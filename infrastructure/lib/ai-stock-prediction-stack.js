@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AiStockPredictionStack = void 0;
+const cdk = require("aws-cdk-lib");
+class AiStockPredictionStack extends cdk.Stack {
+    constructor(scope, id, props) {
+        super(scope, id, props);
+        // Infrastructure components will be added in subsequent tasks
+        // This is the main stack for the AI Stock Prediction application
+    }
+}
+exports.AiStockPredictionStack = AiStockPredictionStack;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYWktc3RvY2stcHJlZGljdGlvbi1zdGFjay5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImFpLXN0b2NrLXByZWRpY3Rpb24tc3RhY2sudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBQUEsbUNBQW1DO0FBR25DLE1BQWEsc0JBQXVCLFNBQVEsR0FBRyxDQUFDLEtBQUs7SUFDbkQsWUFBWSxLQUFnQixFQUFFLEVBQVUsRUFBRSxLQUFzQjtRQUM5RCxLQUFLLENBQUMsS0FBSyxFQUFFLEVBQUUsRUFBRSxLQUFLLENBQUMsQ0FBQztRQUV4Qiw4REFBOEQ7UUFDOUQsaUVBQWlFO0lBQ25FLENBQUM7Q0FDRjtBQVBELHdEQU9DIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0ICogYXMgY2RrIGZyb20gJ2F3cy1jZGstbGliJztcbmltcG9ydCB7IENvbnN0cnVjdCB9IGZyb20gJ2NvbnN0cnVjdHMnO1xuXG5leHBvcnQgY2xhc3MgQWlTdG9ja1ByZWRpY3Rpb25TdGFjayBleHRlbmRzIGNkay5TdGFjayB7XG4gIGNvbnN0cnVjdG9yKHNjb3BlOiBDb25zdHJ1Y3QsIGlkOiBzdHJpbmcsIHByb3BzPzogY2RrLlN0YWNrUHJvcHMpIHtcbiAgICBzdXBlcihzY29wZSwgaWQsIHByb3BzKTtcblxuICAgIC8vIEluZnJhc3RydWN0dXJlIGNvbXBvbmVudHMgd2lsbCBiZSBhZGRlZCBpbiBzdWJzZXF1ZW50IHRhc2tzXG4gICAgLy8gVGhpcyBpcyB0aGUgbWFpbiBzdGFjayBmb3IgdGhlIEFJIFN0b2NrIFByZWRpY3Rpb24gYXBwbGljYXRpb25cbiAgfVxufSJdfQ==

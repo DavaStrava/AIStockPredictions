@@ -1,6 +1,354 @@
 {
   "version": "34.0.0",
   "artifacts": {
+    "AiStockPredictionS3Stack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "AiStockPredictionS3Stack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "AiStockPredictionS3Stack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://740527929378/us-west-2",
+      "properties": {
+        "templateFile": "AiStockPredictionS3Stack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-deploy-role-740527929378-us-west-2",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-cfn-exec-role-740527929378-us-west-2",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-740527929378-us-west-2/3b8b623ce3525d331324da062610a095221b429797230e7a685422a6dff3defd.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "AiStockPredictionS3Stack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-lookup-role-740527929378-us-west-2",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "AiStockPredictionS3Stack.assets"
+      ],
+      "metadata": {
+        "/AiStockPredictionS3Stack/DataLakeBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataLakeBucket0256EA8E"
+          }
+        ],
+        "/AiStockPredictionS3Stack/LambdaS3AccessRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LambdaS3AccessRole2ABE84F4"
+          }
+        ],
+        "/AiStockPredictionS3Stack/DataLakeBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataLakeBucketName"
+          }
+        ],
+        "/AiStockPredictionS3Stack/DataLakeBucketArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataLakeBucketArn"
+          }
+        ],
+        "/AiStockPredictionS3Stack/LambdaS3RoleArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LambdaS3RoleArn"
+          }
+        ],
+        "/AiStockPredictionS3Stack/DataLakeBucketNameExport": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataLakeBucketNameExport"
+          }
+        ],
+        "/AiStockPredictionS3Stack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/AiStockPredictionS3Stack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/AiStockPredictionS3Stack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "AiStockPredictionS3Stack"
+    },
+    "AiStockPredictionDatabaseStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "AiStockPredictionDatabaseStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "AiStockPredictionDatabaseStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://740527929378/us-west-2",
+      "properties": {
+        "templateFile": "AiStockPredictionDatabaseStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-deploy-role-740527929378-us-west-2",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-cfn-exec-role-740527929378-us-west-2",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-740527929378-us-west-2/759d05060307f6f9ef5a8d5f57c5ace10190727399c7eec6f3cb262dd6841b88.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "AiStockPredictionDatabaseStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-lookup-role-740527929378-us-west-2",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "AiStockPredictionDatabaseStack.assets"
+      ],
+      "metadata": {
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpc52E081A8"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet1Subnet566D0ED1"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet1RouteTableB02F7A15"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet1RouteTableAssociation0853FD11"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet2Subnet69555C3F"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet2RouteTable6C141FB1"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/DatabaseSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcDatabaseSubnet2RouteTableAssociation87618AA8"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet1Subnet9931F353"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet1RouteTable1C0D0562"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet1RouteTableAssociation01E4F06F"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet1DefaultRoute0DA5FEC1"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet2Subnet20894B3C"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet2RouteTable7A719D96"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet2RouteTableAssociationD5079725"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/PublicSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcPublicSubnet2DefaultRoute1F30C0A1"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/IGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcIGWE4B72D48"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/VPCGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcVPCGWBC1561DD"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AiStockPredictionVpc/RestrictDefaultSecurityGroupCustomResource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AiStockPredictionVpcRestrictDefaultSecurityGroupCustomResource122A9C10"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Role": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Handler": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecurityGroup7319C0F6"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseSecurityGroup/from AiStockPredictionDatabaseStackLambdaSecurityGroup20D0BBBD:5432": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecurityGroupfromAiStockPredictionDatabaseStackLambdaSecurityGroup20D0BBBD5432363FD863"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecret86DBB7B3"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseSecret/Attachment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecretAttachment9A63A3D4"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AuroraCluster/Subnets/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuroraClusterSubnetsF3E9E6AD"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AuroraCluster/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuroraCluster23D869C0"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AuroraCluster/writer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuroraClusterwriter499C523E"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/AuroraCluster/reader/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuroraClusterreader22C4AA3E"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/LambdaSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LambdaSecurityGroup0BD9FC99"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseClusterEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseClusterEndpoint"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseSecretArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecretArn"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/VpcId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VpcId"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/LambdaSecurityGroupId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LambdaSecurityGroupId"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/DatabaseClusterIdentifier": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseClusterIdentifier"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/AiStockPredictionDatabaseStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "AiStockPredictionDatabaseStack"
+    },
     "AiStockPredictionStack.assets": {
       "type": "cdk:asset-manifest",
       "properties": {
@@ -11,21 +359,21 @@
     },
     "AiStockPredictionStack": {
       "type": "aws:cloudformation:stack",
-      "environment": "aws://unknown-account/us-east-1",
+      "environment": "aws://740527929378/us-west-2",
       "properties": {
         "templateFile": "AiStockPredictionStack.template.json",
         "terminationProtection": false,
         "validateOnSynth": false,
-        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-us-east-1",
-        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1/6c69c6875df511bf5e7bbf8054ab2d52e37f248ed0658646f8b8f6830ae72e63.json",
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-deploy-role-740527929378-us-west-2",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-cfn-exec-role-740527929378-us-west-2",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-740527929378-us-west-2/6c69c6875df511bf5e7bbf8054ab2d52e37f248ed0658646f8b8f6830ae72e63.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
           "AiStockPredictionStack.assets"
         ],
         "lookupRole": {
-          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-us-east-1",
+          "arn": "arn:${AWS::Partition}:iam::740527929378:role/cdk-hnb659fds-lookup-role-740527929378-us-west-2",
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         }
