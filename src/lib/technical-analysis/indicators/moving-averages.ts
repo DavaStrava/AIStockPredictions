@@ -45,8 +45,9 @@ export function calculateSMAWithSignals(
   }
   
   return results;
-}/*
-*
+}
+
+/**
  * Calculate Exponential Moving Average with signals
  */
 export function calculateEMAWithSignals(
