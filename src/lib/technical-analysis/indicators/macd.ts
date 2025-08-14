@@ -2,11 +2,36 @@ import { PriceData, MACDResult, TechnicalSignal } from '../types';
 import { validatePriceData, calculateEMA, detectCrossovers } from '../utils';
 
 /**
- * Calculate MACD (Moving Average Convergence Divergence)
+ * Calculates MACD (Moving Average Convergence Divergence) - A trend-following momentum indicator
  * 
- * MACD is a trend-following momentum indicator that shows the relationship between
- * two moving averages of a security's price. The MACD is calculated by subtracting
- * the 26-period EMA from the 12-period EMA.
+ * MACD was developed by Gerald Appel and is one of the most popular technical indicators.
+ * It reveals changes in the strength, direction, momentum, and duration of a trend.
+ * 
+ * MACD Components:
+ * 1. MACD Line: Fast EMA - Slow EMA (typically 12-period EMA - 26-period EMA)
+ * 2. Signal Line: EMA of MACD Line (typically 9-period EMA)
+ * 3. Histogram: MACD Line - Signal Line (shows convergence/divergence)
+ * 
+ * Trading Signals:
+ * - Bullish: MACD line crosses above signal line
+ * - Bearish: MACD line crosses below signal line
+ * - Momentum: Histogram shows increasing/decreasing momentum
+ * - Zero Line: MACD crossing above/below zero indicates trend changes
+ * 
+ * @param data - Array of price data (OHLCV format)
+ * @param fastPeriod - Period for fast EMA (default: 12, standard setting)
+ * @param slowPeriod - Period for slow EMA (default: 26, standard setting)
+ * @param signalPeriod - Period for signal line EMA (default: 9, standard setting)
+ * @returns Array of MACD results with all components and crossover signals
+ * 
+ * @throws {Error} When parameters are invalid or insufficient data
+ * 
+ * @example
+ * ```typescript
+ * const macdResults = calculateMACD(priceData, 12, 26, 9);
+ * const latest = macdResults[macdResults.length - 1];
+ * console.log(`MACD: ${latest.macd}, Signal: ${latest.signal}, Histogram: ${latest.histogram}`);
+ * ```
  */
 export function calculateMACD(
   data: PriceData[],
@@ -14,66 +39,96 @@ export function calculateMACD(
   slowPeriod: number = 26,
   signalPeriod: number = 9
 ): MACDResult[] {
+  // Validate input data for completeness and consistency
   validatePriceData(data);
   
+  // Ensure fast period is less than slow period (logical requirement)
   if (fastPeriod >= slowPeriod) {
     throw new Error('Fast period must be less than slow period');
   }
   
+  // Check if we have sufficient data for all MACD components
+  // Need: slow period + signal period for complete calculation
   if (data.length < slowPeriod + signalPeriod) {
     throw new Error('Insufficient data for MACD calculation');
   }
 
+  // Extract closing prices for MACD calculation
+  // MACD typically uses closing prices as they represent final market consensus
   const closePrices = data.map(d => d.close);
   
-  // Calculate EMAs
+  // Calculate the two EMAs that form the foundation of MACD
+  // Fast EMA reacts more quickly to price changes
+  // Slow EMA provides a smoother, more stable reference line
   const fastEMA = calculateEMA(closePrices, fastPeriod);
   const slowEMA = calculateEMA(closePrices, slowPeriod);
   
-  // Calculate MACD line (fast EMA - slow EMA)
+  // Calculate MACD line by subtracting slow EMA from fast EMA
+  // This difference shows the relationship between short-term and long-term trends
   const macdLine: number[] = [];
-  const startIndex = slowPeriod - fastPeriod; // Offset to align EMAs
+  
+  // Calculate offset to align the two EMAs properly
+  // Since slow EMA starts later, we need to align the arrays
+  const startIndex = slowPeriod - fastPeriod;
   
   for (let i = 0; i < slowEMA.length; i++) {
     const fastIndex = i + startIndex;
     if (fastIndex < fastEMA.length) {
+      // MACD = Fast EMA - Slow EMA
+      // Positive values indicate upward momentum, negative indicate downward
       macdLine.push(fastEMA[fastIndex] - slowEMA[i]);
     }
   }
   
-  // Calculate Signal line (EMA of MACD line)
+  // Calculate Signal line as EMA of MACD line
+  // This smooths the MACD line and provides crossover signals
+  // The signal line helps identify changes in MACD momentum
   const signalLine = calculateEMA(macdLine, signalPeriod);
   
   // Calculate Histogram (MACD - Signal)
+  // Histogram shows the difference between MACD and signal lines
+  // It provides early warning of potential crossovers and momentum changes
   const histogram: number[] = [];
   for (let i = 0; i < signalLine.length; i++) {
     const macdIndex = i + signalPeriod - 1;
     if (macdIndex < macdLine.length) {
+      // Histogram = MACD Line - Signal Line
+      // Positive histogram: MACD above signal (bullish momentum)
+      // Negative histogram: MACD below signal (bearish momentum)
       histogram.push(macdLine[macdIndex] - signalLine[i]);
     }
   }
   
-  // Detect crossovers
+  // Detect crossovers between MACD line and signal line
+  // These crossovers are primary trading signals in MACD analysis
   const crossovers = detectCrossovers(
-    macdLine.slice(signalPeriod - 1),
+    macdLine.slice(signalPeriod - 1), // Align MACD line with signal line
     signalLine
   );
   
+  // Build results array with all MACD components
   const results: MACDResult[] = [];
+  
+  // Calculate starting index in original data array
+  // Account for the data consumed by EMA calculations
   const dataStartIndex = slowPeriod + signalPeriod - 2;
   
   for (let i = 0; i < histogram.length; i++) {
     const dataIndex = dataStartIndex + i;
+    
+    // Safety check to prevent array bounds errors
     if (dataIndex >= data.length) break;
     
+    // Calculate corresponding index in MACD line array
     const macdIndex = i + signalPeriod - 1;
     
+    // Create comprehensive MACD result
     results.push({
       date: data[dataIndex].date,
-      macd: macdLine[macdIndex],
-      signal: signalLine[i],
-      histogram: histogram[i],
-      crossover: i < crossovers.length ? crossovers[i] : 'none',
+      macd: macdLine[macdIndex],           // Main MACD line value
+      signal: signalLine[i],               // Signal line value
+      histogram: histogram[i],             // Histogram value (MACD - Signal)
+      crossover: i < crossovers.length ? crossovers[i] : 'none', // Crossover signal
     });
   }
   

@@ -2,11 +2,36 @@ import { PriceData, RSIResult, TechnicalSignal } from '../types';
 import { validatePriceData, calculateGainsAndLosses, calculateEMA } from '../utils';
 
 /**
- * Calculate Relative Strength Index (RSI)
+ * Calculates Relative Strength Index (RSI) - A momentum oscillator
  * 
- * RSI is a momentum oscillator that measures the speed and change of price movements.
- * RSI oscillates between 0 and 100. Traditionally, RSI is considered overbought when above 70
- * and oversold when below 30.
+ * RSI is one of the most popular technical indicators, developed by J. Welles Wilder Jr.
+ * It measures the speed and change of price movements on a scale of 0 to 100.
+ * 
+ * Key Concepts:
+ * - RSI > 70: Traditionally considered overbought (potential sell signal)
+ * - RSI < 30: Traditionally considered oversold (potential buy signal)
+ * - RSI around 50: Neutral momentum
+ * 
+ * The RSI calculation involves:
+ * 1. Calculate price changes (gains and losses)
+ * 2. Calculate average gains and losses over the period
+ * 3. Calculate Relative Strength (RS) = Average Gain / Average Loss
+ * 4. Calculate RSI = 100 - (100 / (1 + RS))
+ * 
+ * @param data - Array of price data (OHLCV format)
+ * @param period - Number of periods for RSI calculation (default: 14, Wilder's original)
+ * @param overbought - RSI level considered overbought (default: 70)
+ * @param oversold - RSI level considered oversold (default: 30)
+ * @returns Array of RSI results with signals and strength indicators
+ * 
+ * @throws {Error} When data is invalid or period is inappropriate
+ * 
+ * @example
+ * ```typescript
+ * const rsiResults = calculateRSI(priceData, 14, 70, 30);
+ * const latestRSI = rsiResults[rsiResults.length - 1];
+ * console.log(`RSI: ${latestRSI.value}, Signal: ${latestRSI.signal}`);
+ * ```
  */
 export function calculateRSI(
   data: PriceData[],
@@ -14,60 +39,86 @@ export function calculateRSI(
   overbought: number = 70,
   oversold: number = 30
 ): RSIResult[] {
+  // Validate input data for completeness and consistency
   validatePriceData(data);
   
+  // Ensure we have enough data points for meaningful RSI calculation
   if (period <= 0 || period >= data.length) {
     throw new Error('Invalid period for RSI calculation');
   }
 
+  // Extract closing prices for RSI calculation
+  // RSI is typically calculated using closing prices as they represent
+  // the final consensus of value for each trading period
   const closePrices = data.map(d => d.close);
+  
+  // Calculate gains and losses from price changes
+  // This separates upward moves (gains) from downward moves (losses)
   const { gains, losses } = calculateGainsAndLosses(closePrices);
   
-  // Calculate average gains and losses using EMA (Wilder's smoothing)
+  // Calculate average gains and losses using EMA (Wilder's smoothing method)
+  // Wilder used a modified EMA that gives equal weight to all periods
+  // This provides smoother results than simple averages
   const avgGains = calculateEMA(gains, period);
   const avgLosses = calculateEMA(losses, period);
   
   const results: RSIResult[] = [];
   
-  // Start from period index since we need enough data for EMA
+  // Process each data point where we have sufficient history
+  // Start from period index since we need enough data for EMA calculation
   for (let i = 0; i < avgGains.length; i++) {
-    const dataIndex = i + period; // Adjust for the offset
+    // Calculate the corresponding index in the original data array
+    const dataIndex = i + period; // Adjust for the offset caused by EMA calculation
     
+    // Safety check to prevent array bounds errors
     if (dataIndex >= data.length) break;
     
     const avgGain = avgGains[i];
     const avgLoss = avgLosses[i];
     
-    // Calculate RS (Relative Strength)
+    // Calculate Relative Strength (RS)
+    // RS = Average Gain / Average Loss
+    // Handle division by zero case (no losses = maximum strength)
     const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
     
-    // Calculate RSI
+    // Calculate RSI using the standard formula
+    // RSI = 100 - (100 / (1 + RS))
+    // This normalizes RS to a 0-100 scale
     const rsi = 100 - (100 / (1 + rs));
     
-    // Determine signal
+    // Generate trading signals based on RSI levels
     let signal: 'buy' | 'sell' | 'hold' = 'hold';
-    let strength = 0.5;
+    let strength = 0.5; // Default neutral strength
     
     if (rsi <= oversold) {
+      // Oversold condition - potential buying opportunity
       signal = 'buy';
+      // Strength increases as RSI gets more oversold
+      // Minimum strength of 0.6, increases as RSI approaches 0
       strength = Math.max(0.6, (oversold - rsi) / oversold + 0.5);
     } else if (rsi >= overbought) {
+      // Overbought condition - potential selling opportunity
       signal = 'sell';
+      // Strength increases as RSI gets more overbought
+      // Minimum strength of 0.6, increases as RSI approaches 100
       strength = Math.max(0.6, (rsi - overbought) / (100 - overbought) + 0.5);
     } else {
-      // Neutral zone - calculate strength based on distance from 50
+      // Neutral zone (between oversold and overbought levels)
+      // Calculate strength based on distance from neutral (50)
       const distanceFrom50 = Math.abs(rsi - 50);
-      strength = 0.3 + (distanceFrom50 / 50) * 0.4; // 0.3 to 0.7 range
+      // Strength ranges from 0.3 (at RSI=50) to 0.7 (at boundaries)
+      strength = 0.3 + (distanceFrom50 / 50) * 0.4;
     }
     
+    // Create RSI result object with all relevant information
     results.push({
       date: data[dataIndex].date,
       value: rsi,
       signal,
-      strength: Math.min(1, strength),
+      strength: Math.min(1, strength), // Cap strength at 1.0
       overbought: rsi >= overbought,
       oversold: rsi <= oversold,
-      divergence: 'none', // Will be calculated separately if needed
+      divergence: 'none', // Divergence analysis performed separately
     });
   }
   

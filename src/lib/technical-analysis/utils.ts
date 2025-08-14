@@ -1,23 +1,47 @@
 import { PriceData } from './types';
 
 /**
- * Validate price data array
+ * Validates price data array to ensure data integrity and consistency
+ * 
+ * This function performs comprehensive validation of OHLCV (Open, High, Low, Close, Volume) data
+ * to prevent calculation errors in technical indicators. It checks for:
+ * - Array existence and non-empty state
+ * - Required fields presence (date, OHLCV)
+ * - Logical price relationships (high >= low)
+ * - Non-negative values for prices and volume
+ * 
+ * @param data - Array of price data points to validate
+ * @throws {Error} When validation fails with descriptive error message
+ * 
+ * @example
+ * ```typescript
+ * const priceData = [
+ *   { date: new Date(), open: 100, high: 105, low: 98, close: 103, volume: 1000000 }
+ * ];
+ * validatePriceData(priceData); // Passes validation
+ * ```
  */
 export function validatePriceData(data: PriceData[]): void {
+  // Check if data exists and is a non-empty array
   if (!Array.isArray(data) || data.length === 0) {
     throw new Error('Price data must be a non-empty array');
   }
 
+  // Validate each data point for completeness and logical consistency
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
+    
+    // Check for required fields - all OHLCV data must be present
     if (!item.date || !item.open || !item.high || !item.low || !item.close || !item.volume) {
       throw new Error(`Invalid price data at index ${i}: missing required fields`);
     }
     
+    // Validate price relationships - high must be >= low (basic market logic)
     if (item.high < item.low) {
       throw new Error(`Invalid price data at index ${i}: high price cannot be less than low price`);
     }
     
+    // Ensure all prices and volume are non-negative (no negative prices in real markets)
     if (item.open < 0 || item.high < 0 || item.low < 0 || item.close < 0 || item.volume < 0) {
       throw new Error(`Invalid price data at index ${i}: prices and volume cannot be negative`);
     }
@@ -25,24 +49,69 @@ export function validatePriceData(data: PriceData[]): void {
 }
 
 /**
- * Sort price data by date (ascending)
+ * Sorts price data by date in ascending order (oldest to newest)
+ * 
+ * Technical analysis requires chronologically ordered data for accurate calculations.
+ * This function creates a new sorted array without modifying the original data.
+ * 
+ * @param data - Array of price data to sort
+ * @returns New array sorted by date (ascending)
+ * 
+ * @example
+ * ```typescript
+ * const unsortedData = [
+ *   { date: new Date('2024-01-02'), close: 100, ... },
+ *   { date: new Date('2024-01-01'), close: 99, ... }
+ * ];
+ * const sorted = sortPriceData(unsortedData); // Oldest first
+ * ```
  */
 export function sortPriceData(data: PriceData[]): PriceData[] {
+  // Create a shallow copy to avoid mutating the original array
+  // Sort by timestamp (getTime() returns milliseconds since epoch)
   return [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
 /**
- * Calculate Simple Moving Average
+ * Calculates Simple Moving Average (SMA) for a series of values
+ * 
+ * SMA is the arithmetic mean of values over a specified period. It's used to smooth
+ * out price fluctuations and identify trend direction. Each point represents the
+ * average of the last N periods.
+ * 
+ * Formula: SMA = (Sum of N periods) / N
+ * 
+ * @param values - Array of numerical values (typically closing prices)
+ * @param period - Number of periods to average (must be > 0 and <= values.length)
+ * @returns Array of SMA values (length = values.length - period + 1)
+ * 
+ * @throws {Error} When period is invalid
+ * 
+ * @example
+ * ```typescript
+ * const prices = [10, 12, 14, 16, 18];
+ * const sma3 = calculateSMA(prices, 3); // [12, 14, 16] (3-period SMA)
+ * ```
  */
 export function calculateSMA(values: number[], period: number): number[] {
+  // Validate period parameter
   if (period <= 0 || period > values.length) {
     throw new Error('Invalid period for SMA calculation');
   }
 
   const result: number[] = [];
   
+  // Calculate SMA for each possible window
+  // Start from index (period - 1) to have enough data for the first calculation
   for (let i = period - 1; i < values.length; i++) {
-    const sum = values.slice(i - period + 1, i + 1).reduce((acc, val) => acc + val, 0);
+    // Extract the window of values for this period
+    // slice(start, end) where end is exclusive
+    const window = values.slice(i - period + 1, i + 1);
+    
+    // Calculate the sum of values in the window
+    const sum = window.reduce((acc, val) => acc + val, 0);
+    
+    // Add the average to results
     result.push(sum / period);
   }
   
@@ -50,23 +119,54 @@ export function calculateSMA(values: number[], period: number): number[] {
 }
 
 /**
- * Calculate Exponential Moving Average
+ * Calculates Exponential Moving Average (EMA) for a series of values
+ * 
+ * EMA gives more weight to recent prices, making it more responsive to new information
+ * than SMA. It uses a smoothing factor (alpha) to determine how much weight to give
+ * to the most recent price versus the previous EMA value.
+ * 
+ * Formula: 
+ * - Multiplier = 2 / (period + 1)
+ * - EMA[today] = (Price[today] × Multiplier) + (EMA[yesterday] × (1 - Multiplier))
+ * - First EMA = SMA of first N periods
+ * 
+ * @param values - Array of numerical values (typically closing prices)
+ * @param period - Number of periods for EMA calculation
+ * @returns Array of EMA values (length = values.length - period + 1)
+ * 
+ * @throws {Error} When period is invalid
+ * 
+ * @example
+ * ```typescript
+ * const prices = [10, 12, 14, 16, 18, 20];
+ * const ema3 = calculateEMA(prices, 3); // More weight on recent prices
+ * ```
  */
 export function calculateEMA(values: number[], period: number): number[] {
+  // Validate input parameters
   if (period <= 0 || period > values.length) {
     throw new Error('Invalid period for EMA calculation');
   }
 
   const result: number[] = [];
+  
+  // Calculate the smoothing multiplier (alpha)
+  // Higher periods = lower multiplier = more smoothing
   const multiplier = 2 / (period + 1);
   
-  // First EMA value is SMA
+  // Initialize EMA with SMA of the first 'period' values
+  // This provides a stable starting point for the exponential calculation
   const firstSMA = values.slice(0, period).reduce((acc, val) => acc + val, 0) / period;
   result.push(firstSMA);
   
-  // Calculate subsequent EMA values
+  // Calculate subsequent EMA values using the exponential formula
   for (let i = period; i < values.length; i++) {
-    const ema = (values[i] * multiplier) + (result[result.length - 1] * (1 - multiplier));
+    // EMA = (Current Price × Multiplier) + (Previous EMA × (1 - Multiplier))
+    // This gives more weight to recent prices while maintaining historical context
+    const currentPrice = values[i];
+    const previousEMA = result[result.length - 1];
+    const ema = (currentPrice * multiplier) + (previousEMA * (1 - multiplier));
+    
     result.push(ema);
   }
   

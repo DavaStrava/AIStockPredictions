@@ -94,6 +94,35 @@ export function calculateEMAWithSignals(
 }
 
 /**
+ * Align two moving average arrays by matching dates
+ */
+function alignMovingAverages(
+  fastMA: MovingAverageResult[],
+  slowMA: MovingAverageResult[]
+): { fast: MovingAverageResult[]; slow: MovingAverageResult[] } {
+  const aligned = { fast: [] as MovingAverageResult[], slow: [] as MovingAverageResult[] };
+  
+  // Create date maps for efficient lookup
+  const fastMap = new Map(fastMA.map(ma => [ma.date.getTime(), ma]));
+  const slowMap = new Map(slowMA.map(ma => [ma.date.getTime(), ma]));
+  
+  // Find common dates
+  const commonDates = [...fastMap.keys()].filter(date => slowMap.has(date)).sort();
+  
+  // Build aligned arrays
+  for (const date of commonDates) {
+    const fastResult = fastMap.get(date);
+    const slowResult = slowMap.get(date);
+    if (fastResult && slowResult) {
+      aligned.fast.push(fastResult);
+      aligned.slow.push(slowResult);
+    }
+  }
+  
+  return aligned;
+}
+
+/**
  * Detect moving average crossovers
  */
 export function detectMovingAverageCrossovers(
@@ -102,12 +131,14 @@ export function detectMovingAverageCrossovers(
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
   
-  if (fastMA.length !== slowMA.length) {
-    throw new Error('Moving average arrays must have the same length');
+  // Align arrays by finding overlapping dates
+  const alignedData = alignMovingAverages(fastMA, slowMA);
+  if (alignedData.fast.length < 2) {
+    return signals; // Need at least 2 points for crossover detection
   }
   
-  const fastValues = fastMA.map(ma => ma.value);
-  const slowValues = slowMA.map(ma => ma.value);
+  const fastValues = alignedData.fast.map(ma => ma.value);
+  const slowValues = alignedData.slow.map(ma => ma.value);
   const crossovers = detectCrossovers(fastValues, slowValues);
   
   for (let i = 0; i < crossovers.length; i++) {
@@ -115,16 +146,21 @@ export function detectMovingAverageCrossovers(
     
     if (crossover !== 'none') {
       const signal = crossover === 'bullish' ? 'buy' : 'sell';
-      const strength = calculateCrossoverStrength(fastMA[i + 1], slowMA[i + 1]);
+      const fastIndex = i + 1;
+      const slowIndex = i + 1;
       
-      signals.push({
-        indicator: `MA Crossover (${fastMA[0].period}/${slowMA[0].period})`,
-        signal,
-        strength,
-        value: fastMA[i + 1].value,
-        timestamp: fastMA[i + 1].date,
-        description: `${fastMA[0].type}${fastMA[0].period} crossed ${crossover === 'bullish' ? 'above' : 'below'} ${slowMA[0].type}${slowMA[0].period} - ${crossover} signal`,
-      });
+      if (fastIndex < alignedData.fast.length && slowIndex < alignedData.slow.length) {
+        const strength = calculateCrossoverStrength(alignedData.fast[fastIndex], alignedData.slow[slowIndex]);
+        
+        signals.push({
+          indicator: `MA Crossover (${fastMA[0].period}/${slowMA[0].period})`,
+          signal,
+          strength,
+          value: alignedData.fast[fastIndex].value,
+          timestamp: alignedData.fast[fastIndex].date,
+          description: `${fastMA[0].type}${fastMA[0].period} crossed ${crossover === 'bullish' ? 'above' : 'below'} ${slowMA[0].type}${slowMA[0].period} - ${crossover} signal`,
+        });
+      }
     }
   }
   

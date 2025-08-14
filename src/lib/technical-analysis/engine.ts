@@ -10,31 +10,90 @@ import { analyzeVolume } from './indicators/volume';
 /**
  * Comprehensive Technical Analysis Engine
  * 
- * This engine combines multiple technical indicators to provide a complete
- * analysis of price data with signals, trends, and confidence scores.
+ * This is the main orchestrator class that combines multiple technical indicators
+ * to provide comprehensive market analysis. It processes price data through various
+ * technical analysis methods and generates actionable trading signals.
+ * 
+ * Features:
+ * - Multi-indicator analysis (trend, momentum, volume)
+ * - Signal generation with strength ratings
+ * - Market sentiment and trend analysis
+ * - Consensus signal detection
+ * - Configurable indicator parameters
+ * - Performance optimized for real-time analysis
+ * 
+ * Supported Indicators:
+ * - Trend: RSI, MACD, Bollinger Bands, Moving Averages
+ * - Momentum: Stochastic, Williams %R, ADX
+ * - Volume: OBV, VPT, Accumulation/Distribution
+ * 
+ * @example
+ * ```typescript
+ * const engine = new TechnicalAnalysisEngine({
+ *   rsi: { period: 14, overbought: 75, oversold: 25 }
+ * });
+ * const analysis = engine.analyze(priceData, 'AAPL');
+ * console.log(`Overall sentiment: ${analysis.summary.overall}`);
+ * ```
  */
 export class TechnicalAnalysisEngine {
+  /** Configuration object containing parameters for all indicators */
   private config: IndicatorConfig;
   
+  /**
+   * Creates a new Technical Analysis Engine instance
+   * 
+   * @param config - Optional partial configuration to override defaults
+   *                 Any unspecified parameters will use DEFAULT_CONFIG values
+   */
   constructor(config?: Partial<IndicatorConfig>) {
+    // Merge user configuration with defaults
+    // This allows users to override only specific parameters while keeping defaults for others
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
   
   /**
-   * Analyze price data with all available indicators
+   * Performs comprehensive technical analysis on price data
+   * 
+   * This is the main analysis method that orchestrates all technical indicators
+   * and generates a complete market analysis report. It processes the data through
+   * multiple indicator categories and combines the results into actionable insights.
+   * 
+   * Analysis Process:
+   * 1. Data validation and preparation
+   * 2. Individual indicator calculations
+   * 3. Signal generation and aggregation
+   * 4. Market summary generation
+   * 5. Error handling and graceful degradation
+   * 
+   * @param data - Array of price data points (OHLCV format)
+   * @param symbol - Stock symbol or identifier for the analysis
+   * @returns Comprehensive analysis result with indicators, signals, and summary
+   * 
+   * @example
+   * ```typescript
+   * const analysis = engine.analyze(priceData, 'AAPL');
+   * console.log(`Found ${analysis.signals.length} trading signals`);
+   * console.log(`Market sentiment: ${analysis.summary.overall}`);
+   * ```
    */
   public analyze(data: PriceData[], symbol: string): TechnicalAnalysisResult {
-    // Validate and sort data
+    // Step 1: Data Validation and Preparation
+    // Ensure data integrity before processing through indicators
     validatePriceData(data);
+    
+    // Sort data chronologically (oldest to newest)
+    // Technical indicators require sequential data for accurate calculations
     const sortedData = sortPriceData(data);
     
-    // Initialize result structure
+    // Step 2: Initialize Result Structure
+    // Create the comprehensive result object that will hold all analysis data
     const result: TechnicalAnalysisResult = {
       symbol,
-      timestamp: new Date(),
-      signals: [],
-      indicators: {},
-      summary: {
+      timestamp: new Date(), // Analysis timestamp for tracking
+      signals: [],           // Will accumulate all trading signals
+      indicators: {},        // Will hold all indicator calculation results
+      summary: {             // Default neutral summary, will be calculated later
         overall: 'neutral',
         strength: 0.5,
         confidence: 0.5,
@@ -44,30 +103,36 @@ export class TechnicalAnalysisEngine {
       },
     };
     
-    // Analyze each indicator category
+    // Step 3: Indicator Analysis with Error Handling
+    // Process each indicator category independently to prevent single failures
+    // from breaking the entire analysis
     try {
-      // RSI Analysis
+      // RSI Analysis - Momentum Oscillator
+      // Check if RSI is configured and we have sufficient data
       if (this.config.rsi && sortedData.length >= this.config.rsi.period) {
         const rsiAnalysis = analyzeRSI(sortedData, symbol, this.config.rsi);
         result.indicators.rsi = rsiAnalysis.results;
         result.signals.push(...rsiAnalysis.signals);
       }
       
-      // MACD Analysis
+      // MACD Analysis - Trend Following Momentum Indicator
+      // Requires more data due to slow EMA + signal line calculation
       if (this.config.macd && sortedData.length >= this.config.macd.slowPeriod + this.config.macd.signalPeriod) {
         const macdAnalysis = analyzeMACD(sortedData, symbol, this.config.macd);
         result.indicators.macd = macdAnalysis.results;
         result.signals.push(...macdAnalysis.signals);
       }
       
-      // Bollinger Bands Analysis
+      // Bollinger Bands Analysis - Volatility and Mean Reversion
+      // Helps identify overbought/oversold conditions and volatility changes
       if (this.config.bollingerBands && sortedData.length >= this.config.bollingerBands.period) {
         const bbAnalysis = analyzeBollingerBands(sortedData, symbol, this.config.bollingerBands);
         result.indicators.bollingerBands = bbAnalysis.results;
         result.signals.push(...bbAnalysis.signals);
       }
       
-      // Moving Averages Analysis
+      // Moving Averages Analysis - Trend Identification
+      // Includes both SMA and EMA with crossover detection
       if (this.config.movingAverages && this.config.movingAverages.periods.length > 0) {
         const minPeriod = Math.min(...this.config.movingAverages.periods);
         if (sortedData.length >= minPeriod) {
@@ -76,13 +141,15 @@ export class TechnicalAnalysisEngine {
             includeEMA: true,
             detectCrossovers: true,
           });
+          // Flatten arrays since moving averages returns arrays of arrays (one per period)
           result.indicators.sma = maAnalysis.sma.flat();
           result.indicators.ema = maAnalysis.ema?.flat();
           result.signals.push(...maAnalysis.signals);
         }
       }
       
-      // Momentum Analysis
+      // Momentum Analysis - Advanced Momentum Indicators
+      // Includes Stochastic, Williams %R, and ADX
       if (this.config.stochastic || this.config.williamsR || this.config.adx) {
         const momentumAnalysis = analyzeMomentum(sortedData, symbol, {
           stochastic: this.config.stochastic,
@@ -95,8 +162,9 @@ export class TechnicalAnalysisEngine {
         result.signals.push(...momentumAnalysis.signals);
       }
       
-      // Volume Analysis
-      if (sortedData.length >= 20) { // Need sufficient data for volume analysis
+      // Volume Analysis - Volume-Based Indicators
+      // Requires sufficient data for meaningful volume pattern analysis
+      if (sortedData.length >= 20) {
         const volumeAnalysis = analyzeVolume(sortedData, symbol);
         result.indicators.obv = volumeAnalysis.obv;
         result.indicators.volumePriceTrend = volumeAnalysis.vpt;
@@ -104,12 +172,15 @@ export class TechnicalAnalysisEngine {
         result.signals.push(...volumeAnalysis.signals);
       }
       
-      // Generate summary
+      // Step 4: Generate Market Summary
+      // Analyze all signals to create overall market assessment
       result.summary = this.generateSummary(result.signals, sortedData);
       
     } catch (error) {
+      // Graceful error handling - log error but return partial results
+      // This ensures the system remains functional even if some indicators fail
       console.error('Error in technical analysis:', error);
-      // Return partial results even if some indicators fail
+      // The result object will contain whatever indicators succeeded
     }
     
     return result;

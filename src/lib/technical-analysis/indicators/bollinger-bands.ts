@@ -2,54 +2,115 @@ import { PriceData, BollingerBandsResult, TechnicalSignal } from '../types';
 import { validatePriceData, calculateSMA, calculateStandardDeviation } from '../utils';
 
 /**
- * Calculate Bollinger Bands
+ * Calculates Bollinger Bands - A volatility and mean reversion indicator
  * 
- * Bollinger Bands consist of a middle band (SMA) and two outer bands that are
- * standard deviations away from the middle band. They help identify overbought
- * and oversold conditions.
+ * Bollinger Bands were developed by John Bollinger and consist of three lines:
+ * 1. Middle Band: Simple Moving Average (typically 20-period)
+ * 2. Upper Band: Middle Band + (Standard Deviation × multiplier, typically 2)
+ * 3. Lower Band: Middle Band - (Standard Deviation × multiplier, typically 2)
+ * 
+ * Key Concepts:
+ * - Bands expand during high volatility periods
+ * - Bands contract during low volatility periods (squeeze)
+ * - Price tends to bounce between the bands
+ * - Price touching bands may indicate overbought/oversold conditions
+ * - %B shows where price is relative to the bands (0 = lower band, 1 = upper band)
+ * - Bandwidth measures the width of the bands (volatility indicator)
+ * 
+ * Trading Applications:
+ * - Mean reversion: Price at bands may reverse toward middle
+ * - Breakouts: Price breaking through bands with volume may continue
+ * - Squeeze: Low bandwidth followed by expansion signals volatility breakout
+ * - %B extremes: Values above 1 or below 0 indicate strong moves
+ * 
+ * @param data - Array of price data (OHLCV format)
+ * @param period - Period for middle band SMA calculation (default: 20)
+ * @param standardDeviations - Multiplier for standard deviation (default: 2)
+ * @returns Array of Bollinger Bands results with all components and metrics
+ * 
+ * @throws {Error} When parameters are invalid or insufficient data
+ * 
+ * @example
+ * ```typescript
+ * const bbResults = calculateBollingerBands(priceData, 20, 2);
+ * const latest = bbResults[bbResults.length - 1];
+ * console.log(`Price at ${(latest.percentB * 100).toFixed(1)}% of band width`);
+ * if (latest.squeeze) console.log('Bollinger Band squeeze detected!');
+ * ```
  */
 export function calculateBollingerBands(
   data: PriceData[],
   period: number = 20,
   standardDeviations: number = 2
 ): BollingerBandsResult[] {
+  // Validate input data for completeness and consistency
   validatePriceData(data);
   
+  // Ensure we have sufficient data for meaningful calculation
   if (period <= 0 || period > data.length) {
     throw new Error('Invalid period for Bollinger Bands calculation');
   }
 
+  // Extract closing prices for Bollinger Bands calculation
+  // Bollinger Bands typically use closing prices as they represent
+  // the final consensus value for each trading period
   const closePrices = data.map(d => d.close);
+  
+  // Calculate the middle band (Simple Moving Average)
+  // This serves as the baseline around which the bands are constructed
   const sma = calculateSMA(closePrices, period);
+  
+  // Calculate standard deviation for the same period
+  // Standard deviation measures price volatility - higher values = more volatile
   const stdDev = calculateStandardDeviation(closePrices, period);
   
   const results: BollingerBandsResult[] = [];
   
+  // Process each data point where we have sufficient history
   for (let i = 0; i < sma.length; i++) {
+    // Calculate corresponding index in original data array
     const dataIndex = i + period - 1;
+    
+    // Get the middle band value (SMA)
     const middle = sma[i];
+    
+    // Calculate the deviation amount for this period
+    // This determines how far the bands extend from the middle
     const deviation = stdDev[i] * standardDeviations;
+    
+    // Calculate upper and lower bands
+    // Upper band = Middle + (Standard Deviation × Multiplier)
+    // Lower band = Middle - (Standard Deviation × Multiplier)
     const upper = middle + deviation;
     const lower = middle - deviation;
     
-    // Calculate %B (Percent B) - position within the bands
+    // Calculate %B (Percent B) - Shows where current price sits within the bands
+    // %B = (Current Price - Lower Band) / (Upper Band - Lower Band)
+    // Values: 0 = at lower band, 0.5 = at middle, 1 = at upper band
+    // Values > 1 = above upper band, < 0 = below lower band
     const currentPrice = closePrices[dataIndex];
     const percentB = (currentPrice - lower) / (upper - lower);
     
-    // Calculate Bandwidth - measure of band width
+    // Calculate Bandwidth - Measures the width of the bands relative to middle band
+    // Bandwidth = (Upper Band - Lower Band) / Middle Band
+    // Higher values = higher volatility, lower values = lower volatility
     const bandwidth = (upper - lower) / middle;
     
-    // Detect squeeze (low volatility)
-    const squeeze = bandwidth < 0.1; // Threshold can be adjusted
+    // Detect Bollinger Band Squeeze
+    // Squeeze occurs when bands contract significantly (low volatility)
+    // Often precedes significant price moves when volatility expands
+    // Threshold of 0.1 (10%) can be adjusted based on market and timeframe
+    const squeeze = bandwidth < 0.1;
     
+    // Create comprehensive Bollinger Bands result
     results.push({
       date: data[dataIndex].date,
-      upper,
-      middle,
-      lower,
-      bandwidth,
-      percentB,
-      squeeze,
+      upper,        // Upper band value
+      middle,       // Middle band value (SMA)
+      lower,        // Lower band value
+      bandwidth,    // Band width relative to middle (volatility measure)
+      percentB,     // Price position within bands (0-1 scale, can exceed)
+      squeeze,      // Boolean indicating if bands are in squeeze formation
     });
   }
   
