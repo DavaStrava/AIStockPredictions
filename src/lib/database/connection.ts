@@ -84,12 +84,13 @@ class DatabaseConnection {
     if (this.config.secretArn) {
       credentials = await this.getCredentialsFromSecret();
     } else {
+      // Use environment variables for local development
       credentials = {
-        username: this.config.username || 'postgres',
-        password: this.config.password || '',
-        host: this.config.host || 'localhost',
-        port: this.config.port || 5432,
-        dbname: this.config.database || 'ai_stock_prediction',
+        username: this.config.username || process.env.DB_USER || 'postgres',
+        password: this.config.password || process.env.DB_PASSWORD || '',
+        host: this.config.host || process.env.DB_HOST || 'localhost',
+        port: this.config.port || parseInt(process.env.DB_PORT || '5432'),
+        dbname: this.config.database || process.env.DB_NAME || 'ai_stock_prediction',
       };
     }
 

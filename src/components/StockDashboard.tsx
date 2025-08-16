@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TechnicalAnalysisResult, TechnicalSignal } from '@/lib/technical-analysis/types';
+import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/technical-analysis/types';
+import StockChart from './StockChart';
+import PerformanceMetrics from './PerformanceMetrics';
 
 interface PredictionResult {
   symbol: string;
@@ -26,6 +28,7 @@ export default function StockDashboard() {
   const [predictions, setPredictions] = useState<PredictionResult[]>([]);
   const [selectedStock, setSelectedStock] = useState<string>('');
   const [analysis, setAnalysis] = useState<TechnicalAnalysisResult | null>(null);
+  const [priceData, setPriceData] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [customSymbol, setCustomSymbol] = useState('');
 
@@ -62,10 +65,51 @@ export default function StockDashboard() {
       if (data.success) {
         setAnalysis(data.data);
         setSelectedStock(symbol);
+        // Extract price data from the response metadata if available
+        // For now, we'll generate it again for consistency
+        generatePriceDataForSymbol(symbol);
       }
     } catch (error) {
       console.error('Failed to fetch analysis:', error);
     }
+  };
+
+  const generatePriceDataForSymbol = (symbol: string) => {
+    // Generate the same mock data as the API for consistency
+    const data: PriceData[] = [];
+    let basePrice = 100 + Math.random() * 100;
+    
+    for (let i = 0; i < 100; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (100 - i));
+      
+      const volatility = 0.02;
+      const trend = Math.sin(i / 20) * 0.001;
+      const randomChange = (Math.random() - 0.5) * volatility + trend;
+      
+      const open = basePrice;
+      const change = basePrice * randomChange;
+      const close = basePrice + change;
+      
+      const spread = Math.abs(change) + (Math.random() * basePrice * 0.01);
+      const high = Math.max(open, close) + spread * Math.random();
+      const low = Math.min(open, close) - spread * Math.random();
+      
+      const volume = Math.floor(1000000 + Math.abs(change / basePrice) * 5000000 + Math.random() * 2000000);
+      
+      data.push({
+        date,
+        open,
+        high,
+        low,
+        close,
+        volume,
+      });
+      
+      basePrice = close;
+    }
+    
+    setPriceData(data);
   };
 
   const handleCustomAnalysis = async () => {
@@ -186,26 +230,37 @@ export default function StockDashboard() {
         ))}
       </div>
 
-      {/* Detailed Analysis Modal/Section */}
-      {analysis && selectedStock && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800">
-          <div className="flex justify-between items-center mb-6">
+      {/* Detailed Analysis Section */}
+      {analysis && selectedStock && priceData.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold text-foreground">
               Detailed Analysis: {selectedStock}
             </h3>
             <button
-              onClick={() => setAnalysis(null)}
-              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              onClick={() => {
+                setAnalysis(null);
+                setPriceData([]);
+                setSelectedStock('');
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-lg"
             >
               ✕
             </button>
           </div>
 
+          {/* Performance Metrics */}
+          <PerformanceMetrics symbol={selectedStock} priceData={priceData} />
+
+          {/* Interactive Charts */}
+          <StockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+
+          {/* Analysis Summary Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Summary */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Market Summary</h4>
-              <div className="space-y-2">
+            {/* Market Summary */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="font-semibold text-foreground mb-4">Market Summary</h4>
+              <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Overall Sentiment:</span>
                   <span className={`font-medium ${getDirectionColor(analysis.summary.overall)}`}>
@@ -216,6 +271,12 @@ export default function StockDashboard() {
                   <span className="text-gray-600 dark:text-gray-400">Strength:</span>
                   <span className="font-medium text-foreground">
                     {Math.round(analysis.summary.strength * 100)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Confidence:</span>
+                  <span className="font-medium text-foreground">
+                    {Math.round(analysis.summary.confidence * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -230,16 +291,22 @@ export default function StockDashboard() {
                     {analysis.summary.momentum}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Volatility:</span>
+                  <span className="font-medium text-foreground capitalize">
+                    {analysis.summary.volatility}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Technical Indicators */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Technical Indicators</h4>
-              <div className="space-y-2 text-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="font-semibold text-foreground mb-4">Technical Indicators</h4>
+              <div className="space-y-3">
                 {analysis.indicators.rsi && analysis.indicators.rsi.length > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">RSI:</span>
+                    <span className="text-gray-600 dark:text-gray-400">RSI (14):</span>
                     <span className="font-medium text-foreground">
                       {Math.round(analysis.indicators.rsi[analysis.indicators.rsi.length - 1].value)}
                     </span>
@@ -261,32 +328,62 @@ export default function StockDashboard() {
                     </span>
                   </div>
                 )}
+                {analysis.indicators.sma && analysis.indicators.sma.length > 0 && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">SMA 20:</span>
+                      <span className="font-medium text-foreground">
+                        ${analysis.indicators.sma.find(s => s.period === 20)?.value.toFixed(2) || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">SMA 50:</span>
+                      <span className="font-medium text-foreground">
+                        ${analysis.indicators.sma.find(s => s.period === 50)?.value.toFixed(2) || 'N/A'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* All Signals */}
-          <div className="mt-6">
-            <h4 className="font-semibold text-foreground mb-3">All Trading Signals</h4>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+          {/* Trading Signals */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h4 className="font-semibold text-foreground mb-4">Trading Signals ({analysis.signals.length})</h4>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
               {analysis.signals.map((signal, idx) => (
-                <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm">
-                  <div>
-                    <span className="font-medium text-foreground">{signal.indicator}</span>
-                    <span className="text-gray-600 dark:text-gray-400 ml-2">
+                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium text-foreground">{signal.indicator}</span>
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        signal.signal === 'buy' 
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          : signal.signal === 'sell'
+                          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'
+                      }`}>
+                        {signal.signal.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                       {signal.description}
-                    </span>
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <span className={`font-medium ${getDirectionColor(signal.signal === 'buy' ? 'bullish' : signal.signal === 'sell' ? 'bearish' : 'neutral')}`}>
-                      {signal.signal.toUpperCase()}
-                    </span>
+                  <div className="text-right ml-4">
+                    <div className="text-sm font-medium text-foreground">
+                      {Math.round(signal.strength * 100)}%
+                    </div>
                     <div className="text-xs text-gray-500">
-                      {Math.round(signal.strength * 100)}% strength
+                      strength
                     </div>
                   </div>
                 </div>
               ))}
+              {analysis.signals.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No trading signals generated</p>
+              )}
             </div>
           </div>
         </div>
