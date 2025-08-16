@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collapsible Sections Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .header {
+            padding: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            border-bottom: 1px solid #eee;
+        }
+        .header:hover {
+            background: #f0f0f0;
+        }
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .icon {
+            font-size: 20px;
+        }
+        .arrow {
+            transition: transform 0.2s;
+        }
+        .arrow.expanded {
+            transform: rotate(180deg);
+        }
+        .content {
+            padding: 16px;
+            display: none;
+        }
+        .content.expanded {
+            display: block;
+        }
+        .badge {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 AI Stock Prediction - Collapsible Sections Demo</h1>
+    <p>This demonstrates the new collapsible functionality for the Detailed Analysis page:</p>
+
+    <!-- Performance Metrics Section -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">📊</span>
+                <div>
+                    <h3>Performance Metrics</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">Risk analysis, volatility, and key performance indicators</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="arrow">▼</span>
+            </div>
+        </div>
+        <div class="content expanded">
+            <h4>AAPL Current Performance</h4>
+            <div style="display: flex; align-items: baseline; gap: 16px; margin-bottom: 16px;">
+                <span style="font-size: 24px; font-weight: bold;">$150.25</span>
+                <span style="color: #059669; font-weight: 500;">+2.15 (+1.45%)</span>
+                <span style="color: #666; font-size: 14px;">Today</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                <div style="background: #f3f4f6; padding: 12px; border-radius: 6px;">
+                    <div style="color: #666; font-size: 12px;">1 Week</div>
+                    <div style="font-weight: 600;">+3.2%</div>
+                </div>
+                <div style="background: #f3f4f6; padding: 12px; border-radius: 6px;">
+                    <div style="color: #666; font-size: 12px;">Volatility</div>
+                    <div style="font-weight: 600;">22.1%</div>
+                </div>
+                <div style="background: #f3f4f6; padding: 12px; border-radius: 6px;">
+                    <div style="color: #666; font-size: 12px;">Volume</div>
+                    <div style="font-weight: 600;">45.2M</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price Analysis & Charts Section -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">📈</span>
+                <div>
+                    <h3>Price Analysis & Charts</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">Technical indicators and price visualization</p>
+                </div>
+            </div>
+            <span class="arrow">▼</span>
+        </div>
+        <div class="content expanded">
+            <h4>Current Price & Performance</h4>
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-between; font-size: 12px; color: #666; margin-bottom: 4px;">
+                    <span>52W Low: $142.50</span>
+                    <span>52W High: $198.23</span>
+                </div>
+                <div style="height: 16px; background: #e5e7eb; border-radius: 8px; position: relative;">
+                    <div style="height: 16px; background: #3b82f6; border-radius: 8px; width: 35%;"></div>
+                    <div style="position: absolute; top: 2px; left: 35%; width: 12px; height: 12px; background: #1e40af; border-radius: 50%; transform: translateX(-50%);"></div>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
+                <div>
+                    <div style="color: #666; font-size: 12px;">Open</div>
+                    <div style="font-weight: 600;">$148.10</div>
+                </div>
+                <div>
+                    <div style="color: #666; font-size: 12px;">High</div>
+                    <div style="font-weight: 600;">$151.45</div>
+                </div>
+                <div>
+                    <div style="color: #666; font-size: 12px;">Low</div>
+                    <div style="font-weight: 600;">$147.80</div>
+                </div>
+                <div>
+                    <div style="color: #666; font-size: 12px;">Volume</div>
+                    <div style="font-weight: 600;">45.2M</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI-Powered Insights Section (Collapsed by default) -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">🤖</span>
+                <div>
+                    <h3>AI-Powered Insights</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">Technical, portfolio, and sentiment analysis powered by AI</p>
+                </div>
+            </div>
+            <span class="arrow" style="transform: rotate(0deg);">▼</span>
+        </div>
+        <div class="content">
+            <div style="display: flex; gap: 4px; background: #f3f4f6; padding: 4px; border-radius: 6px; margin-bottom: 16px;">
+                <button style="flex: 1; padding: 8px; background: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📊 Technical Analysis</button>
+                <button style="flex: 1; padding: 8px; background: transparent; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📈 Portfolio Theory</button>
+                <button style="flex: 1; padding: 8px; background: transparent; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🎯 Market Sentiment</button>
+            </div>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 6px;">
+                <p style="margin: 0; line-height: 1.5;">
+                    <strong>Technical Analysis:</strong> AAPL is showing strong bullish momentum with RSI at 68, indicating healthy buying pressure without being overbought. The MACD histogram is positive and expanding, suggesting continued upward momentum. Bollinger Bands show the stock is trading in the upper half of its range, indicating strength.
+                </p>
+            </div>
+            <div style="margin-top: 12px; padding: 12px; background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 12px;">
+                <strong>AI Disclaimer:</strong> These insights are generated by AI and should be used for informational purposes only.
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Analysis Summary Section -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">🔍</span>
+                <div>
+                    <h3>Technical Analysis Summary</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">Market summary and detailed technical indicators</p>
+                </div>
+            </div>
+            <span class="arrow">▼</span>
+        </div>
+        <div class="content expanded">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                    <h4>Market Summary</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">Overall Sentiment:</span>
+                        <span style="color: #059669; font-weight: 500;">BULLISH</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">Strength:</span>
+                        <span style="font-weight: 500;">78%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">Confidence:</span>
+                        <span style="font-weight: 500;">85%</span>
+                    </div>
+                </div>
+                <div>
+                    <h4>Technical Indicators</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">RSI (14):</span>
+                        <span style="font-weight: 500;">68</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">MACD:</span>
+                        <span style="font-weight: 500;">1.25</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">BB %B:</span>
+                        <span style="font-weight: 500;">72.3%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Signals Section (Collapsed by default) -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">⚡</span>
+                <div>
+                    <h3>Trading Signals</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">5 signals generated from technical analysis</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge">5</span>
+                <span class="arrow" style="transform: rotate(0deg);">▼</span>
+            </div>
+        </div>
+        <div class="content">
+            <h4>Trading Signals</h4>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <div style="display: flex; justify-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span style="font-weight: 500;">RSI</span>
+                            <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500;">BUY</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #666;">RSI indicates oversold conditions with potential for reversal</p>
+                    </div>
+                    <div style="text-align: right; margin-left: 16px;">
+                        <div style="font-weight: 500;">78%</div>
+                        <div style="font-size: 10px; color: #666;">strength</div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span style="font-weight: 500;">MACD</span>
+                            <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500;">BUY</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #666;">MACD line crossed above signal line, indicating bullish momentum</p>
+                    </div>
+                    <div style="text-align: right; margin-left: 16px;">
+                        <div style="font-weight: 500;">85%</div>
+                        <div style="font-size: 10px; color: #666;">strength</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Terms & Definitions (Already has collapsible functionality) -->
+    <div class="section">
+        <div class="header" onclick="toggleSection(this)">
+            <div class="title">
+                <span class="icon">📖</span>
+                <div>
+                    <h3>Financial Terms & Definitions</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">Interactive glossary and educational content</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge">45 terms</span>
+                <span class="arrow" style="transform: rotate(0deg);">▼</span>
+            </div>
+        </div>
+        <div class="content">
+            <p style="margin-bottom: 16px; color: #666;">Search and explore financial terms used in the analysis above.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span>📊</span>
+                        <span style="font-weight: 500; font-size: 14px;">RSI</span>
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: #666;">Relative Strength Index - momentum oscillator</p>
+                </div>
+                <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span>📈</span>
+                        <span style="font-weight: 500; font-size: 14px;">MACD</span>
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: #666;">Moving Average Convergence Divergence</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 32px; padding: 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #0369a1;">✨ Collapsible Sections Benefits</h3>
+        <ul style="margin-bottom: 0; color: #0c4a6e;">
+            <li><strong>Better UX:</strong> Users can focus on sections they care about</li>
+            <li><strong>Reduced clutter:</strong> Long analysis pages become more manageable</li>
+            <li><strong>Progressive disclosure:</strong> Start with key info, expand for details</li>
+            <li><strong>Smart defaults:</strong> Important sections expanded, detailed ones collapsed</li>
+            <li><strong>Consistent design:</strong> All sections follow same collapsible pattern</li>
+        </ul>
+    </div>
+
+    <script>
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.arrow');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                arrow.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                arrow.classList.add('expanded');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -6,6 +6,8 @@ import SimpleStockChart from './SimpleStockChart';
 import PerformanceMetrics from './PerformanceMetrics';
 import StockSearch from './StockSearch';
 import AIInsights from './AIInsights';
+import TermsGlossary from './TermsGlossary';
+import CollapsibleSection from './CollapsibleSection';
 
 interface PredictionResult {
   symbol: string;
@@ -228,17 +230,44 @@ export default function StockDashboard() {
             </button>
           </div>
 
-          {/* Performance Metrics */}
-          <PerformanceMetrics symbol={selectedStock} priceData={priceData} />
+          {/* Performance Metrics - Collapsible */}
+          <CollapsibleSection
+            title="Performance Metrics"
+            subtitle="Risk analysis, volatility, and key performance indicators"
+            icon="📊"
+            defaultExpanded={true}
+          >
+            <PerformanceMetrics symbol={selectedStock} priceData={priceData} />
+          </CollapsibleSection>
 
-          {/* Interactive Charts */}
-          <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+          {/* Interactive Charts - Collapsible */}
+          <CollapsibleSection
+            title="Price Analysis & Charts"
+            subtitle="Technical indicators and price visualization"
+            icon="📈"
+            defaultExpanded={true}
+          >
+            <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+          </CollapsibleSection>
 
-          {/* AI-Powered Insights */}
-          <AIInsights symbol={selectedStock} analysis={analysis} />
+          {/* AI-Powered Insights - Collapsible */}
+          <CollapsibleSection
+            title="AI-Powered Insights"
+            subtitle="Technical, portfolio, and sentiment analysis powered by AI"
+            icon="🤖"
+            defaultExpanded={false}
+          >
+            <AIInsights symbol={selectedStock} analysis={analysis} />
+          </CollapsibleSection>
 
-          {/* Analysis Summary Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Analysis Summary Grid - Collapsible */}
+          <CollapsibleSection
+            title="Technical Analysis Summary"
+            subtitle="Market summary and detailed technical indicators"
+            icon="🔍"
+            defaultExpanded={true}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Market Summary */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <h4 className="font-semibold text-foreground mb-4">Market Summary</h4>
@@ -328,11 +357,19 @@ export default function StockDashboard() {
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          </CollapsibleSection>
 
-          {/* Trading Signals */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="font-semibold text-foreground mb-4">Trading Signals ({analysis.signals.length})</h4>
+          {/* Trading Signals - Collapsible */}
+          <CollapsibleSection
+            title="Trading Signals"
+            subtitle={`${analysis.signals.length} signals generated from technical analysis`}
+            icon="⚡"
+            defaultExpanded={false}
+            badge={analysis.signals.length}
+          >
+            <div>
+            <h4 className="font-semibold text-foreground mb-4">Trading Signals</h4>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {analysis.signals.map((signal, idx) => (
                 <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -367,7 +404,11 @@ export default function StockDashboard() {
                 <p className="text-gray-500 text-center py-4">No trading signals generated</p>
               )}
             </div>
-          </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Terms & Definitions Glossary */}
+          <TermsGlossary />
         </div>
       )}
     </div>

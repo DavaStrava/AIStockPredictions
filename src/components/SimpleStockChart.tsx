@@ -22,6 +22,7 @@
 'use client';
 
 import { PriceData, TechnicalAnalysisResult } from '@/lib/technical-analysis/types';
+import Term from './Term';
 
 /**
  * TYPESCRIPT INTERFACE: Props Definition
@@ -74,13 +75,8 @@ export default function SimpleStockChart({ symbol, priceData, analysis }: Simple
    */
   if (priceData.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          {symbol} Price Chart
-        </h3>
-        <div className="flex items-center justify-center h-64 text-gray-500">
-          No price data available
-        </div>
+      <div className="flex items-center justify-center h-64 text-gray-500">
+        No price data available for {symbol}
       </div>
     );
   }
@@ -149,12 +145,12 @@ export default function SimpleStockChart({ symbol, priceData, analysis }: Simple
    *    - Green for positive price changes, red for negative (financial convention)
    */
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div>
       {/* HEADER SECTION - Price Display with Change Indicators */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-foreground">
-          {symbol} Price Analysis
-        </h3>
+        <h4 className="text-lg font-semibold text-foreground">
+          Current Price & Performance
+        </h4>
         <div className="text-right">
           {/* 
             CURRENT PRICE DISPLAY
@@ -352,7 +348,9 @@ export default function SimpleStockChart({ symbol, priceData, analysis }: Simple
             */}
             {analysis.indicators.rsi && analysis.indicators.rsi.length > 0 && (
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                <div className="text-sm text-gray-600 dark:text-gray-400">RSI</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <Term>RSI</Term>
+                </div>
                 <div className="font-semibold text-foreground">
                   {Math.round(analysis.indicators.rsi[analysis.indicators.rsi.length - 1].value)}
                 </div>
@@ -371,7 +369,9 @@ export default function SimpleStockChart({ symbol, priceData, analysis }: Simple
             */}
             {analysis.indicators.macd && analysis.indicators.macd.length > 0 && (
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                <div className="text-sm text-gray-600 dark:text-gray-400">MACD</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <Term>MACD</Term>
+                </div>
                 <div className="font-semibold text-foreground">
                   {analysis.indicators.macd[analysis.indicators.macd.length - 1].macd.toFixed(2)}
                 </div>

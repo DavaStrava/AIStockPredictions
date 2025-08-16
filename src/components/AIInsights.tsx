@@ -41,10 +41,10 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`/api/insights?symbol=${symbol}&types=technical,portfolio,sentiment`);
       const data = await response.json();
-      
+
       if (data.success) {
         setInsights(data.data.insights);
       } else {
@@ -83,7 +83,7 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
       medium: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
       low: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
     };
-    
+
     return colors[quality as keyof typeof colors] || colors.medium;
   };
 
@@ -95,37 +95,27 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          AI-Powered Insights for {symbol}
-        </h3>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-          <span className="text-gray-600 dark:text-gray-400">Generating AI insights...</span>
-        </div>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+        <span className="text-gray-600 dark:text-gray-400">Generating AI insights for {symbol}...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          AI-Powered Insights for {symbol}
-        </h3>
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="text-red-600 dark:text-red-400 mr-2">⚠️</div>
-            <div>
-              <h4 className="text-sm font-medium text-red-800 dark:text-red-200">AI Analysis Unavailable</h4>
-              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
-              <button
-                onClick={fetchInsights}
-                className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
-              >
-                Try again
-              </button>
-            </div>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="flex items-center">
+          <div className="text-red-600 dark:text-red-400 mr-2">⚠️</div>
+          <div>
+            <h4 className="text-sm font-medium text-red-800 dark:text-red-200">AI Analysis Unavailable for {symbol}</h4>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+            <button
+              onClick={fetchInsights}
+              className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
+            >
+              Try again
+            </button>
           </div>
         </div>
       </div>
@@ -136,11 +126,11 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
   const hasInsights = Object.keys(insights).length > 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-foreground">
-          AI-Powered Insights for {symbol}
-        </h3>
+        <h4 className="text-lg font-semibold text-foreground">
+          Analysis for {symbol}
+        </h4>
         <button
           onClick={fetchInsights}
           className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
@@ -157,11 +147,10 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
               >
                 <span className="mr-2">{tab.icon}</span>
                 {tab.label}
@@ -191,8 +180,8 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
                   </div>
                 </div>
                 <div className="text-xs text-gray-500">
-                  {currentInsight.provider === 'openai' ? 'GPT-4' : 
-                   currentInsight.provider === 'bedrock' ? 'AWS Bedrock' : 'Cached'}
+                  {currentInsight.provider === 'openai' ? 'GPT-4' :
+                    currentInsight.provider === 'bedrock' ? 'AWS Bedrock' : 'Cached'}
                 </div>
               </div>
 
@@ -255,7 +244,7 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
         <div className="flex items-start">
           <div className="text-blue-600 dark:text-blue-400 mr-2">ℹ️</div>
           <div className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>AI Analysis Disclaimer:</strong> These insights are generated by AI and should be used for informational purposes only. 
+            <strong>AI Analysis Disclaimer:</strong> These insights are generated by AI and should be used for informational purposes only.
             Always conduct your own research and consider consulting with financial professionals before making investment decisions.
           </div>
         </div>

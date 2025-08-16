@@ -148,16 +148,16 @@ export default function PerformanceMetrics({ symbol, priceData }: PerformanceMet
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-6">
-        {symbol} Performance Metrics
-      </h3>
-
-      {/* Current Price Section */}
+    <div>
+      {/* Current Price Header */}
       <div className="mb-6">
+        <h4 className="text-lg font-semibold text-foreground mb-4">
+          {symbol} Current Performance
+        </h4>
+
         <div className="flex items-baseline space-x-4">
           <span className="text-3xl font-bold text-foreground">
-            {formatPrice(stats.currentPrice)}
+            ${formatPrice(stats.currentPrice)}
           </span>
           <span className={`text-lg font-medium ${getChangeColor(stats.dayChange)}`}>
             {formatPrice(stats.dayChange)} ({formatPercent(stats.dayChangePercent)})
