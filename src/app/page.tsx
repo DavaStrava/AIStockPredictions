@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import StockDashboard from '@/components/StockDashboard';
-import WatchlistManager from '@/components/WatchlistManager';
+import MockWatchlistManager from '@/components/MockWatchlistManager';
 
 type ActiveTab = 'dashboard' | 'watchlists';
 
@@ -55,7 +55,7 @@ export default function Home() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && <StockDashboard />}
-        {activeTab === 'watchlists' && <WatchlistManager />}
+        {activeTab === 'watchlists' && <MockWatchlistManager />}
       </main>
     </div>
   );

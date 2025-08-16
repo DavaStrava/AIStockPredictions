@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/technical-analysis/types';
-import StockChart from './StockChart';
+import SimpleStockChart from './SimpleStockChart';
 import PerformanceMetrics from './PerformanceMetrics';
 
 interface PredictionResult {
@@ -59,57 +59,28 @@ export default function StockDashboard() {
 
   const fetchDetailedAnalysis = async (symbol: string) => {
     try {
-      const response = await fetch(`/api/analysis?symbol=${symbol}&days=100`);
+      const response = await fetch(`/api/analysis?symbol=${symbol}&period=1year`);
       const data = await response.json();
       
       if (data.success) {
         setAnalysis(data.data);
         setSelectedStock(symbol);
-        // Extract price data from the response metadata if available
-        // For now, we'll generate it again for consistency
-        generatePriceDataForSymbol(symbol);
+        // Use real price data from FMP
+        if (data.priceData && Array.isArray(data.priceData)) {
+          const processedPriceData = data.priceData.map((item: any) => ({
+            ...item,
+            date: new Date(item.date),
+          }));
+          setPriceData(processedPriceData);
+        }
+      } else {
+        console.error('Analysis failed:', data.error);
+        // You could show a user-friendly error message here
       }
     } catch (error) {
       console.error('Failed to fetch analysis:', error);
+      // You could show a user-friendly error message here
     }
-  };
-
-  const generatePriceDataForSymbol = (symbol: string) => {
-    // Generate the same mock data as the API for consistency
-    const data: PriceData[] = [];
-    let basePrice = 100 + Math.random() * 100;
-    
-    for (let i = 0; i < 100; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - (100 - i));
-      
-      const volatility = 0.02;
-      const trend = Math.sin(i / 20) * 0.001;
-      const randomChange = (Math.random() - 0.5) * volatility + trend;
-      
-      const open = basePrice;
-      const change = basePrice * randomChange;
-      const close = basePrice + change;
-      
-      const spread = Math.abs(change) + (Math.random() * basePrice * 0.01);
-      const high = Math.max(open, close) + spread * Math.random();
-      const low = Math.min(open, close) - spread * Math.random();
-      
-      const volume = Math.floor(1000000 + Math.abs(change / basePrice) * 5000000 + Math.random() * 2000000);
-      
-      data.push({
-        date,
-        open,
-        high,
-        low,
-        close,
-        volume,
-      });
-      
-      basePrice = close;
-    }
-    
-    setPriceData(data);
   };
 
   const handleCustomAnalysis = async () => {
@@ -253,7 +224,7 @@ export default function StockDashboard() {
           <PerformanceMetrics symbol={selectedStock} priceData={priceData} />
 
           {/* Interactive Charts */}
-          <StockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+          <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
 
           {/* Analysis Summary Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

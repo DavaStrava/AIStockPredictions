@@ -1,44 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
-import { PriceData, TechnicalSignal } from '@/lib/technical-analysis/types';
-
-// Mock price data generator (same as analysis route)
-function generateMockPriceData(symbol: string, days: number = 100): PriceData[] {
-  const data: PriceData[] = [];
-  let basePrice = 100 + Math.random() * 100;
-  
-  for (let i = 0; i < days; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i));
-    
-    const volatility = 0.02;
-    const trend = Math.sin(i / 20) * 0.001;
-    const randomChange = (Math.random() - 0.5) * volatility + trend;
-    
-    const open = basePrice;
-    const change = basePrice * randomChange;
-    const close = basePrice + change;
-    
-    const spread = Math.abs(change) + (Math.random() * basePrice * 0.01);
-    const high = Math.max(open, close) + spread * Math.random();
-    const low = Math.min(open, close) - spread * Math.random();
-    
-    const volume = Math.floor(1000000 + Math.abs(change / basePrice) * 5000000 + Math.random() * 2000000);
-    
-    data.push({
-      date,
-      open,
-      high,
-      low,
-      close,
-      volume,
-    });
-    
-    basePrice = close;
-  }
-  
-  return data;
-}
+import { TechnicalSignal } from '@/lib/technical-analysis/types';
+import { getFMPProvider, FMPQuote } from '@/lib/data-providers/fmp';
 
 interface PredictionResult {
   symbol: string;
@@ -57,67 +20,133 @@ interface PredictionResult {
     resistance: number;
     stopLoss: number;
   };
+  marketData: {
+    dayChange: number;
+    dayChangePercent: number;
+    volume: number;
+    avgVolume: number;
+    marketCap: number;
+    pe: number;
+  };
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const symbols = searchParams.get('symbols')?.split(',') || ['AAPL', 'GOOGL', 'MSFT'];
+    const symbols = searchParams.get('symbols')?.split(',') || ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA'];
     
+    const fmpProvider = getFMPProvider();
     const predictions: PredictionResult[] = [];
     
+    // Process each symbol
     for (const symbol of symbols) {
-      // Generate mock data and analyze
-      const priceData = generateMockPriceData(symbol.trim(), 100);
-      const engine = new TechnicalAnalysisEngine();
-      const analysis = engine.analyze(priceData, symbol);
-      
-      const currentPrice = priceData[priceData.length - 1].close;
-      const recentPrices = priceData.slice(-20).map(d => d.close);
-      const support = Math.min(...recentPrices);
-      const resistance = Math.max(...recentPrices);
-      
-      // Generate prediction based on analysis
-      const strongSignals = engine.getStrongSignals(analysis, 0.6);
-      const bullishSignals = strongSignals.filter(s => s.signal === 'buy');
-      const bearishSignals = strongSignals.filter(s => s.signal === 'sell');
-      
-      let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-      let targetPrice = currentPrice;
-      let reasoning: string[] = [];
-      
-      if (bullishSignals.length > bearishSignals.length) {
-        direction = 'bullish';
-        targetPrice = currentPrice * (1 + 0.05 + Math.random() * 0.1); // 5-15% upside
-        reasoning = bullishSignals.slice(0, 3).map(s => s.description);
-      } else if (bearishSignals.length > bullishSignals.length) {
-        direction = 'bearish';
-        targetPrice = currentPrice * (1 - 0.05 - Math.random() * 0.1); // 5-15% downside
-        reasoning = bearishSignals.slice(0, 3).map(s => s.description);
-      } else {
-        reasoning = ['Mixed signals from technical indicators', 'Market consolidation phase', 'Awaiting clearer directional bias'];
+      try {
+        const cleanSymbol = symbol.trim().toUpperCase();
+        
+        // Fetch real data in parallel
+        const [historicalData, quote] = await Promise.all([
+          fmpProvider.getHistoricalData(cleanSymbol, '6month'),
+          fmpProvider.getQuote(cleanSymbol)
+        ]);
+        
+        if (historicalData.length === 0) {
+          console.warn(`No historical data for ${cleanSymbol}, skipping`);
+          continue;
+        }
+        
+        // Perform technical analysis
+        const engine = new TechnicalAnalysisEngine();
+        const analysis = engine.analyze(historicalData, cleanSymbol);
+        
+        // Calculate support and resistance from recent data
+        const recentPrices = historicalData.slice(-20).map(d => d.close);
+        const support = Math.min(...recentPrices);
+        const resistance = Math.max(...recentPrices);
+        
+        // Generate prediction based on analysis
+        const strongSignals = engine.getStrongSignals(analysis, 0.6);
+        const bullishSignals = strongSignals.filter(s => s.signal === 'buy');
+        const bearishSignals = strongSignals.filter(s => s.signal === 'sell');
+        
+        let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        let targetPrice = quote.price;
+        let reasoning: string[] = [];
+        
+        // Determine direction based on signals and overall sentiment
+        const sentimentScore = analysis.summary.strength;
+        const overallSentiment = analysis.summary.overall;
+        
+        if (overallSentiment === 'bullish' && bullishSignals.length > bearishSignals.length) {
+          direction = 'bullish';
+          targetPrice = quote.price * (1 + 0.03 + Math.random() * 0.07); // 3-10% upside
+          reasoning = [
+            `Strong bullish sentiment (${Math.round(sentimentScore * 100)}% strength)`,
+            ...bullishSignals.slice(0, 2).map(s => s.description)
+          ];
+        } else if (overallSentiment === 'bearish' && bearishSignals.length > bullishSignals.length) {
+          direction = 'bearish';
+          targetPrice = quote.price * (1 - 0.03 - Math.random() * 0.07); // 3-10% downside
+          reasoning = [
+            `Strong bearish sentiment (${Math.round(sentimentScore * 100)}% strength)`,
+            ...bearishSignals.slice(0, 2).map(s => s.description)
+          ];
+        } else {
+          reasoning = [
+            'Mixed signals from technical indicators',
+            `Current trend: ${analysis.summary.trendDirection}`,
+            `Momentum: ${analysis.summary.momentum}`
+          ];
+        }
+        
+        // Determine volatility category
+        let volatility: 'low' | 'medium' | 'high' = 'medium';
+        const volatilityLevel = analysis.summary.volatility;
+        if (volatilityLevel === 'low') volatility = 'low';
+        else if (volatilityLevel === 'high') volatility = 'high';
+        
+        const prediction: PredictionResult = {
+          symbol: cleanSymbol,
+          currentPrice: Math.round(quote.price * 100) / 100,
+          prediction: {
+            direction,
+            confidence: analysis.summary.confidence,
+            targetPrice: Math.round(targetPrice * 100) / 100,
+            timeframe: '1-2 weeks',
+            reasoning,
+          },
+          signals: strongSignals.slice(0, 5), // Top 5 signals
+          riskMetrics: {
+            volatility,
+            support: Math.round(support * 100) / 100,
+            resistance: Math.round(resistance * 100) / 100,
+            stopLoss: Math.round(quote.price * 0.95 * 100) / 100, // 5% stop loss
+          },
+          marketData: {
+            dayChange: quote.change || 0,
+            dayChangePercent: quote.changesPercentage || 0,
+            volume: quote.volume || 0,
+            avgVolume: quote.avgVolume || 0,
+            marketCap: quote.marketCap || 0,
+            pe: quote.pe || 0,
+          },
+        };
+        
+        predictions.push(prediction);
+        
+      } catch (error) {
+        console.error(`Failed to process symbol ${symbol}:`, error);
+        // Continue with other symbols
       }
-      
-      const prediction: PredictionResult = {
-        symbol,
-        currentPrice: Math.round(currentPrice * 100) / 100,
-        prediction: {
-          direction,
-          confidence: analysis.summary.confidence,
-          targetPrice: Math.round(targetPrice * 100) / 100,
-          timeframe: '1-2 weeks',
-          reasoning,
+    }
+    
+    if (predictions.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No valid predictions could be generated for the requested symbols',
         },
-        signals: strongSignals.slice(0, 5), // Top 5 signals
-        riskMetrics: {
-          volatility: analysis.summary.volatility,
-          support: Math.round(support * 100) / 100,
-          resistance: Math.round(resistance * 100) / 100,
-          stopLoss: Math.round(currentPrice * 0.95 * 100) / 100, // 5% stop loss
-        },
-      };
-      
-      predictions.push(prediction);
+        { status: 404 }
+      );
     }
     
     return NextResponse.json({
@@ -125,19 +154,34 @@ export async function GET(request: NextRequest) {
       data: predictions,
       metadata: {
         timestamp: new Date().toISOString(),
-        symbolsAnalyzed: symbols.length,
+        symbolsRequested: symbols.length,
+        symbolsProcessed: predictions.length,
+        dataSource: 'Financial Modeling Prep',
       },
     });
     
   } catch (error) {
     console.error('Predictions API error:', error);
+    
+    let errorMessage = 'Failed to generate predictions';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('FMP API error')) {
+        errorMessage = 'Failed to fetch market data. Please try again later.';
+        statusCode = 503;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to generate predictions',
+        error: errorMessage,
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }

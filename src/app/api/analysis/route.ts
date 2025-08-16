@@ -1,134 +1,135 @@
-// Next.js API Route for Technical Analysis
+// Next.js API Route for Technical Analysis with Real Market Data
 // This file creates REST API endpoints using Next.js App Router's route handlers
 // The file name 'route.ts' in the /api/analysis/ directory creates the endpoint /api/analysis
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
 import { PriceData } from '@/lib/technical-analysis/types';
-
-/**
- * Mock Price Data Generator for Development and Demo
- * 
- * In a production app, this would be replaced with real market data from APIs like:
- * - Alpha Vantage, Yahoo Finance, IEX Cloud, or Bloomberg
- * 
- * This function simulates realistic stock price movements using:
- * - Random walk with controlled volatility
- * - Trending components using sine waves
- * - Realistic OHLCV (Open, High, Low, Close, Volume) relationships
- * 
- * @param symbol - Stock symbol (e.g., 'AAPL', 'GOOGL')
- * @param days - Number of historical days to generate
- * @returns Array of PriceData objects with realistic market data
- */
-function generateMockPriceData(symbol: string, days: number = 100): PriceData[] {
-  const data: PriceData[] = [];
-  let basePrice = 100 + Math.random() * 100; // Random starting price between $100-$200
-  
-  // Generate historical data by working backwards from today
-  for (let i = 0; i < days; i++) {
-    // Create date for each day, starting from 'days' ago and moving forward
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i)); // Subtract decreasing days to go chronologically
-    
-    // Simulate realistic price movements using multiple components:
-    const volatility = 0.02; // 2% daily volatility (typical for stocks)
-    const trend = Math.sin(i / 20) * 0.001; // Sine wave creates trending periods (0.1% trend component)
-    const randomChange = (Math.random() - 0.5) * volatility + trend; // Random walk + trend
-    
-    // Calculate OHLC (Open, High, Low, Close) prices
-    const open = basePrice; // Open price is previous day's close
-    const change = basePrice * randomChange; // Dollar amount of change
-    const close = basePrice + change; // New closing price
-    
-    // Generate realistic high/low prices that respect market logic:
-    // - High must be >= max(open, close)
-    // - Low must be <= min(open, close)
-    const spread = Math.abs(change) + (Math.random() * basePrice * 0.01); // Intraday range
-    const high = Math.max(open, close) + spread * Math.random(); // High extends above
-    const low = Math.min(open, close) - spread * Math.random(); // Low extends below
-    
-    // Generate volume with realistic patterns:
-    // - Base volume around 1M shares
-    // - Higher volume on larger price moves (volatility attracts trading)
-    // - Random component for daily variation
-    const volume = Math.floor(1000000 + Math.abs(change / basePrice) * 5000000 + Math.random() * 2000000);
-    
-    // Create PriceData object conforming to our technical analysis interface
-    data.push({
-      date,   // JavaScript Date object
-      open,   // Opening price
-      high,   // Highest price during the day
-      low,    // Lowest price during the day
-      close,  // Closing price (most important for technical analysis)
-      volume, // Number of shares traded
-    });
-    
-    // Update base price for next iteration (creates price continuity)
-    basePrice = close;
-  }
-  
-  return data; // Return chronologically ordered array of price data
-}
+import { getFMPProvider } from '@/lib/data-providers/fmp';
 
 /**
  * GET Handler - Handles HTTP GET requests to /api/analysis
  * 
- * This endpoint provides technical analysis for a stock symbol using mock data.
- * In Next.js App Router, named export functions (GET, POST, PUT, DELETE) 
- * automatically become HTTP method handlers.
+ * This endpoint provides technical analysis for a stock symbol using real market data
+ * from Financial Modeling Prep (FMP) API. This is a significant upgrade from mock data
+ * to production-ready real-time market information.
  * 
  * Query Parameters:
- * - symbol: Stock symbol (default: 'AAPL')
- * - days: Number of historical days (default: 100)
+ * - symbol: Stock symbol (default: 'AAPL') - e.g., 'GOOGL', 'MSFT', 'TSLA'
+ * - period: Time period for historical data (default: '1year') - e.g., '1month', '3months', '1year'
  * 
- * Example: GET /api/analysis?symbol=GOOGL&days=50
+ * Example: GET /api/analysis?symbol=GOOGL&period=6months
+ * 
+ * Key Changes from Mock Version:
+ * - Real market data instead of generated mock data
+ * - External API integration with error handling
+ * - Current quote information for additional context
+ * - Data source attribution and metadata
  */
 export async function GET(request: NextRequest) {
   try {
-    // Extract query parameters from the URL
-    // NextRequest provides a clean way to access URL parameters
+    // Extract query parameters from the URL using Next.js URL parsing
+    // NextRequest provides a clean way to access URL search parameters
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol') || 'AAPL'; // Default to Apple stock
-    const days = parseInt(searchParams.get('days') || '100'); // Default to 100 days
+    const period = searchParams.get('period') || '1year'; // Default to 1 year of data
     
-    // Generate mock data for demonstration
-    // In production, this would fetch real data from market data APIs
-    const priceData = generateMockPriceData(symbol, days);
+    // Initialize the Financial Modeling Prep data provider
+    // This abstracts the complexity of API calls and data formatting
+    const fmpProvider = getFMPProvider();
+    
+    // Fetch real historical market data from FMP API
+    // This replaces the mock data generation with actual market information
+    // The data includes OHLCV (Open, High, Low, Close, Volume) for technical analysis
+    const priceData = await fmpProvider.getHistoricalData(
+      symbol.toUpperCase(), // Normalize symbol to uppercase (market standard)
+      period as any // Cast to satisfy TypeScript (period validation happens in provider)
+    );
+    
+    // Validate that we received data from the external API
+    // Empty data could indicate invalid symbol, API issues, or no trading history
+    if (priceData.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `No historical data found for symbol: ${symbol}`,
+        },
+        { status: 404 } // HTTP 404 Not Found - appropriate for missing data
+      );
+    }
     
     // Initialize the technical analysis engine with default configuration
-    // The engine orchestrates multiple technical indicators (RSI, MACD, etc.)
+    // The engine orchestrates multiple technical indicators (RSI, MACD, Bollinger Bands, etc.)
     const engine = new TechnicalAnalysisEngine();
     
-    // Perform comprehensive technical analysis
-    // This calculates all indicators and generates trading signals
-    const analysis = engine.analyze(priceData, symbol);
+    // Perform comprehensive technical analysis on real market data
+    // This calculates all indicators and generates trading signals based on actual price movements
+    const analysis = engine.analyze(priceData, symbol.toUpperCase());
     
-    // Return successful response with analysis results
+    // Fetch current market quote for real-time context
+    // This provides additional information like current price, market cap, P/E ratio
+    // We use a separate try-catch to ensure analysis continues even if quote fails
+    let currentQuote = null;
+    try {
+      currentQuote = await fmpProvider.getQuote(symbol.toUpperCase());
+    } catch (error) {
+      // Log warning but don't fail the entire request
+      // This demonstrates graceful degradation - core functionality works even if extras fail
+      console.warn('Failed to fetch current quote:', error);
+    }
+    
+    // Return comprehensive response with analysis results and metadata
     // NextResponse.json() automatically sets Content-Type: application/json
     return NextResponse.json({
       success: true,
-      data: analysis, // Complete technical analysis results
+      data: analysis, // Complete technical analysis results (indicators, signals, summary)
+      priceData: priceData, // Include raw price data for frontend charting
+      currentQuote: currentQuote, // Real-time quote information (if available)
       metadata: {
-        symbol,
-        dataPoints: priceData.length,
+        symbol: symbol.toUpperCase(), // Normalized symbol
+        dataPoints: priceData.length, // Number of historical data points analyzed
+        period: period, // Time period requested
+        dataSource: 'Financial Modeling Prep', // Attribution for data source
         analysisTimestamp: new Date().toISOString(), // When analysis was performed
+        dateRange: {
+          // Date range of the historical data for frontend display
+          from: priceData[0]?.date, // Oldest data point
+          to: priceData[priceData.length - 1]?.date, // Most recent data point
+        },
       },
     });
     
   } catch (error) {
-    // Error handling: Log the error and return user-friendly response
+    // Comprehensive error handling with logging for debugging
     console.error('Analysis API error:', error);
     
-    // Return error response with 500 status code
+    // Provide user-friendly error messages based on error type
+    // This improves user experience by giving actionable feedback
+    let errorMessage = 'Failed to perform technical analysis';
+    let statusCode = 500; // Default to Internal Server Error
+    
+    // Type-safe error handling - check if error is an Error instance
+    if (error instanceof Error) {
+      // Parse different types of errors and provide appropriate responses
+      if (error.message.includes('FMP API error')) {
+        errorMessage = 'Failed to fetch market data. Please check the symbol or try again later.';
+        statusCode = 503; // Service Unavailable - external API issue
+      } else if (error.message.includes('No quote data found')) {
+        errorMessage = `Symbol "${searchParams.get('symbol')}" not found. Please check the symbol and try again.`;
+        statusCode = 404; // Not Found - invalid symbol
+      } else {
+        errorMessage = error.message; // Use the actual error message for other cases
+      }
+    }
+    
+    // Return structured error response with appropriate HTTP status code
     return NextResponse.json(
       {
-        success: false,
-        error: 'Failed to perform technical analysis',
-        // Type-safe error message extraction
-        details: error instanceof Error ? error.message : 'Unknown error',
+        success: false, // Consistent response format for error handling
+        error: errorMessage, // User-friendly error message
+        details: error instanceof Error ? error.message : 'Unknown error', // Technical details for debugging
       },
-      { status: 500 } // HTTP 500 Internal Server Error
+      { status: statusCode } // HTTP status code matching the error type
     );
   }
 }
@@ -137,15 +138,25 @@ export async function GET(request: NextRequest) {
  * POST Handler - Handles HTTP POST requests to /api/analysis
  * 
  * This endpoint allows clients to submit their own price data for analysis.
- * Useful for:
- * - Analyzing custom datasets
- * - Testing with specific market scenarios
- * - Integration with external data sources
+ * This is useful for:
+ * - Analyzing custom datasets or backtesting scenarios
+ * - Testing with specific market conditions
+ * - Integration with other data sources beyond FMP
+ * - Offline analysis when external APIs are unavailable
  * 
  * Request Body:
  * - symbol: Stock symbol string
- * - priceData: Array of OHLCV data objects
- * - config: Optional technical analysis configuration
+ * - priceData: Array of OHLCV data objects with date strings
+ * - config: Optional technical analysis configuration (indicator parameters)
+ * 
+ * Example Request Body:
+ * {
+ *   "symbol": "AAPL",
+ *   "priceData": [
+ *     { "date": "2024-01-01", "open": 100, "high": 105, "low": 98, "close": 103, "volume": 1000000 }
+ *   ],
+ *   "config": { "rsi": { "period": 21 } }
+ * }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -162,13 +173,13 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Invalid request body. Expected symbol and priceData array.',
         },
-        { status: 400 } // HTTP 400 Bad Request
+        { status: 400 } // HTTP 400 Bad Request - client error
       );
     }
     
     // Data transformation: Convert date strings to Date objects
-    // JSON doesn't have a native Date type, so dates come as strings
-    // Our technical analysis engine expects JavaScript Date objects
+    // JSON doesn't have a native Date type, so dates come as ISO strings
+    // Our technical analysis engine expects JavaScript Date objects for calculations
     const processedData: PriceData[] = priceData.map((item: any) => ({
       ...item, // Spread operator copies all properties (open, high, low, close, volume)
       date: new Date(item.date), // Convert ISO string to Date object
@@ -176,47 +187,59 @@ export async function POST(request: NextRequest) {
     
     // Initialize engine with custom configuration if provided
     // This allows clients to customize indicator parameters (e.g., RSI period, MACD settings)
+    // If no config provided, uses default settings from TechnicalAnalysisEngine
     const engine = new TechnicalAnalysisEngine(config);
     
     // Perform comprehensive technical analysis on the provided data
+    // Same analysis logic as GET endpoint, but using client-provided data
     const analysis = engine.analyze(processedData, symbol);
     
     // Return successful response with analysis results
-    // Same response format as GET endpoint for consistency
+    // Same response format as GET endpoint for API consistency
     return NextResponse.json({
       success: true,
       data: analysis, // Complete technical analysis results
       metadata: {
-        symbol,
+        symbol, // Stock symbol as provided by client
         dataPoints: processedData.length, // Number of data points analyzed
         analysisTimestamp: new Date().toISOString(), // When analysis was performed
+        dataSource: 'Client Provided', // Indicate this was custom data
       },
     });
     
   } catch (error) {
-    // Consistent error handling across both endpoints
+    // Consistent error handling across both GET and POST endpoints
     console.error('Analysis API error:', error);
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to perform technical analysis',
+        // Type-safe error message extraction
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 } // HTTP 500 Internal Server Error
     );
   }
 }
 
 /*
+ * Key Improvements in This Version:
+ * 
+ * 1. REAL DATA INTEGRATION: Replaced mock data with actual market data from FMP API
+ * 2. ENHANCED ERROR HANDLING: Specific error messages for different failure scenarios
+ * 3. GRACEFUL DEGRADATION: Core analysis works even if optional features (quotes) fail
+ * 4. COMPREHENSIVE METADATA: Includes data source, date ranges, and analysis context
+ * 5. PRODUCTION READY: Proper external API integration with error recovery
+ * 
  * API Design Patterns Demonstrated:
  * 
- * 1. RESTful Design: GET for retrieval, POST for data submission
- * 2. Consistent Response Format: All responses include success/error status
- * 3. Input Validation: Check required fields and data types
- * 4. Error Handling: Graceful error responses with appropriate HTTP status codes
+ * 1. RESTful Design: GET for data retrieval, POST for custom data submission
+ * 2. Consistent Response Format: All responses include success/error status and metadata
+ * 3. Input Validation: Thorough checking of required fields and data types
+ * 4. Error Classification: Different HTTP status codes for different error types
  * 5. Type Safety: TypeScript interfaces ensure data structure consistency
  * 6. Separation of Concerns: Business logic in separate modules, API handles HTTP concerns
- * 7. Metadata: Include useful information about the analysis (timestamp, data points)
+ * 7. External API Integration: Proper handling of third-party service dependencies
  * 
  * Next.js App Router Features Used:
  * - Route Handlers: Named export functions become HTTP endpoints
