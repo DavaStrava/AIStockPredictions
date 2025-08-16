@@ -6,6 +6,8 @@ import { analyzeBollingerBands } from './indicators/bollinger-bands';
 import { analyzeMovingAverages } from './indicators/moving-averages';
 import { analyzeMomentum } from './indicators/momentum';
 import { analyzeVolume } from './indicators/volume';
+import { analyzeStochastic } from './indicators/stochastic';
+import { analyzeWilliamsR } from './indicators/williams-r';
 
 /**
  * Comprehensive Technical Analysis Engine
@@ -148,16 +150,25 @@ export class TechnicalAnalysisEngine {
         }
       }
       
-      // Momentum Analysis - Advanced Momentum Indicators
-      // Includes Stochastic, Williams %R, and ADX
-      if (this.config.stochastic || this.config.williamsR || this.config.adx) {
+      // Stochastic Oscillator Analysis
+      if (this.config.stochastic && sortedData.length >= this.config.stochastic.kPeriod + this.config.stochastic.dPeriod) {
+        const stochasticAnalysis = analyzeStochastic(sortedData, symbol, this.config.stochastic);
+        result.indicators.stochastic = stochasticAnalysis.results;
+        result.signals.push(...stochasticAnalysis.signals);
+      }
+      
+      // Williams %R Analysis
+      if (this.config.williamsR && sortedData.length >= this.config.williamsR.period) {
+        const williamsRAnalysis = analyzeWilliamsR(sortedData, symbol, this.config.williamsR);
+        result.indicators.williamsR = williamsRAnalysis.results;
+        result.signals.push(...williamsRAnalysis.signals);
+      }
+      
+      // Momentum Analysis - ADX and other momentum indicators
+      if (this.config.adx) {
         const momentumAnalysis = analyzeMomentum(sortedData, symbol, {
-          stochastic: this.config.stochastic,
-          williamsR: this.config.williamsR,
           adx: this.config.adx,
         });
-        result.indicators.stochastic = momentumAnalysis.stochastic;
-        result.indicators.williamsR = momentumAnalysis.williamsR;
         result.indicators.adx = momentumAnalysis.adx;
         result.signals.push(...momentumAnalysis.signals);
       }

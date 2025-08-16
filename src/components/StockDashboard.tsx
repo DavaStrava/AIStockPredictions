@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/technical-analysis/types';
 import SimpleStockChart from './SimpleStockChart';
 import PerformanceMetrics from './PerformanceMetrics';
+import StockSearch from './StockSearch';
 
 interface PredictionResult {
   symbol: string;
@@ -117,30 +118,36 @@ export default function StockDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header with custom analysis */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Stock Predictions</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            AI-powered technical analysis with real-time insights
-          </p>
+      {/* Header with smart search */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Stock Predictions</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              AI-powered technical analysis with real market data
+            </p>
+          </div>
+          
+          <div className="w-full sm:w-96">
+            <StockSearch 
+              onSelectStock={(symbol) => fetchDetailedAnalysis(symbol)}
+              placeholder="Search any stock (e.g., Apple, TSLA, Microsoft...)"
+            />
+          </div>
         </div>
         
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Enter symbol (e.g., AAPL)"
-            value={customSymbol}
-            onChange={(e) => setCustomSymbol(e.target.value.toUpperCase())}
-            onKeyPress={(e) => e.key === 'Enter' && handleCustomAnalysis()}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-foreground text-sm"
-          />
-          <button
-            onClick={handleCustomAnalysis}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
-          >
-            Analyze
-          </button>
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Popular:</span>
+          {['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'META'].map((symbol) => (
+            <button
+              key={symbol}
+              onClick={() => fetchDetailedAnalysis(symbol)}
+              className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              {symbol}
+            </button>
+          ))}
         </div>
       </div>
 
