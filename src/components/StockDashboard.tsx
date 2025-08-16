@@ -5,6 +5,7 @@ import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/techn
 import SimpleStockChart from './SimpleStockChart';
 import PerformanceMetrics from './PerformanceMetrics';
 import StockSearch from './StockSearch';
+import AIInsights from './AIInsights';
 
 interface PredictionResult {
   symbol: string;
@@ -232,6 +233,9 @@ export default function StockDashboard() {
 
           {/* Interactive Charts */}
           <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+
+          {/* AI-Powered Insights */}
+          <AIInsights symbol={selectedStock} analysis={analysis} />
 
           {/* Analysis Summary Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
