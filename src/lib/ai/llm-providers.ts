@@ -349,7 +349,7 @@ export class OpenAIProvider implements LLMProvider {
 
     // Robust error reporting (include a snippet of body for debugging)
     if (!res.ok) {
-      const text = await res.text().catch(()=>'');
+      const text = await res.text().catch(() => '');
       throw new Error(`OpenAI API error ${res.status}: ${text.slice(0, 200)}`);
     }
 
