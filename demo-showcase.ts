@@ -2,6 +2,33 @@ import { generateSamplePriceData } from './src/lib/technical-analysis/utils';
 import { TechnicalAnalysisEngine } from './src/lib/technical-analysis/engine';
 import { PriceData } from './src/lib/technical-analysis/types';
 
+/**
+ * TECHNICAL ANALYSIS ENGINE SHOWCASE
+ * 
+ * This demo file showcases the comprehensive technical analysis engine and demonstrates
+ * important TypeScript patterns for handling complex data structures safely.
+ * 
+ * 🔧 RECENT IMPROVEMENTS - TYPE SAFETY ENHANCEMENTS:
+ * This file was recently updated to demonstrate proper type safety when working with
+ * union types and dynamic object properties. The key improvement is the addition of
+ * type guards using the `'property' in object` pattern.
+ * 
+ * 🎯 LEARNING OBJECTIVES:
+ * 1. Understanding union types and why they require careful handling
+ * 2. Learning the type guard pattern for runtime type safety
+ * 3. Seeing how TypeScript's type system prevents runtime errors
+ * 4. Understanding the trade-offs between different type safety approaches
+ * 
+ * 💡 KEY CONCEPTS DEMONSTRATED:
+ * - Type Guards: Using `'property' in object` to safely check property existence
+ * - Union Types: Handling objects that could be one of several different types
+ * - Runtime Safety: Preventing crashes from accessing undefined properties
+ * - Type Narrowing: How TypeScript infers more specific types inside type guards
+ * 
+ * This pattern is essential for production applications where data structures
+ * may vary or come from external sources (APIs, databases, user input).
+ */
+
 console.log('🚀 TECHNICAL ANALYSIS ENGINE SHOWCASE');
 console.log('=====================================\n');
 
@@ -112,6 +139,36 @@ console.log(`Trend Direction: ${analysis.summary.trendDirection.toUpperCase()}`)
 console.log(`Momentum: ${analysis.summary.momentum.toUpperCase()}`);
 console.log(`Volatility: ${analysis.summary.volatility.toUpperCase()}\n`);
 
+/**
+ * FINANCIAL DATA TYPE SAFETY - WHY IT MATTERS
+ * 
+ * In financial analysis applications, type safety is particularly critical because:
+ * 
+ * 🏦 FINANCIAL ACCURACY:
+ * - Wrong calculations can lead to significant financial losses
+ * - Each indicator has specific data requirements and output formats
+ * - Missing or incorrect data should fail gracefully, not crash the system
+ * 
+ * 📊 INDICATOR DIVERSITY:
+ * - Different technical indicators return completely different data structures
+ * - RSI returns a single value (0-100), MACD returns three values (macd, signal, histogram)
+ * - Bollinger Bands return bands + statistical measures, volume indicators return trends
+ * 
+ * 🔄 DYNAMIC ANALYSIS:
+ * - The analysis engine can be configured to run different combinations of indicators
+ * - Some indicators might fail due to insufficient data or market conditions
+ * - The system must handle partial results gracefully
+ * 
+ * 🚨 PRODUCTION RELIABILITY:
+ * - Financial applications run 24/7 and process real-time market data
+ * - Type errors in production could cause trading system failures
+ * - Defensive programming prevents cascading failures
+ * 
+ * The type guard pattern below ensures that we only access properties that actually
+ * exist on each indicator result, preventing runtime errors and ensuring reliable
+ * financial calculations.
+ */
+
 // Indicator Summary
 console.log('🔍 TECHNICAL INDICATORS SUMMARY');
 console.log('-------------------------------');
@@ -119,28 +176,94 @@ Object.entries(analysis.indicators).forEach(([indicator, data]) => {
   if (data && Array.isArray(data) && data.length > 0) {
     const latest = data[data.length - 1];
     
+    /**
+     * TYPE SAFETY PATTERN: Property Existence Checking
+     * 
+     * The changes below demonstrate a crucial TypeScript pattern for handling
+     * union types and ensuring type safety when working with objects that may
+     * have different shapes or properties.
+     * 
+     * 🔍 PROBLEM BEING SOLVED:
+     * The `latest` variable has a union type - it could be any of several different
+     * indicator result types (RSIResult, MACDResult, BollingerBandsResult, etc.).
+     * Each type has different properties, so we can't safely access properties
+     * without first checking if they exist.
+     * 
+     * 🛡️ TYPE GUARD PATTERN:
+     * Using the `'propertyName' in object` syntax creates a "type guard" that:
+     * 1. Checks if the property exists on the object at runtime
+     * 2. Tells TypeScript that inside the if block, the object definitely has that property
+     * 3. Prevents runtime errors from accessing undefined properties
+     * 4. Provides better IntelliSense and compile-time error checking
+     * 
+     * 💡 WHY THIS MATTERS:
+     * - RUNTIME SAFETY: Prevents crashes from accessing undefined properties
+     * - TYPE NARROWING: TypeScript knows the exact type inside each if block
+     * - MAINTAINABILITY: Code is self-documenting about what properties it expects
+     * - DEBUGGING: Clear error boundaries if data structure changes
+     * 
+     * 🔧 ALTERNATIVE APPROACHES:
+     * - Type assertions (latest as RSIResult) - less safe, bypasses type checking
+     * - Optional chaining (latest.value?.toFixed) - handles undefined but not type safety
+     * - Discriminated unions - more complex but provides better type safety
+     * 
+     * This pattern is essential when working with:
+     * - API responses with varying structures
+     * - Database results with optional fields
+     * - Configuration objects with different schemas
+     * - Any situation where object shape isn't guaranteed
+     */
+    
     switch (indicator) {
       case 'rsi':
-        console.log(`RSI (14): ${latest.value.toFixed(2)} - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        // Type guard: Check if this object has RSI-specific properties
+        // This ensures we're working with an RSIResult type inside the if block
+        if ('value' in latest && 'overbought' in latest && 'oversold' in latest) {
+          console.log(`RSI (14): ${latest.value.toFixed(2)} - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        }
         break;
       case 'macd':
-        console.log(`MACD: ${latest.macd.toFixed(4)} | Signal: ${latest.signal.toFixed(4)} | Histogram: ${latest.histogram.toFixed(4)}`);
+        // Type guard: Check if this object has MACD-specific properties
+        // MACD results have macd, signal, and histogram properties
+        if ('macd' in latest && 'signal' in latest && 'histogram' in latest) {
+          console.log(`MACD: ${latest.macd.toFixed(4)} | Signal: ${latest.signal.toFixed(4)} | Histogram: ${latest.histogram.toFixed(4)}`);
+        }
         break;
       case 'bollingerBands':
-        console.log(`Bollinger Bands: Upper ${latest.upper.toFixed(2)} | Middle ${latest.middle.toFixed(2)} | Lower ${latest.lower.toFixed(2)}`);
-        console.log(`  %B: ${(latest.percentB * 100).toFixed(1)}% | Bandwidth: ${(latest.bandwidth * 100).toFixed(2)}% | Squeeze: ${latest.squeeze ? 'YES' : 'NO'}`);
+        // Type guard: Check if this object has Bollinger Bands-specific properties
+        // Bollinger Bands have multiple properties, so we check for all required ones
+        if ('upper' in latest && 'middle' in latest && 'lower' in latest && 'percentB' in latest && 'bandwidth' in latest && 'squeeze' in latest) {
+          console.log(`Bollinger Bands: Upper ${latest.upper.toFixed(2)} | Middle ${latest.middle.toFixed(2)} | Lower ${latest.lower.toFixed(2)}`);
+          console.log(`  %B: ${(latest.percentB * 100).toFixed(1)}% | Bandwidth: ${(latest.bandwidth * 100).toFixed(2)}% | Squeeze: ${latest.squeeze ? 'YES' : 'NO'}`);
+        }
         break;
       case 'stochastic':
-        console.log(`Stochastic: %K ${latest.k.toFixed(1)} | %D ${latest.d.toFixed(1)} - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        // Type guard: Check if this object has Stochastic-specific properties
+        // Stochastic oscillator has %K and %D values plus overbought/oversold flags
+        if ('k' in latest && 'd' in latest && 'overbought' in latest && 'oversold' in latest) {
+          console.log(`Stochastic: %K ${latest.k.toFixed(1)} | %D ${latest.d.toFixed(1)} - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        }
         break;
       case 'williamsR':
-        console.log(`Williams %R: ${latest.value.toFixed(1)}% - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        // Type guard: Check if this object has Williams %R-specific properties
+        // Williams %R is similar to RSI but uses different calculation and range
+        if ('value' in latest && 'overbought' in latest && 'oversold' in latest) {
+          console.log(`Williams %R: ${latest.value.toFixed(1)}% - ${latest.overbought ? 'OVERBOUGHT' : latest.oversold ? 'OVERSOLD' : 'NEUTRAL'}`);
+        }
         break;
       case 'adx':
-        console.log(`ADX: ${latest.adx.toFixed(1)} (${latest.trend.toUpperCase()}) | +DI: ${latest.plusDI.toFixed(1)} | -DI: ${latest.minusDI.toFixed(1)} | Direction: ${latest.direction.toUpperCase()}`);
+        // Type guard: Check if this object has ADX-specific properties
+        // ADX (Average Directional Index) has multiple directional components
+        if ('adx' in latest && 'trend' in latest && 'plusDI' in latest && 'minusDI' in latest && 'direction' in latest) {
+          console.log(`ADX: ${latest.adx.toFixed(1)} (${latest.trend.toUpperCase()}) | +DI: ${latest.plusDI.toFixed(1)} | -DI: ${latest.minusDI.toFixed(1)} | Direction: ${latest.direction.toUpperCase()}`);
+        }
         break;
       case 'obv':
-        console.log(`OBV: ${latest.value.toFixed(0)} - Trend: ${latest.trend.toUpperCase()}`);
+        // Type guard: Check if this object has OBV-specific properties
+        // OBV (On-Balance Volume) has a value and trend direction
+        if ('value' in latest && 'trend' in latest) {
+          console.log(`OBV: ${latest.value.toFixed(0)} - Trend: ${latest.trend.toUpperCase()}`);
+        }
         break;
     }
   }

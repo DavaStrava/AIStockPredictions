@@ -222,8 +222,8 @@ export class PortfolioAnalyzer {
    * Calculate Conditional Value at Risk (CVaR)
    */
   static calculateCVaR(returns: number[], confidenceLevel: number = 0.05): number {
-    const var = this.calculateVaR(returns, confidenceLevel);
-    const tailReturns = returns.filter(r => r <= var);
+    const valueAtRisk = this.calculateVaR(returns, confidenceLevel);
+    const tailReturns = returns.filter(r => r <= valueAtRisk);
     return tailReturns.reduce((sum, r) => sum + r, 0) / tailReturns.length;
   }
 }

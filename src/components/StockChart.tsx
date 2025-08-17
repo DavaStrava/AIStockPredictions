@@ -89,6 +89,13 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
    * 2. DATA ALIGNMENT: Matches technical indicators with corresponding price data by index
    * 3. DATE FORMATTING: Converts Date objects to readable strings for chart labels
    * 4. OPTIONAL CHAINING (?.): Safely accesses properties that might not exist
+   * 
+   * REACT PATTERN: Data Processing in Components
+   * This transformation happens every time the component re-renders. In a production
+   * app, you might want to memoize this with useMemo() to avoid recalculating
+   * the same data on every render, especially with large datasets.
+   * 
+   * Example: const chartData = useMemo(() => priceData.map(...), [priceData, analysis]);
    */
   const chartData = priceData.map((data, index) => {
     // OPTIONAL CHAINING (?.) - Safely access nested properties that might not exist
@@ -97,7 +104,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     const rsi = analysis?.indicators.rsi?.[index];
     const macd = analysis?.indicators.macd?.[index];
     const bb = analysis?.indicators.bollingerBands?.[index];
-    
+
     // ARRAY.FIND() - Search for specific moving averages by period and date
     // This demonstrates how to match data points across different arrays
     // getTime() converts Date objects to timestamps for accurate comparison
@@ -120,25 +127,25 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
       // FORMATTED DATE: 'MMM dd' creates labels like "Jan 15", "Feb 03"
       date: format(data.date, 'MMM dd'),
       fullDate: data.date,              // Keep original date for tooltips/calculations
-      
+
       // OHLCV DATA: Core price and volume information
       open: data.open,                  // Opening price
       high: data.high,                  // Highest price of the period
       low: data.low,                    // Lowest price of the period
       close: data.close,                // Closing price (most important for analysis)
       volume: data.volume,              // Number of shares traded
-      
+
       // TECHNICAL INDICATORS: Extract values from analysis results
       rsi: rsi?.value,                  // RSI oscillator value (0-100)
       macd: macd?.macd,                 // MACD line value
       macdSignal: macd?.signal,         // MACD signal line value
       macdHistogram: macd?.histogram,   // MACD histogram (difference between MACD and signal)
-      
+
       // BOLLINGER BANDS: Volatility indicator with three lines
       bbUpper: bb?.upper,               // Upper band (price + 2 standard deviations)
       bbMiddle: bb?.middle,             // Middle band (simple moving average)
       bbLower: bb?.lower,               // Lower band (price - 2 standard deviations)
-      
+
       // MOVING AVERAGES: Trend-following indicators
       sma20: sma20?.value,              // 20-period simple moving average
       sma50: sma50?.value,              // 50-period simple moving average
@@ -153,7 +160,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
    * - Reusable across different parts of the component
    * - Make the code more readable and maintainable
    */
-  
+
   // FORMAT PRICE: Always show 2 decimal places with dollar sign for consistency
   // Example: 123.456 becomes "$123.46"
   const formatPrice = (value: number) => `$${value.toFixed(2)}`;
@@ -187,24 +194,39 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
    * - OHLC Data: Open, High, Low, Close prices for each time period
    * - Moving Averages: Trend-following indicators that smooth price action
    * - Support/Resistance: High/low areas where price tends to bounce
+   * 
+   * IMPORTANT SYNTAX NOTE: 
+   * This function returns JSX, so we use JavaScript comments (//) outside JSX elements
+   * and JSX comments ({/* */}) inside JSX elements. The comment below demonstrates
+   * the correct syntax for commenting outside of JSX.
    */
   const renderPriceChart = () => (
-    {/* RESPONSIVE CONTAINER: Makes chart automatically resize with its container */}
+    // RESPONSIVE CONTAINER: Makes chart automatically resize with its container
+    // This is a JavaScript comment because we're outside JSX elements here.
+    // Inside the JSX below, we would use {/* JSX comment syntax */} instead.
     <ResponsiveContainer width="100%" height={400}>
-      {/* COMPOSED CHART: Allows combining different chart types (lines, bars, areas) */}
+      {/* 
+        COMPOSED CHART: Allows combining different chart types (lines, bars, areas)
+        
+        COMMENT SYNTAX EXPLANATION:
+        Notice how we use {/* */} for comments inside JSX elements. This is because
+        we're now inside the JSX return statement, so we need JSX comment syntax.
+        The curly braces {} tell React this is a JavaScript expression, and /* */
+        is the JavaScript multi-line comment syntax.
+      */}
       <ComposedChart data={chartData}>
         {/* GRID: Background grid lines for easier reading of values */}
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-        
+
         {/* X-AXIS: Horizontal axis showing dates */}
-        <XAxis 
+        <XAxis
           dataKey="date"           // Which field from data to use for labels
           stroke="#6B7280"        // Color of axis line and labels
           fontSize={12}           // Text size for readability
         />
-        
+
         {/* Y-AXIS: Vertical axis showing prices */}
-        <YAxis 
+        <YAxis
           stroke="#6B7280"        // Consistent color scheme
           fontSize={12}           // Consistent text size
           tickFormatter={formatPrice}  // Use our custom price formatter
@@ -225,7 +247,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
         />
         {/* LEGEND: Shows what each line/color represents */}
         <Legend />
-        
+
         {/* 
           CANDLESTICK APPROXIMATION using Area Charts
           
@@ -253,7 +275,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           strokeWidth={1}          // Thin line
           dot={false}             // No dots at data points
         />
-        
+
         {/* 
           MAIN PRICE LINE: The most important data series
           
@@ -270,7 +292,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           dot={false}             // No dots for cleaner appearance
           name="Close Price"       // Name for legend and tooltips
         />
-        
+
         {/* 
           MOVING AVERAGES: Trend-following indicators
           
@@ -318,12 +340,12 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     <ResponsiveContainer width="100%" height={400}>
       <ComposedChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-        <XAxis 
-          dataKey="date" 
+        <XAxis
+          dataKey="date"
           stroke="#6B7280"
           fontSize={12}
         />
-        <YAxis 
+        <YAxis
           stroke="#6B7280"
           fontSize={12}
           tickFormatter={formatVolume}
@@ -352,7 +374,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           name="Price"
           yAxisId="price"
         />
-        <YAxis 
+        <YAxis
           yAxisId="price"
           orientation="right"
           stroke="#6B7280"
@@ -382,12 +404,12 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-        <XAxis 
-          dataKey="date" 
+        <XAxis
+          dataKey="date"
           stroke="#6B7280"
           fontSize={12}
         />
-        <YAxis 
+        <YAxis
           domain={[0, 100]}
           stroke="#6B7280"
           fontSize={12}
@@ -400,7 +422,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
             color: '#F9FAFB'
           }}
         />
-        
+
         {/* RSI overbought/oversold zones */}
         <Area
           type="monotone"
@@ -416,7 +438,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           fill="#10B981"
           fillOpacity={0.1}
         />
-        
+
         {/* RSI line */}
         <Line
           type="monotone"
@@ -426,7 +448,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           dot={false}
           name="RSI"
         />
-        
+
         {/* Reference lines */}
         <Line
           type="monotone"
@@ -470,12 +492,12 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     <ResponsiveContainer width="100%" height={400}>
       <ComposedChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-        <XAxis 
-          dataKey="date" 
+        <XAxis
+          dataKey="date"
           stroke="#6B7280"
           fontSize={12}
         />
-        <YAxis 
+        <YAxis
           stroke="#6B7280"
           fontSize={12}
         />
@@ -488,7 +510,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           }}
         />
         <Legend />
-        
+
         {/* MACD Histogram */}
         <Bar
           dataKey="macdHistogram"
@@ -496,7 +518,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           opacity={0.6}
           name="MACD Histogram"
         />
-        
+
         {/* MACD Lines */}
         <Line
           type="monotone"
@@ -538,12 +560,12 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     <ResponsiveContainer width="100%" height={400}>
       <AreaChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-        <XAxis 
-          dataKey="date" 
+        <XAxis
+          dataKey="date"
           stroke="#6B7280"
           fontSize={12}
         />
-        <YAxis 
+        <YAxis
           stroke="#6B7280"
           fontSize={12}
           tickFormatter={formatPrice}
@@ -558,7 +580,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           formatter={(value: number) => [formatPrice(value), 'Price']}
         />
         <Legend />
-        
+
         {/* Bollinger Bands area */}
         <Area
           type="monotone"
@@ -575,7 +597,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
           fill="transparent"
           name="Lower Band"
         />
-        
+
         {/* Middle line and price */}
         <Line
           type="monotone"
@@ -626,7 +648,7 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
    * 5. RESPONSIVE DESIGN: Tailwind classes for mobile-first design
    */
   return (
-    {/* CONTAINER: Card-style layout with dark mode support */}
+    // CONTAINER: Card-style layout with dark mode support
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       {/* HEADER: Chart title and data summary */}
       <div className="flex justify-between items-center mb-6">
@@ -652,17 +674,23 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
         - Visual feedback for active tab (different colors/shadow)
         - Hover states for better interactivity
         - Consistent spacing and typography
+        
+        STATE MANAGEMENT PATTERN:
+        This demonstrates the "controlled component" pattern where:
+        - Component state (activeChart) controls which tab is active
+        - User interactions (clicks) update the state via setActiveChart
+        - State changes trigger re-renders with updated UI
+        - This creates a predictable, unidirectional data flow
       */}
       <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
         {chartTabs.map((tab) => (
           <button
-            key={tab.id}                    // Unique key for React's reconciliation
-            onClick={() => setActiveChart(tab.id as ChartType)}  // Update state when clicked
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeChart === tab.id
+            key={tab.id}                    // Unique key for React's reconciliation algorithm
+            onClick={() => setActiveChart(tab.id as ChartType)}  // Arrow function to update state
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeChart === tab.id
                 ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'  // Active tab styles
                 : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white' // Inactive tab styles
-            }`}
+              }`}
           >
             {tab.label}                     // Display the human-readable label
           </button>
@@ -680,6 +708,14 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
         
         This pattern allows us to render different chart types without
         a large switch statement or multiple conditional renders.
+        
+        ALTERNATIVE APPROACHES:
+        1. Switch statement: switch(activeChart) { case 'price': return renderPriceChart(); ... }
+        2. Object lookup: const charts = { price: renderPriceChart, ... }; charts[activeChart]()
+        3. Conditional rendering: {activeChart === 'price' && renderPriceChart()}
+        
+        The current approach is more scalable because adding new chart types
+        only requires updating the chartTabs array, not the rendering logic.
       */}
       <div className="h-[400px]">
         {chartTabs.find(tab => tab.id === activeChart)?.component()}

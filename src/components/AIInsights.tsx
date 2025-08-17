@@ -32,9 +32,20 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
   const [activeTab, setActiveTab] = useState<'technical' | 'portfolio' | 'sentiment'>('technical');
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (symbol) {
-      fetchInsights();
+      const loadInsights = async () => {
+        if (isMounted) {
+          await fetchInsights();
+        }
+      };
+      loadInsights();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [symbol]);
 
   const fetchInsights = async () => {

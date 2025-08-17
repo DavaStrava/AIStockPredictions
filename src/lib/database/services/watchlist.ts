@@ -521,4 +521,3 @@ export class WatchlistService {
  * This service serves as a solid foundation for building scalable,
  * maintainable database access layers in TypeScript applications.
  */
-}

@@ -11,7 +11,7 @@ console.log('📊 Testing Extreme Market Conditions...');
 // Create a market crash scenario
 function createMarketCrash(): PriceData[] {
   const data = generateSamplePriceData('CRASH', 30, 100, 0.01);
-  
+
   // Simulate a sudden crash on day 15
   for (let i = 15; i < data.length; i++) {
     if (i === 15) {
@@ -29,7 +29,7 @@ function createMarketCrash(): PriceData[] {
     }
     data[i].volume = data[i].volume * (2 + Math.random()); // High volume during crash
   }
-  
+
   return data;
 }
 
@@ -47,13 +47,13 @@ console.log('\n📊 Testing Gap Scenarios...');
 
 function createGapScenario(): PriceData[] {
   const data = generateSamplePriceData('GAP', 40, 100, 0.01);
-  
+
   // Create gaps every 10 days
   for (let i = 10; i < data.length; i += 10) {
     if (i < data.length) {
       const gapDirection = Math.random() > 0.5 ? 1 : -1;
       const gapSize = 0.05 + Math.random() * 0.05; // 5-10% gap
-      
+
       data[i].open = data[i - 1].close * (1 + gapDirection * gapSize);
       data[i].close = data[i].open * (1 + (Math.random() - 0.5) * 0.02);
       data[i].high = Math.max(data[i].open, data[i].close) * 1.01;
@@ -61,7 +61,7 @@ function createGapScenario(): PriceData[] {
       data[i].volume = data[i].volume * (1.5 + Math.random()); // Higher volume on gaps
     }
   }
-  
+
   return data;
 }
 
@@ -77,12 +77,12 @@ console.log('\n📊 Testing Low Volume Conditions...');
 
 function createLowVolumeScenario(): PriceData[] {
   const data = generateSamplePriceData('LOWVOL', 50, 100, 0.005); // Very low volatility
-  
+
   // Reduce volume significantly
   data.forEach(d => {
     d.volume = Math.floor(d.volume * 0.1); // 10% of normal volume
   });
-  
+
   return data;
 }
 
@@ -121,26 +121,26 @@ function analyzeSignalTiming(data: PriceData[], analysis: any) {
   const signals = analysis.signals;
   let correctSignals = 0;
   let totalTestableSignals = 0;
-  
+
   signals.forEach((signal: any) => {
     const signalDate = signal.timestamp;
     const signalIndex = data.findIndex(d => d.date.getTime() === signalDate.getTime());
-    
+
     if (signalIndex >= 0 && signalIndex < data.length - 5) { // Need 5 days to test
       totalTestableSignals++;
-      
+
       const currentPrice = data[signalIndex].close;
       const futurePrice = data[signalIndex + 5].close; // 5 days later
       const priceChange = (futurePrice - currentPrice) / currentPrice;
-      
+
       // Check if signal was correct
       if ((signal.signal === 'buy' && priceChange > 0.01) || // 1% gain for buy
-          (signal.signal === 'sell' && priceChange < -0.01)) { // 1% loss for sell
+        (signal.signal === 'sell' && priceChange < -0.01)) { // 1% loss for sell
         correctSignals++;
       }
     }
   });
-  
+
   return { correctSignals, totalTestableSignals };
 }
 
@@ -168,18 +168,18 @@ console.log('\n📊 Testing Scalability...');
 const dataSizes = [50, 100, 500, 1000];
 dataSizes.forEach(size => {
   const testData = generateSamplePriceData('SCALE', size, 100, 0.02);
-  
+
   const startTime = Date.now();
   const startMemory = process.memoryUsage().heapUsed;
-  
+
   const analysis = analyzeTechnicals(testData, 'SCALE');
-  
+
   const endTime = Date.now();
   const endMemory = process.memoryUsage().heapUsed;
-  
+
   const executionTime = endTime - startTime;
   const memoryUsed = (endMemory - startMemory) / 1024 / 1024;
-  
+
   console.log(`   ${size} days: ${executionTime}ms, ${memoryUsed.toFixed(2)}MB, ${analysis.signals.length} signals`);
 });
 
@@ -217,7 +217,8 @@ try {
   console.log(`   Original: ${incompleteData.length} days, Filtered: ${filteredData.length} days`);
   console.log(`   Total Signals: ${incompleteAnalysis.signals.length}`);
 } catch (error) {
-  console.log(`⚠️  Incomplete Data Error: ${error.message}`);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.log(`⚠️  Incomplete Data Error: ${errorMessage}`);
 }
 
 // Final Summary

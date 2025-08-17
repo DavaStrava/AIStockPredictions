@@ -102,6 +102,8 @@ export default function MockWatchlistManager() {
    * fetch('/api/watchlists').then(data => setWatchlists(data))
    */
   useEffect(() => {
+    let isMounted = true;
+    
     // Create realistic mock data that represents different investment strategies
     const mockWatchlists: Watchlist[] = [
       {
@@ -126,10 +128,17 @@ export default function MockWatchlistManager() {
     
     // Simulate network delay to show loading state (realistic UX)
     // In real apps, this would be the time for API calls to complete
-    setTimeout(() => {
-      setWatchlists(mockWatchlists);  // Update state with mock data
-      setLoading(false);              // Hide loading spinner
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        setWatchlists(mockWatchlists);  // Update state with mock data
+        setLoading(false);              // Hide loading spinner
+      }
     }, 500);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, []); // Empty dependency array = run once on component mount
 
   /**

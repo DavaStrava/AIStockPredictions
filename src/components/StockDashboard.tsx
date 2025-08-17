@@ -38,7 +38,19 @@ export default function StockDashboard() {
 
   // Load initial predictions
   useEffect(() => {
-    fetchPredictions();
+    let isMounted = true;
+    
+    const loadPredictions = async () => {
+      if (isMounted) {
+        await fetchPredictions();
+      }
+    };
+    
+    loadPredictions();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const fetchPredictions = async (symbols?: string) => {
@@ -49,13 +61,22 @@ export default function StockDashboard() {
         : '/api/predictions?symbols=AAPL,GOOGL,MSFT,TSLA,NVDA';
       
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
         setPredictions(data.data);
+      } else {
+        console.error('Predictions API error:', data.error);
+        setPredictions([]);
       }
     } catch (error) {
       console.error('Failed to fetch predictions:', error);
+      setPredictions([]);
     } finally {
       setLoading(false);
     }
@@ -64,6 +85,11 @@ export default function StockDashboard() {
   const fetchDetailedAnalysis = async (symbol: string) => {
     try {
       const response = await fetch(`/api/analysis?symbol=${symbol}&period=1year`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -79,11 +105,13 @@ export default function StockDashboard() {
         }
       } else {
         console.error('Analysis failed:', data.error);
-        // You could show a user-friendly error message here
+        setAnalysis(null);
+        setPriceData([]);
       }
     } catch (error) {
       console.error('Failed to fetch analysis:', error);
-      // You could show a user-friendly error message here
+      setAnalysis(null);
+      setPriceData([]);
     }
   };
 

@@ -35,7 +35,7 @@ class DatabaseConnection {
       ssl: true,
       ...config,
     };
-    
+
     this.secretsClient = new SecretsManagerClient({
       region: process.env.AWS_REGION || 'us-west-2',
     });
@@ -53,15 +53,15 @@ class DatabaseConnection {
       const command = new GetSecretValueCommand({
         SecretId: this.config.secretArn,
       });
-      
+
       const response = await this.secretsClient.send(command);
-      
+
       if (!response.SecretString) {
         throw new Error('Secret value is empty');
       }
 
       const secret = JSON.parse(response.SecretString);
-      
+
       return {
         username: secret.username,
         password: secret.password,
@@ -164,7 +164,7 @@ class DatabaseConnection {
    */
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.getClient();
-    
+
     try {
       await client.query('BEGIN');
       const result = await callback(client);

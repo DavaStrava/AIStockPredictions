@@ -115,7 +115,33 @@ export async function GET(request: NextRequest) {
         errorMessage = 'Failed to fetch market data. Please check the symbol or try again later.';
         statusCode = 503; // Service Unavailable - external API issue
       } else if (error.message.includes('No quote data found')) {
-        errorMessage = `Symbol "${searchParams.get('symbol')}" not found. Please check the symbol and try again.`;
+        // DEFENSIVE PROGRAMMING PATTERN: Re-parsing URL to avoid variable scope issues
+        // 
+        // This change demonstrates an important debugging and defensive programming concept:
+        // 
+        // PROBLEM SOLVED:
+        // The original code tried to reference `searchParams` from the outer try block,
+        // but JavaScript variable scoping in catch blocks can sometimes be tricky,
+        // especially when the error occurs before the variable is properly initialized.
+        // 
+        // SOLUTION APPLIED:
+        // Re-parse the URL within the error handling block to ensure we have access
+        // to the search parameters even if the original parsing failed or was incomplete.
+        // 
+        // KEY CONCEPTS DEMONSTRATED:
+        // 1. VARIABLE SCOPING: Variables declared in try blocks may not be accessible
+        //    in catch blocks if the error occurs before declaration
+        // 2. DEFENSIVE PROGRAMMING: Always assume variables might be undefined/null
+        // 3. FAIL-SAFE DEFAULTS: Using `|| 'unknown'` provides a fallback value
+        // 4. ERROR MESSAGE CLARITY: Specific error messages help users understand issues
+        // 
+        // WHY THIS PATTERN MATTERS:
+        // - Prevents runtime errors in error handling code (ironic but common)
+        // - Ensures error messages are always informative, even in edge cases
+        // - Makes code more robust against unexpected execution paths
+        // - Follows the principle: "Error handling code should never fail"
+        const { searchParams } = new URL(request.url);
+        errorMessage = `Symbol "${searchParams.get('symbol') || 'unknown'}" not found. Please check the symbol and try again.`;
         statusCode = 404; // Not Found - invalid symbol
       } else {
         errorMessage = error.message; // Use the actual error message for other cases

@@ -1,13 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StockDashboard from '@/components/StockDashboard';
 import MockWatchlistManager from '@/components/MockWatchlistManager';
+import DevErrorDashboard from '@/components/DevErrorDashboard';
+import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitoring';
 
 type ActiveTab = 'dashboard' | 'watchlists';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+
+  // Initialize error monitoring and performance tracking
+  useEffect(() => {
+    setupGlobalErrorHandling();
+    
+    // Check memory usage periodically
+    const memoryCheckInterval = setInterval(checkMemoryUsage, 30000); // Every 30 seconds
+    
+    return () => {
+      clearInterval(memoryCheckInterval);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,6 +71,9 @@ export default function Home() {
         {activeTab === 'dashboard' && <StockDashboard />}
         {activeTab === 'watchlists' && <MockWatchlistManager />}
       </main>
+      
+      {/* Development Error Dashboard */}
+      <DevErrorDashboard />
     </div>
   );
 }

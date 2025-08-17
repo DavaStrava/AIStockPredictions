@@ -23,6 +23,9 @@ export default function Term({ children, term, className = '' }: TermProps) {
   }, [lookupTerm]);
 
   useEffect(() => {
+    // Hydration guard - only run on client side
+    if (typeof window === 'undefined') return;
+    
     const handleClickOutside = (event: MouseEvent) => {
       if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node) &&
           termRef.current && !termRef.current.contains(event.target as Node)) {
