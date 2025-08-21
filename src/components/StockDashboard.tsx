@@ -40,20 +40,52 @@ interface PredictionResult {
   };
 }
 
+/*
+  STOCK DASHBOARD COMPONENT:
+  This component demonstrates advanced UX patterns for data-heavy applications.
+  
+  KEY UX IMPROVEMENT IMPLEMENTED:
+  The component uses a "differential loading" pattern where:
+  - Initial page load: Shows full loading spinner (users expect to wait)
+  - Individual searches: No loading spinner (feels more responsive)
+  - Content builds incrementally without jarring UI changes
+  
+  This creates a smooth, professional user experience that feels fast and responsive
+  while still providing appropriate feedback during longer operations.
+*/
 export default function StockDashboard() {
   /*
-    REACT STATE MANAGEMENT:
-    useState hooks manage component state. Each piece of state has:
-    1. Current value (e.g., predictions)
-    2. Setter function (e.g., setPredictions)
-    3. Initial value (e.g., [])
+    REACT STATE MANAGEMENT WITH TYPESCRIPT:
+    useState is React's primary way to add state to functional components.
+    
+    ANATOMY OF useState:
+    const [currentValue, setterFunction] = useState<Type>(initialValue);
+    
+    DESTRUCTURING ASSIGNMENT:
+    - useState returns an array with exactly 2 elements
+    - [0]: Current state value
+    - [1]: Function to update the state
+    - We use array destructuring to assign meaningful names
+    
+    TYPESCRIPT GENERICS:
+    - <PredictionResult[]> tells TypeScript what type this state holds
+    - Provides compile-time type checking and IDE autocomplete
+    - Prevents bugs by catching type mismatches early
+    
+    STATE ORGANIZATION STRATEGY:
+    This component uses multiple useState calls instead of one large object because:
+    1. Each piece of state has different update patterns
+    2. React can optimize re-renders when only specific state changes
+    3. Code is more readable with descriptive variable names
+    4. TypeScript types are simpler and more specific
   */
-  const [predictions, setPredictions] = useState<PredictionResult[]>([]);        // List of stock predictions
-  const [selectedStock, setSelectedStock] = useState<string>('');               // Currently selected stock symbol
-  const [analysis, setAnalysis] = useState<TechnicalAnalysisResult | null>(null); // Detailed analysis data
-  const [priceData, setPriceData] = useState<PriceData[]>([]);                  // Historical price data for charts
-  const [loading, setLoading] = useState(true);                                // Loading state for UI feedback
-  const [customSymbol, setCustomSymbol] = useState('');                        // User input for custom stock search
+  const [predictions, setPredictions] = useState<PredictionResult[]>([]);        // Array of stock predictions from API
+  const [selectedStock, setSelectedStock] = useState<string>('');               // Currently selected stock symbol for detailed view
+  const [analysis, setAnalysis] = useState<TechnicalAnalysisResult | null>(null); // Detailed technical analysis data (null when none selected)
+  const [priceData, setPriceData] = useState<PriceData[]>([]);                  // Historical price data for chart visualization
+  const [loading, setLoading] = useState(true);                                // Global loading state for initial page load
+  const [searchLoading, setSearchLoading] = useState(false);                  // Separate loading state for individual stock searches
+  const [customSymbol, setCustomSymbol] = useState('');                        // User input for custom stock symbol search
 
   /*
     COMPONENT LIFECYCLE WITH useEffect:
@@ -71,6 +103,13 @@ export default function StockDashboard() {
     const loadPredictions = async () => {
       // Only update state if component is still mounted
       if (isMounted) {
+        /*
+          INITIAL LOAD BEHAVIOR:
+          Called without parameters, so:
+          - symbols = undefined (loads default popular stocks)
+          - isNewSearch = false (uses replacement behavior, not merge)
+          This ensures clean initial state with popular stocks only
+        */
         await fetchPredictions();
       }
     };
@@ -87,34 +126,173 @@ export default function StockDashboard() {
     ASYNC FUNCTION WITH ERROR HANDLING:
     This function demonstrates several important patterns:
     1. Optional parameters with TypeScript (symbols?: string)
-    2. Conditional URL building using ternary operator
-    3. Proper error handling with try-catch-finally
-    4. State management during async operations
+    2. Default parameter values (isNewSearch = false)
+    3. Conditional URL building using ternary operator
+    4. Proper error handling with try-catch-finally
+    5. State management during async operations
+    
+    PARAMETER EXPLANATION:
+    - symbols?: Optional string of stock symbols to fetch
+    - isNewSearch = false: Boolean flag with default value indicating if this is a new search
+      The default value means if not provided, it defaults to false (existing behavior)
   */
-  const fetchPredictions = async (symbols?: string) => {
+  const fetchPredictions = async (symbols?: string, isNewSearch = false) => {
     try {
-      // LOADING STATE PATTERN: Show loading indicator during async operations
-      setLoading(true);
+      /*
+        IMPROVED LOADING STATE PATTERN:
+        This conditional loading patttes a better user experience by distinguishing
+        between differf data fetching o
       
-      // CONDITIONAL URL BUILDING: Use provided symbols or default to popular stocks
+      // CONDITIONAL URL BNG SPINNER:
+        - Initial page load (isNewSearch = false): Show full loading spinner
+          Users expect to wait when first visiting the page
+          The entire interface is empty, so a loading state makes sense
+        
+        WHEN NOT TO SHOW LOADING SPINNER:
+        - Individual stock searches (isNewSearch = true): No loading spinner
+          Users are adding to existing content, not waiting for everything to load
+          Existing stock tiles remain interactive and visible
+          New tiles appear smoothly without jarring UI changes
+        
+        UX BENEFITS:
+        1. Perceived Performance: App feels faster for searches
+        2. Continuous Interaction: Users can interact with existing tiles during searches
+        3. Progressive Enhancement: Content builds up incrementally
+        4. Reduced Cognitive Load: No disruptive loading states for minor actions
+        
+        TECHNICAL IMPLEMENTATION:
+        - Uses the isNewSearch parameter to determine loading behavior
+        - Default value (false) maintains backward compatibility
+        - Loading state is managed at the component level for fine-grained control
+      */
+      if (!isNewSearch) {
+        setLoading(true);
+      }
+      
+      /*
+        CONDITIONAL URL BUILDING WITH TERNARY OPERATOR:
+        This demonstrates the ternary operator pattern: condition ? valueIfTrue : valueIfFalse
+        
+        BREAKDOWN:
+        - symbols: The condition we're checking (truthy/falsy)
+        - ? : The ternary operator (shorthand for if/else)
+        - First value: Used if symbols exists and is not empty
+        - Second value: Used if symbols is null, undefined, or empty string
+        
+        TEMPLATE LITERALS:
+        - Backticks (`) allow string interpolation with ${variable}
+        - This is more readable than string concatenation with +
+        - Example: `Hello ${name}` instead of "Hello " + name
+        
+        API DESIGN PATTERN:
+        - Single endpoint handles both specific requests and default data
+        - Query parameters (?symbols=...) pass data to the server
+        - Default symbols represent popular/trending stocks for initial load
+        - This reduces the number of API endpoints needed
+      */
       const url = symbols 
         ? `/api/predictions?symbols=${symbols}`
         : '/api/predictions?symbols=AAPL,GOOGL,MSFT,TSLA,NVDA';
       
-      // FETCH API: Modern way to make HTTP requests in JavaScript
+      /*
+        FETCH API WITH ASYNC/AWAIT PATTERN:
+        Modern JavaScript way to make HTTP requests, replacing older XMLHttpRequest.
+        
+        ASYNC/AWAIT EXPLAINED:
+        - await pauses function execution until the Promise resolves
+        - Makes asynchronous code look and behave like synchronous code
+        - Much more readable than .then().catch() chains
+        - Can only be used inside functions marked with 'async'
+        
+        ERROR HANDLING STRATEGY:
+        - fetch() only rejects for network errors, not HTTP error status codes
+        - We must manually check response.ok (true for status 200-299)
+        - Throwing an error here will be caught by the try-catch block
+        - This ensures consistent error handling for all failure types
+      */
       const response = await fetch(url);
       
-      // HTTP ERROR HANDLING: Check if response is successful (status 200-299)
+      /*
+        HTTP STATUS CODE VALIDATION:
+        response.ok is a boolean that's true for successful HTTP status codes (200-299).
+        Common status codes:
+        - 200: OK (success)
+        - 404: Not Found
+        - 500: Internal Server Error
+        - 401: Unauthorized
+        
+        WHY WE CHECK THIS:
+        - fetch() considers the request successful even for 404 or 500 errors
+        - Only network failures (no internet, server down) cause fetch() to reject
+        - Manual checking ensures we handle all types of failures consistently
+      */
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      // JSON PARSING: Convert response body from JSON string to JavaScript object
+      /*
+        JSON PARSING WITH ERROR HANDLING:
+        response.json() is also async and can fail if:
+        - Response body is not valid JSON
+        - Response is empty
+        - Server returns HTML error page instead of JSON
+        
+        AWAIT PATTERN:
+        - This is the second await in our function
+        - First await gets the response object
+        - Second await extracts and parses the JSON body
+        - Both operations can fail and will be caught by try-catch
+      */
       const data = await response.json();
       
       // API RESPONSE VALIDATION: Check if our API returned success flag
       if (data.success) {
-        setPredictions(data.data);
+        /*
+          CONDITIONAL STATE UPDATE PATTERN:
+          This demonstrates two different ways to update state based on user intent:
+          1. New search: Merge new data with existing data (additive behavior)
+          2. Default load: Replace all data (replacement behavior)
+          
+          This pattern is common in search interfaces where users expect:
+          - Initial load: Show default/popular items
+          - Search results: Add searched items to the top, keep others for context
+        */
+        if (isNewSearch && symbols) {
+          /*
+            ARRAY MANIPULATION FOR SEARCH RESULTS:
+            This code implements a "search and merge" pattern:
+            
+            Step 1: Get new predictions from API response
+            Step 2: Filter existing predictions to remove duplicates
+            Step 3: Combine arrays with new items first
+            
+            DUPLICATE REMOVAL LOGIC:
+            - filter() creates a new array with items that pass the test
+            - some() returns true if ANY item in the array matches the condition
+            - The condition checks if the symbol already exists in new predictions
+            - !some() means "keep items that DON'T have matching symbols"
+            
+            ARRAY SPREAD OPERATOR:
+            [...newPredictions, ...existingPredictions] creates a new array by:
+            - Spreading all items from newPredictions first (top of list)
+            - Then spreading all items from existingPredictions (bottom of list)
+            This maintains order: new search results appear at the top
+          */
+          const newPredictions = data.data;
+          const existingPredictions = predictions.filter(p => 
+            !newPredictions.some((np: PredictionResult) => np.symbol === p.symbol)
+          );
+          setPredictions([...newPredictions, ...existingPredictions]);
+        } else {
+          /*
+            DEFAULT BEHAVIOR: Complete replacement
+            When not a new search (initial load, refresh, etc.):
+            - Replace entire predictions array with API response
+            - This is simpler and appropriate for non-search scenarios
+            - Maintains existing behavior for backward compatibility
+          */
+          setPredictions(data.data);
+        }
       } else {
         console.error('Predictions API error:', data.error);
         setPredictions([]); // Reset to empty array on error
@@ -124,8 +302,10 @@ export default function StockDashboard() {
       console.error('Failed to fetch predictions:', error);
       setPredictions([]); // Ensure UI shows empty state on error
     } finally {
-      // FINALLY BLOCK: Always runs regardless of success or failure
-      setLoading(false); // Always hide loading indicator
+      // FINALLY BLOCK: Only hide loading if it was set (not for individual searches)
+      if (!isNewSearch) {
+        setLoading(false);
+      }
     }
   };
 
@@ -182,6 +362,111 @@ export default function StockDashboard() {
     }
   };
 
+  /*
+    NEW SEARCH HANDLER FUNCTION:
+    This function demonstrates the "composite operation" pattern where multiple
+    related actions are performed together to create a cohesive user experience.
+    
+    FUNCTION FLOW:
+    1. Fetch predictions for the searched symbol with isNewSearch=true
+    2. Immediately open detailed analysis for the same symbol
+    
+    PARAMETER USAGE EXPLANATION:
+    - fetchPredictions(symbol, true): The 'true' parameter indicates this is a new search
+      This triggers the "merge" behavior instead of "replace" behavior
+      Result: New stock appears at top of list, existing stocks remain visible
+    
+    LOADING STATE UX IMPROVEMENT:
+    The isNewSearch=true parameter also prevents the full-page loading spinner from showing.
+    This creates a better user experience because:
+    - Initial page load: Shows loading spinner (user expects to wait)
+    - Individual searches: No loading spinner (feels more responsive)
+    - The new stock tile appears smoothly without jarring UI changes
+    - Users can continue interacting with existing tiles while search completes
+    
+    ASYNC OPERATION SEQUENCING:
+    - await ensures fetchPredictions completes before fetchDetailedAnalysis starts
+    - This prevents race conditions and ensures data is available for analysis
+    - Sequential execution provides predictable user experience
+    
+    USER EXPERIENCE DESIGN:
+    - User searches for a stock → stock appears at top of list (no loading spinner)
+    - Detailed analysis opens automatically → immediate insights
+    - Previous stocks remain visible → context is preserved
+    - This creates a smooth, intuitive search-to-analysis workflow
+  */
+  const handleStockSearch = async (symbol: string) => {
+    try {
+      setSearchLoading(true);
+      await fetchPredictions(symbol, true);  // Merge new stock with existing predictions
+      await fetchDetailedAnalysis(symbol);   // Open detailed analysis immediately
+    } catch (error) {
+      /*
+        ERROR HANDLING IN ASYNC FUNCTIONS:
+        This catch block demonstrates proper error handling for composite async operations.
+        
+        WHY THIS CATCH BLOCK IS IMPORTANT:
+        1. GRACEFUL DEGRADATION: If either API call fails, the app doesn't crash
+        2. USER FEEDBACK: Errors are logged for debugging without breaking the UI
+        3. STATE CONSISTENCY: The finally block ensures loading state is always cleared
+        
+        WHAT HAPPENS WITHOUT THIS CATCH:
+        - Unhandled promise rejections could crash the component
+        - Loading spinner might stay visible forever if an error occurs
+        - Users would see no feedback when searches fail
+        
+        ERROR LOGGING STRATEGY:
+        - console.error() preserves the full error object with stack trace
+        - In production, this could be replaced with error monitoring service
+        - The error parameter contains details about what went wrong (network, API, etc.)
+        
+        COMPOSITE OPERATION ERROR HANDLING:
+        Since this function calls two async operations sequentially:
+        - If fetchPredictions fails, fetchDetailedAnalysis won't run
+        - If fetchDetailedAnalysis fails, the prediction data is still added
+        - This provides partial success behavior rather than all-or-nothing
+      */
+      console.error('Error in handleStockSearch:', error);
+    } finally {
+      /*
+        FINALLY BLOCK GUARANTEE:
+        The finally block ALWAYS executes, regardless of success or failure.
+        This is crucial for cleanup operations like resetting loading states.
+        
+        WHY FINALLY IS ESSENTIAL HERE:
+        - Ensures loading spinner disappears even if API calls fail
+        - Prevents UI from getting stuck in loading state
+        - Maintains consistent user experience across all scenarios
+        
+        EXECUTION ORDER:
+        1. try block executes (API calls)
+        2. If error occurs, catch block executes
+        3. finally block ALWAYS executes last
+        4. Loading state is guaranteed to be reset
+        
+        ALTERNATIVE APPROACHES:
+        Without finally, you'd need to call setSearchLoading(false) in both
+        the try and catch blocks, leading to code duplication and potential bugs.
+      */
+      setSearchLoading(false);
+    }
+  };
+
+  // REMOVE TILE HANDLER: Remove individual stock from predictions
+  const removeTile = (symbolToRemove: string) => {
+    try {
+      setPredictions(predictions.filter(p => p.symbol !== symbolToRemove));
+      // Close detailed analysis if it's for the removed stock
+      if (selectedStock === symbolToRemove) {
+        setAnalysis(null);
+        setPriceData([]);
+        setSelectedStock('');
+      }
+    } catch (error) {
+      console.error('Error in removeTile:', error);
+    }
+  };
+
 
 
   /*
@@ -223,10 +508,34 @@ export default function StockDashboard() {
   };
 
   /*
-    BACKGROUND STYLING FUNCTION:
-    Similar to color mapping but for background colors and borders.
-    Notice the opacity modifiers (/20) for subtle background effects.
-    This creates visual hierarchy without overwhelming the content.
+    ADVANCED BACKGROUND STYLING FUNCTION:
+    Creates sophisticated visual feedback using gradients, opacity, and hover states.
+    This function demonstrates several advanced Tailwind CSS concepts working together.
+    
+    GRADIENT BACKGROUNDS EXPLAINED:
+    - bg-gradient-to-br: Creates a gradient from top-left to bottom-right
+    - from-green-100 to-green-200: Light gradient in light mode (subtle depth)
+    - dark:from-green-900/30: Dark mode uses darker colors with opacity for contrast
+    
+    OPACITY SYSTEM:
+    - /30 = 30% opacity for base state (subtle but visible)
+    - /40 = 40% opacity for hover state (slightly more prominent)
+    - This creates layered transparency that works well over dark backgrounds
+    
+    INTERACTIVE STATES:
+    - hover: prefix creates smooth transitions when user hovers over cards
+    - Border colors also change on hover for complete visual feedback
+    - This provides immediate user feedback that elements are clickable
+    
+    DESIGN SYSTEM CONSISTENCY:
+    - All four states (bullish/bearish/neutral/default) follow the same pattern
+    - Color families remain consistent with getDirectionColor function
+    - Maintains visual hierarchy while adding sophisticated polish
+    
+    ACCESSIBILITY CONSIDERATIONS:
+    - Gradients provide visual interest without compromising text readability
+    - Hover states give clear interaction feedback
+    - Color choices work for both light and dark themes
   */
   const getDirectionBg = (direction: string) => {
     switch (direction) {
@@ -240,10 +549,24 @@ export default function StockDashboard() {
   /*
     EARLY RETURN PATTERN FOR LOADING STATE:
     This pattern prevents rendering the main UI while data is loading.
-    Benefits:
-    1. Cleaner code structure (no nested conditionals)
-    2. Better user experience (clear loading feedback)
-    3. Prevents errors from accessing undefined data
+    
+    WHY THIS PATTERN WORKS WELL WITH THE IMPROVED LOADING LOGIC:
+    - Only shows during initial page load (when isNewSearch = false)
+    - Individual stock searches bypass this loading screen entirely
+    - Creates a clean separation between "app loading" vs "content updating"
+    
+    BENEFITS:
+    1. Cleaner code structure (no nested conditionals in main render)
+    2. Better user experience (clear loading feedback for initial load only)
+    3. Prevents errors from accessing undefined data during startup
+    4. Maintains responsive UI during individual stock searches
+    
+    LOADING STATE HIERARCHY:
+    - Full page loading (this component): Only for initial app load
+    - Individual tile loading: Could be added per-tile if needed
+    - Background loading: Happens silently for search operations
+    
+    This creates a layered loading experience that feels natural to users.
   */
   if (loading) {
     return (
@@ -260,10 +583,62 @@ export default function StockDashboard() {
     );
   }
 
+  /*
+    MAIN COMPONENT RENDER RETURN:
+    This is the JSX that defines what the component displays.
+    
+    JSX FUNDAMENTALS:
+    - JSX looks like HTML but is actually JavaScript
+    - Gets compiled to React.createElement() calls
+    - Must return a single parent element (or React Fragment)
+    - Can embed JavaScript expressions using curly braces {}
+    
+    JSX vs HTML DIFFERENCES:
+    - className instead of class (class is a reserved word in JavaScript)
+    - onClick instead of onclick (camelCase for event handlers)
+    - style={{}} uses objects instead of strings
+    - Self-closing tags must have /> (like <img /> not <img>)
+    
+    TAILWIND CSS CLASSES EXPLAINED:
+    - space-y-8: Adds 2rem (32px) vertical spacing between child elements
+    - This is more maintainable than adding margins to individual elements
+    - Tailwind uses a spacing scale: 1=0.25rem, 2=0.5rem, 4=1rem, 8=2rem, etc.
+    - Utility-first approach: small, single-purpose classes compose complex designs
+  */
   return (
     <div className="space-y-8">
-      {/* Header with smart search */}
+      {/* 
+        MAIN COMPONENT RENDER:
+        This return statement defines the JSX structure that React will render to the DOM.
+        
+        JSX FUNDAMENTALS:
+        - JSX looks like HTML but is actually JavaScript that gets compiled to React.createElement() calls
+        - Must return a single parent element (this <div> wraps everything)
+        - Curly braces {} embed JavaScript expressions within JSX
+        - className is used instead of class (class is a JavaScript reserved word)
+        
+        TAILWIND CSS UTILITY CLASSES:
+        - space-y-8: Adds vertical spacing (2rem/32px) between child elements
+        - This is more maintainable than adding individual margins to each child
+        - Tailwind uses a spacing scale: 1=0.25rem, 2=0.5rem, 4=1rem, 8=2rem
+      */}
       <div className="flex flex-col gap-4">
+        {/*
+          RESPONSIVE FLEXBOX LAYOUT PATTERN:
+          This demonstrates mobile-first responsive design using Tailwind CSS.
+          
+          BREAKPOINT SYSTEM:
+          - Default (no prefix): Mobile-first (all screen sizes)
+          - sm: (640px+): Tablets and up
+          - This creates layouts that adapt gracefully to different screen sizes
+          
+          LAYOUT BEHAVIOR:
+          - Mobile: flex-col (vertical stack) - prevents cramped horizontal space
+          - Tablet+: flex-row (horizontal layout) - utilizes available width
+          - items-start/items-center: Controls cross-axis alignment
+          - justify-between: Spreads items across the main axis
+          - gap-4: Adds consistent spacing (1rem) between flex items
+        */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-foreground">Stock Predictions</h2>
@@ -272,17 +647,70 @@ export default function StockDashboard() {
             </p>
           </div>
           
-          <div className="w-full sm:w-96">
+          {/*
+            SEARCH COMPONENT INTEGRATION:
+            This demonstrates component composition and prop passing patterns.
+            
+            RESPONSIVE WIDTH:
+            - w-full: Full width on mobile (prevents horizontal overflow)
+            - sm:w-96: Fixed width (24rem/384px) on tablets+ for better UX
+            - relative: Enables absolute positioning for loading indicator
+            
+            COMPONENT PROPS:
+            - onSelectStock: Callback function passed as prop (event handling pattern)
+            - Arrow function: (symbol) => handleStockSearch(symbol) creates a closure
+            - placeholder: String prop for user guidance
+            
+            CALLBACK PATTERN:
+            When user selects a stock in StockSearch, it calls onSelectStock with the symbol,
+            which triggers handleStockSearch to fetch data and update the dashboard.
+          */}
+          <div className="w-full sm:w-96 relative">
             <StockSearch 
-              onSelectStock={(symbol) => fetchDetailedAnalysis(symbol)}
+              onSelectStock={(symbol) => handleStockSearch(symbol)}
               placeholder="Search any stock (e.g., Apple, TSLA, Microsoft...)"
             />
+            {searchLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Quick Actions */}
+        {/* 
+          QUICK ACTIONS SECTION:
+          This demonstrates several important React and JavaScript patterns
+        */}
         <div className="flex flex-wrap gap-2">
           <span className="text-sm text-gray-600 dark:text-gray-400">Popular:</span>
+          {/*
+            ARRAY MAPPING PATTERN:
+            This is one of the most common patterns in React for rendering lists.
+            
+            HOW .map() WORKS:
+            - Takes an array: ['AAPL', 'GOOGL', 'MSFT', ...]
+            - Calls a function for each item: (symbol) => <button>...</button>
+            - Returns a new array of JSX elements
+            - React renders each element in the array
+            
+            KEY PROP REQUIREMENT:
+            - key={symbol}: React needs unique keys for list items
+            - Helps React efficiently update the DOM when the list changes
+            - Without keys, React shows warnings and performance suffers
+            - Keys should be stable and unique (symbol works here because stock symbols are unique)
+            
+            ARROW FUNCTION IN onClick:
+            - onClick={() => fetchDetailedAnalysis(symbol)}
+            - The arrow function prevents immediate execution
+            - Without arrow function: onClick={fetchDetailedAnalysis(symbol)} would run immediately
+            - With arrow function: Creates a new function that will run when clicked
+            
+            CLOSURE CONCEPT:
+            - The arrow function "closes over" the symbol variable
+            - Each button remembers its specific symbol value
+            - This is how each button knows which stock to analyze when clicked
+          */}
           {['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'META'].map((symbol) => (
             <button
               key={symbol}
@@ -305,23 +733,86 @@ export default function StockDashboard() {
       */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 
-          ARRAY RENDERING WITH MAP:
-          React's standard pattern for rendering lists.
-          Each item needs a unique 'key' prop for efficient re-rendering.
-          The callback function receives each prediction object.
+          ARRAY RENDERING WITH MAP FUNCTION:
+          This is React's fundamental pattern for rendering dynamic lists.
+          
+          HOW MAP WORKS:
+          - map() creates a new array by calling a function on each element
+          - For each prediction in the array, we return a JSX element
+          - React renders all the returned elements as siblings
+          
+          THE KEY PROP REQUIREMENT:
+          - Each element in a list MUST have a unique 'key' prop
+          - React uses keys to efficiently update the DOM when the list changes
+          - Without keys, React re-renders the entire list on any change
+          - With keys, React only updates the specific items that changed
+          
+          CALLBACK FUNCTION PATTERN:
+          - (prediction) => (...) is an arrow function that receives each array item
+          - The parameter name 'prediction' is arbitrary - could be 'item', 'stock', etc.
+          - The function body returns JSX for that specific prediction
+          
+          PERFORMANCE CONSIDERATIONS:
+          - map() creates a new array, which is fine for UI rendering
+          - React's reconciliation algorithm efficiently handles list updates
+          - Keys should be stable (don't use array index if list can reorder)
         */}
         {predictions.map((prediction) => (
           <div
             key={prediction.symbol}  // UNIQUE KEY: Required for React's reconciliation
-            className={`border rounded-lg p-6 cursor-pointer transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-2 hover:scale-105 transform ${getDirectionBg(prediction.prediction.direction)}`}
+            className={`relative border rounded-lg p-6 cursor-pointer transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-2 hover:scale-105 transform ${getDirectionBg(prediction.prediction.direction)}`}
             onClick={() => fetchDetailedAnalysis(prediction.symbol)}  // EVENT HANDLER: Arrow function to pass parameter
           >
+            {/* 
+              CLOSE BUTTON WITH IMPROVED UX:
+              This X button demonstrates several advanced UI/UX patterns:
+              
+              VISUAL HIERARCHY:
+              - opacity-60: Button is subtle by default (60% opacity) to avoid visual clutter
+              - hover:opacity-100: Becomes fully visible on hover for clear interaction feedback
+              - This creates a "progressive disclosure" pattern where UI elements appear when needed
+              
+              LAYERED HOVER EFFECTS:
+              - hover:bg-black/10: Light overlay on hover (10% black opacity) in light mode
+              - dark:hover:bg-white/10: Light overlay on hover (10% white opacity) in dark mode
+              - The /10 syntax is Tailwind's opacity modifier (10% = 0.1 alpha)
+              - This creates a subtle background highlight without being overwhelming
+              
+              COLOR TRANSITION SYSTEM:
+              - Base state: Neutral gray colors that blend with the design
+              - Hover state: Red colors to indicate destructive action (removal)
+              - transition-all duration-200: Smooth 200ms transition for all properties
+              - This provides clear visual feedback about the button's purpose
+              
+              ACCESSIBILITY IMPROVEMENTS:
+              - title attribute: Provides tooltip text for screen readers and mouse users
+              - Adequate size (w-6 h-6 = 24x24px): Meets minimum touch target size guidelines
+              - High contrast colors: Ensures visibility for users with visual impairments
+              - Clear visual feedback: Hover states help users understand interactivity
+              
+              EVENT HANDLING PATTERN:
+              - e.stopPropagation(): Prevents the click from bubbling up to parent elements
+              - This is crucial because the button is inside a clickable card
+              - Without this, clicking X would both remove the tile AND open detailed analysis
+              - This demonstrates proper event management in nested interactive elements
+            */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent tile click when clicking X
+                removeTile(prediction.symbol);
+              }}
+              className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-all duration-200 z-10 opacity-60 hover:opacity-100"
+              title={`Remove ${prediction.symbol}`}
+            >
+              ✕
+            </button>
+            
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">{prediction.symbol}</h3>
                 <p className="text-2xl font-bold text-foreground">${prediction.currentPrice}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right pr-8"> {/* Add padding to avoid overlap with X button */}
                 <span className={`text-sm font-medium ${getDirectionColor(prediction.prediction.direction)}`}>
                   {prediction.prediction.direction.toUpperCase()}
                 </span>
