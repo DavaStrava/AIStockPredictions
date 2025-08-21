@@ -221,18 +221,68 @@ export default function StockDashboard() {
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Key Signals:</p>
-              <div className="space-y-1">
-                {prediction.signals.slice(0, 2).map((signal, idx) => (
-                  <div key={idx} className="text-xs">
-                    <span className={`font-medium ${getDirectionColor(signal.signal === 'buy' ? 'bullish' : signal.signal === 'sell' ? 'bearish' : 'neutral')}`}>
-                      {signal.indicator}:
-                    </span>
-                    <span className="text-gray-600 dark:text-gray-400 ml-1">
-                      {signal.description.slice(0, 40)}...
-                    </span>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Technical Summary:</p>
+              <div className="space-y-1 text-xs">
+                {prediction.signals.length > 0 && (
+                  <>
+                    {/* RSI Analysis */}
+                    {prediction.signals.find(s => s.indicator === 'RSI') && (
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">RSI:</span> {
+                          (() => {
+                            const rsiSignal = prediction.signals.find(s => s.indicator === 'RSI');
+                            if (!rsiSignal) return 'N/A';
+                            const rsiValue = rsiSignal.description.match(/(\d+\.?\d*)/)?.[0];
+                            if (!rsiValue) return 'N/A';
+                            const rsi = parseFloat(rsiValue);
+                            if (rsi > 70) return `${rsi.toFixed(1)} - Overbought territory`;
+                            if (rsi < 30) return `${rsi.toFixed(1)} - Oversold territory`;
+                            return `${rsi.toFixed(1)} - Neutral range`;
+                          })()
+                        }
+                      </div>
+                    )}
+                    
+                    {/* MACD Analysis */}
+                    {prediction.signals.find(s => s.indicator === 'MACD') && (
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">MACD:</span> {
+                          (() => {
+                            const macdSignal = prediction.signals.find(s => s.indicator === 'MACD');
+                            if (!macdSignal) return 'N/A';
+                            if (macdSignal.signal === 'buy') return 'Bullish crossover detected';
+                            if (macdSignal.signal === 'sell') return 'Bearish crossover detected';
+                            return 'No clear crossover signal';
+                          })()
+                        }
+                      </div>
+                    )}
+                    
+                    {/* Moving Average Analysis */}
+                    {prediction.signals.find(s => s.indicator.includes('MA') || s.indicator.includes('SMA') || s.indicator.includes('EMA')) && (
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Moving Avg:</span> {
+                          (() => {
+                            const maSignal = prediction.signals.find(s => 
+                              s.indicator.includes('MA') || s.indicator.includes('SMA') || s.indicator.includes('EMA')
+                            );
+                            if (!maSignal) return 'N/A';
+                            if (maSignal.signal === 'buy') return 'Price above key averages';
+                            if (maSignal.signal === 'sell') return 'Price below key averages';
+                            return 'Price near moving averages';
+                          })()
+                        }
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Fallback if no specific indicators found */}
+                {prediction.signals.length === 0 && (
+                  <div className="text-gray-500 dark:text-gray-400 italic">
+                    Technical analysis pending
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
