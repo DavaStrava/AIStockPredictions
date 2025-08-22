@@ -668,6 +668,69 @@ For portfolio analysis, provide insights tailored to someone building wealth in 
 
 **Portfolio Context**: Discuss how this position fits into a $500K portfolio; consider another $200K as an active roth IRA with divesified investments growing at 12% a year - this will not be touched. What allocation makes sense? How does it complement other holdings for someone in their wealth-building phase?
 
+/*
+  FINANCIAL MODELING CONCEPT - PORTFOLIO SEGMENTATION STRATEGY:
+  
+  This prompt modification demonstrates a sophisticated financial planning concept called
+  "portfolio segmentation" or "bucket strategy" that's commonly used by financial advisors.
+  
+  🎯 THE TWO-BUCKET APPROACH EXPLAINED:
+  
+  BUCKET 1: Active Trading Portfolio ($500K)
+  - Purpose: Active stock picking, technical analysis, higher-risk investments
+  - Management: Hands-on, frequent trading, tactical allocation
+  - Risk Profile: Higher volatility acceptable for potential higher returns
+  - Time Horizon: Medium-term (3-10 years)
+  - Tax Considerations: Taxable account, capital gains implications
+  
+  BUCKET 2: Retirement Core Holdings ($200K Roth IRA)
+  - Purpose: Long-term wealth building, tax-free growth
+  - Management: Set-and-forget, diversified index funds/ETFs
+  - Risk Profile: Moderate, steady growth (12% annual target)
+  - Time Horizon: Long-term (20+ years until retirement)
+  - Tax Advantages: Tax-free growth and withdrawals in retirement
+  
+  🧠 WHY THIS SEGMENTATION MATTERS FOR AI ANALYSIS:
+  
+  1. RISK BUDGETING: The AI can now provide more nuanced advice about position sizing
+     - A 10% position in the $500K active portfolio = $50K investment
+     - This represents only 7.1% of total wealth ($50K / $700K)
+     - Risk tolerance is higher because core retirement savings are protected
+  
+  2. ALLOCATION PSYCHOLOGY: Separating "play money" from "retirement money"
+     - Reduces emotional decision-making in active trading
+     - Allows for more aggressive strategies without jeopardizing retirement
+     - Creates clear boundaries for risk-taking behavior
+  
+  3. TAX OPTIMIZATION: Different tax treatments require different strategies
+     - Active portfolio: Tax-loss harvesting, holding period considerations
+     - Roth IRA: No tax implications, can hold highest-growth assets
+  
+  4. REBALANCING STRATEGY: AI can suggest how positions interact across buckets
+     - If active portfolio becomes tech-heavy, Roth IRA can emphasize other sectors
+     - Complementary holdings reduce overall portfolio correlation
+  
+  💡 EDUCATIONAL VALUE FOR USERS:
+  
+  This prompt teaches users about:
+  - Modern portfolio theory in practice
+  - Risk budgeting across different account types
+  - The psychological benefits of portfolio segmentation
+  - How professional advisors think about wealth allocation
+  - The importance of tax-advantaged account optimization
+  
+  🔧 TECHNICAL IMPLEMENTATION BENEFITS:
+  
+  For the AI system, this provides:
+  - More precise context for position sizing recommendations
+  - Better risk assessment framework
+  - Realistic allocation percentages based on actual investable assets
+  - Educational opportunity to explain portfolio construction principles
+  
+  This change transforms a simple "portfolio size" parameter into a comprehensive
+  financial planning framework that mirrors real-world wealth management strategies.
+*/
+
 **Risk-Return Profile**: Explain metrics like Sharpe ratio, beta, and volatility in practical terms. What do these numbers mean for someone who needs their money to work efficiently but can't afford major losses?
 
 **Diversification Strategy**: Analyze how this stock fits into a well-diversified portfolio. What correlations should they be aware of?

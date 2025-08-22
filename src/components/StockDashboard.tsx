@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/technical-analysis/types';
 // COMPONENT IMPORTS: Import child components using path aliases (@/ = src/)
 import SimpleStockChart from './SimpleStockChart';
+import AdvancedStockChart from './AdvancedStockChart';
 import PerformanceMetrics from './PerformanceMetrics';
 import StockSearch from './StockSearch';
 import AIInsights from './AIInsights';
@@ -909,12 +910,22 @@ export default function StockDashboard() {
             <PerformanceMetrics symbol={selectedStock} priceData={priceData} />
           </CollapsibleSection>
 
-          {/* Interactive Charts - Collapsible */}
+          {/* Advanced Interactive Charts - Collapsible */}
           <CollapsibleSection
-            title="Price Analysis & Charts"
-            subtitle="Technical indicators and price visualization"
+            title="Advanced Chart Analysis"
+            subtitle="Interactive charts with 5-year historical data and technical indicators"
             icon="📈"
             defaultExpanded={true}
+          >
+            <AdvancedStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
+          </CollapsibleSection>
+
+          {/* Simple Chart Overview - Collapsible */}
+          <CollapsibleSection
+            title="Quick Price Overview"
+            subtitle="Simple price visualization and key metrics"
+            icon="📊"
+            defaultExpanded={false}
           >
             <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
           </CollapsibleSection>

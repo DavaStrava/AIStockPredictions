@@ -248,13 +248,111 @@ export class FMPDataProvider {
         .map((item: FMPHistoricalData) => ({
           // Convert string date to Date object for consistent handling
           date: new Date(item.date),
-          // Extract only the OHLCV data we need for technical analysis
-          open: item.open,
-          high: item.high,
-          low: item.low,
-          close: item.close,
+          
+          /*
+            🎓 ADVANCED FINANCIAL DATA PROCESSING: PROPORTIONAL PRICE ADJUSTMENT
+            
+            This code demonstrates a sophisticated approach to handling adjusted stock prices
+            that goes beyond simply using adjusted close prices. It proportionally adjusts
+            ALL price points (Open, High, Low, Close) to maintain accurate relationships.
+            
+            📊 THE PROBLEM WITH MIXED ADJUSTED/RAW DATA:
+            
+            Many financial APIs (including FMP) provide:
+            - Raw OHLC prices (what actually traded that day)
+            - Adjusted close price (accounts for splits/dividends)
+            
+            But using raw OHLC with adjusted close creates inconsistencies:
+            
+            Example: Stock splits 2-for-1
+            Raw data:     Open: $100, High: $105, Low: $98, Close: $102
+            Mixed data:   Open: $100, High: $105, Low: $98, Close: $51 (adjusted)
+            ❌ Problem:   Close price is lower than Low price! (Impossible scenario)
+            
+            🔧 THE SOLUTION: PROPORTIONAL ADJUSTMENT
+            
+            We calculate an adjustment factor and apply it to ALL prices:
+            
+            Adjustment Factor = adjClose / rawClose
+            
+            If a stock splits 2-for-1:
+            - Raw close: $102, Adjusted close: $51
+            - Adjustment factor: $51 / $102 = 0.5
+            - Apply 0.5 to all prices: Open: $50, High: $52.50, Low: $49, Close: $51
+            ✅ Result: All prices maintain proper relationships
+            
+            🧮 MATHEMATICAL BREAKDOWN:
+            
+            The formula: adjustedPrice = (rawPrice × adjClose) / rawClose
+            
+            This can be rewritten as: adjustedPrice = rawPrice × adjustmentFactor
+            Where adjustmentFactor = adjClose / rawClose
+            
+            Why this works:
+            1. Preserves proportional relationships between OHLC prices
+            2. Accounts for all corporate actions (splits, dividends, spin-offs)
+            3. Creates mathematically consistent price data
+            4. Matches what professional trading platforms display
+            
+            📈 REAL-WORLD EXAMPLE: Apple 4-for-1 Split (August 2020)
+            
+            Before split (raw data):
+            Open: $425.00, High: $430.00, Low: $420.00, Close: $428.00
+            
+            After split (what we'd get with mixed data):
+            Open: $425.00, High: $430.00, Low: $420.00, Close: $107.00 ❌ WRONG!
+            
+            With proportional adjustment (factor = 107/428 = 0.25):
+            Open: $106.25, High: $107.50, Low: $105.00, Close: $107.00 ✅ CORRECT!
+            
+            🛡️ DEFENSIVE PROGRAMMING: DIVISION BY ZERO PROTECTION
+            
+            The condition `item.close !== 0` prevents division by zero errors:
+            - If raw close is 0 (data error), use raw prices unchanged
+            - This prevents crashes while maintaining data integrity
+            - Graceful degradation: partial data is better than no data
+            
+            🏭 INDUSTRY ALIGNMENT:
+            
+            This approach matches how major financial platforms handle data:
+            - TradingView: Uses proportionally adjusted OHLC data
+            - Bloomberg Terminal: Adjusts all prices consistently
+            - Yahoo Finance: Provides adjusted OHLC in their API
+            - Google Finance: Shows adjusted prices in charts
+            
+            🔍 TECHNICAL ANALYSIS BENEFITS:
+            
+            Proportional adjustment ensures technical indicators work correctly:
+            ✅ Candlestick patterns remain valid across corporate actions
+            ✅ Support/resistance levels maintain their significance
+            ✅ Moving averages don't show false breakouts after splits
+            ✅ Volume analysis remains accurate (volume isn't adjusted)
+            ✅ Price channels and trend lines stay relevant
+            
+            💡 KEY LEARNING CONCEPTS:
+            
+            1. **Data Consistency**: All related data points must be adjusted together
+            2. **Mathematical Relationships**: Preserve proportional relationships in data
+            3. **Domain Knowledge**: Financial expertise directly impacts code decisions
+            4. **Defensive Programming**: Handle edge cases (division by zero)
+            5. **Industry Standards**: Align with established practices for compatibility
+            
+            This implementation demonstrates how deep domain knowledge (finance) combined
+            with solid programming practices (error handling, mathematical precision)
+            creates robust, professional-grade financial software.
+          */
+          
+          // Calculate adjustment factor for consistent OHLC data
+          // This ensures all prices are adjusted proportionally for splits/dividends
+          // Adjustment factor = adjClose / close (handles corporate actions)
+          open: item.close !== 0 ? (item.open * item.adjClose) / item.close : item.open,
+          high: item.close !== 0 ? (item.high * item.adjClose) / item.close : item.high,
+          low: item.close !== 0 ? (item.low * item.adjClose) / item.close : item.low,
+          close: item.adjClose, // Use adjusted close - matches Google Finance and other platforms
           volume: item.volume,
-          // Note: We ignore adjClose, vwap, and other fields not needed for our analysis
+          
+          // Note: This proportional adjustment ensures price accuracy and consistency with major financial platforms
+          // All OHLC prices maintain their mathematical relationships while accounting for corporate actions
         }))
         // Sort chronologically (oldest to newest) - required for technical indicators
         // getTime() converts Date to milliseconds for numeric comparison
@@ -262,6 +360,12 @@ export class FMPDataProvider {
       
       // Apply time period filter to reduce data size and improve performance
       const filteredData = this.filterByPeriod(priceData, period);
+      
+      // Debug logging for data accuracy verification (only in development)
+      if (process.env.NODE_ENV === 'development' && filteredData.length > 0) {
+        const latestData = filteredData[filteredData.length - 1];
+        console.log(`[FMP] ${symbol} latest price: $${latestData.close.toFixed(2)} on ${latestData.date.toLocaleDateString()}`);
+      }
       
       return filteredData;
       
