@@ -141,7 +141,71 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     */
     const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('1Y');     // Currently selected time period
     const [chartType, setChartType] = useState<ChartType>('line');                  // Currently selected chart visualization type
-    const [historicalData, setHistoricalData] = useState<PriceData[]>(priceData);   // Cached historical price data
+    
+    /*
+      DEFENSIVE PROGRAMMING PATTERN - NULL/UNDEFINED SAFETY:
+      This line demonstrates a critical defensive programming technique using the logical OR operator (||).
+      
+      🛡️ THE PROBLEM THIS SOLVES:
+      When components receive props from parent components, those props might be:
+      - undefined (parent didn't pass the prop)
+      - null (parent explicitly passed null)
+      - An empty array [] (valid but empty data)
+      - A populated array (normal case)
+      
+      🔧 LOGICAL OR OPERATOR (||) EXPLAINED:
+      The || operator returns the first "truthy" value it encounters:
+      - priceData || [] means "use priceData if it exists and is truthy, otherwise use []"
+      - If priceData is undefined or null, JavaScript will use the empty array []
+      - If priceData is a valid array (even empty []), it will be used as-is
+      
+      📊 JAVASCRIPT TRUTHINESS RULES:
+      FALSY VALUES (|| will skip these):
+      - undefined, null, false, 0, "", NaN, 0n
+      
+      TRUTHY VALUES (|| will use these):
+      - Any non-empty array: [1, 2, 3], ["data"], even []
+      - Any non-empty object: {}, {key: "value"}
+      - Any non-zero number: 1, -1, 0.1
+      - Any non-empty string: "hello", "0", " "
+      
+      🎯 WHY THIS PATTERN IS ESSENTIAL:
+      Without this fallback, if priceData is undefined:
+      1. useState<PriceData[]>(undefined) would initialize state as undefined
+      2. Later code expecting an array would crash: historicalData.length, historicalData.map(), etc.
+      3. Error: "Cannot read property 'length' of undefined"
+      4. Component would break and potentially crash the entire app
+      
+      ✅ WITH THE FALLBACK:
+      1. useState<PriceData[]>(priceData || []) always initializes with an array
+      2. historicalData.length works (returns 0 for empty array)
+      3. historicalData.map() works (returns empty array)
+      4. Component renders gracefully with "no data" state
+      
+      🏭 PRODUCTION BENEFITS:
+      - CRASH PREVENTION: App continues working even with missing data
+      - GRACEFUL DEGRADATION: Shows empty chart instead of error screen
+      - BETTER UX: Users see loading states or empty states, not crashes
+      - EASIER DEBUGGING: Predictable behavior makes issues easier to trace
+      
+      🔄 ALTERNATIVE APPROACHES:
+      1. Default parameters: function Component({ priceData = [] })
+      2. Conditional rendering: {priceData && <Chart data={priceData} />}
+      3. Guard clauses: if (!priceData) return <EmptyState />
+      4. Optional chaining: priceData?.length || 0
+      
+      This || pattern is preferred here because:
+      - It's concise and readable
+      - It handles the initialization in one place
+      - It works with TypeScript's type system
+      - It's a common React pattern developers recognize
+      
+      💡 LEARNING TAKEAWAY:
+      Always consider what happens when your data is missing, null, or undefined.
+      Defensive programming with fallback values prevents crashes and creates
+      more robust applications that handle edge cases gracefully.
+    */
+    const [historicalData, setHistoricalData] = useState<PriceData[]>(priceData || []);   // Cached historical price data with null safety
     const [loading, setLoading] = useState(false);                                  // Loading state for data fetching
     const [showTechnicalIndicators, setShowTechnicalIndicators] = useState(true);   // Toggle for technical indicator overlays
 
@@ -212,7 +276,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     */
     const getFilteredData = () => {
         // GUARD CLAUSE: Return empty array if no data available
-        if (!historicalData.length) return [];
+        if (!historicalData || !historicalData.length) return [];
 
         const now = new Date();           // Current date/time
         const cutoffDate = new Date();    // Date to filter from (will be modified)

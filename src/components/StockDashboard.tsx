@@ -16,6 +16,8 @@ import StockSearch from './StockSearch';
 import AIInsights from './AIInsights';
 import TermsGlossary from './TermsGlossary';
 import CollapsibleSection from './CollapsibleSection';
+import MarketIndicesSidebar from './MarketIndicesSidebar';
+import MarketIndexAnalysis from './MarketIndexAnalysis';
 
 /*
   TYPESCRIPT INTERFACE DEFINITION:
@@ -87,6 +89,7 @@ export default function StockDashboard() {
   const [loading, setLoading] = useState(true);                                // Global loading state for initial page load
   const [searchLoading, setSearchLoading] = useState(false);                  // Separate loading state for individual stock searches
   const [customSymbol, setCustomSymbol] = useState('');                        // User input for custom stock symbol search
+  const [selectedIndex, setSelectedIndex] = useState<string | null>(null);     // Selected market index for detailed analysis
 
   /*
     COMPONENT LIFECYCLE WITH useEffect:
@@ -468,6 +471,16 @@ export default function StockDashboard() {
     }
   };
 
+  // MARKET INDEX HANDLER: Open detailed analysis for market index
+  const handleIndexClick = (indexSymbol: string) => {
+    setSelectedIndex(indexSymbol);
+  };
+
+  // CLOSE INDEX ANALYSIS HANDLER: Close market index analysis modal
+  const closeIndexAnalysis = () => {
+    setSelectedIndex(null);
+  };
+
 
 
   /*
@@ -607,7 +620,9 @@ export default function StockDashboard() {
     - Utility-first approach: small, single-purpose classes compose complex designs
   */
   return (
-    <div className="space-y-8">
+    <div className="flex">
+      {/* Main Content */}
+      <div className="flex-1 space-y-8 pr-6">
       {/* 
         MAIN COMPONENT RENDER:
         This return statement defines the JSX structure that React will render to the DOM.
@@ -1227,6 +1242,18 @@ export default function StockDashboard() {
           {/* Terms & Definitions Glossary */}
           <TermsGlossary />
         </div>
+      )}
+      </div>
+
+      {/* Market Indices Sidebar */}
+      <MarketIndicesSidebar onIndexClick={handleIndexClick} />
+
+      {/* Market Index Analysis Modal */}
+      {selectedIndex && (
+        <MarketIndexAnalysis
+          symbol={selectedIndex}
+          onClose={closeIndexAnalysis}
+        />
       )}
     </div>
   );

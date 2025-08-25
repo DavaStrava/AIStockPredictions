@@ -812,15 +812,19 @@ For sentiment analysis, provide a nuanced view of market psychology:
    */
   private compactTechnical(analysis: TechnicalAnalysisResult) {
     const lastN = (arr?: any[], n = 5) => Array.isArray(arr) ? arr.slice(-n) : undefined;
+    
+    // Safely access indicators with fallbacks
+    const indicators = analysis?.indicators || {};
+    
     return {
-      summary: analysis.summary,
-      signals: (analysis.signals || []).slice(0, 20),
+      summary: analysis?.summary || { overall: 'neutral', strength: 0.5, confidence: 0.5 },
+      signals: (analysis?.signals || []).slice(0, 20),
       indicators: {
-        rsi: lastN(analysis.indicators.rsi),
-        macd: lastN(analysis.indicators.macd),
-        bollingerBands: lastN(analysis.indicators.bollingerBands),
-        stochastic: lastN(analysis.indicators.stochastic),
-        williamsR: lastN(analysis.indicators.williamsR),
+        rsi: lastN(indicators.rsi),
+        macd: lastN(indicators.macd),
+        bollingerBands: lastN(indicators.bollingerBands),
+        stochastic: lastN(indicators.stochastic),
+        williamsR: lastN(indicators.williamsR),
       }
     };
   }
@@ -1233,4 +1237,55 @@ export function getLLMInsightService(): LLMInsightService {
     insightService = new LLMInsightService();
   }
   return insightService;
+}
+
+/**
+ * Get a simple LLM provider for basic text generation
+ * This is a simplified interface for direct text generation without the insight service
+ */
+export function getLLMProvider(): { generateText: (prompt: string) => Promise<string> } {
+  return {
+    generateText: async (prompt: string): Promise<string> => {
+      try {
+        // Simple direct OpenAI API call for basic text generation
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+          throw new Error('OpenAI API key not configured');
+        }
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a financial analyst providing concise market analysis. Keep responses to 2-3 sentences.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 150,
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenAI API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || 'Analysis unavailable at this time.';
+      } catch (error) {
+        console.error('LLM generation failed:', error);
+        return 'Market analysis temporarily unavailable. Please check back later.';
+      }
+    }
+  };
 }
