@@ -56,15 +56,15 @@ export default function MarketIndexAnalysis({ symbol, onClose }: MarketIndexAnal
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`/api/market-index-analysis?symbol=${encodeURIComponent(symbol)}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setData(result.data);
       } else {

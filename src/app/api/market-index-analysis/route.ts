@@ -1,19 +1,140 @@
+/*
+  MARKET INDEX ANALYSIS API ROUTE - EDUCATIONAL OVERVIEW
+  
+  This file demonstrates several important backend development concepts:
+  
+  🏗️ ARCHITECTURAL PATTERNS:
+  - RESTful API design with Next.js App Router
+  - External API integration with fallback strategies
+  - Data transformation and normalization pipelines
+  - Graceful degradation and error handling
+  
+  🔧 NEXT.JS APP ROUTER PATTERNS:
+  - File-based routing: /api/market-index-analysis/route.ts → /api/market-index-analysis
+  - Named export functions (GET, POST, etc.) for HTTP methods
+  - TypeScript integration with NextRequest/NextResponse
+  - Environment variable access for API keys
+  
+  📊 FINANCIAL DATA INTEGRATION:
+  - Multiple data source coordination (FMP API, technical analysis, news)
+  - Real-time and historical data processing
+  - Technical indicator calculations and interpretation
+  - Market sentiment analysis and AI-powered summaries
+  
+  🛡️ PRODUCTION-READY PATTERNS:
+  - Comprehensive error handling with user-friendly messages
+  - API rate limiting considerations and fallback data
+  - Type safety throughout the data pipeline
+  - Logging and debugging support for troubleshooting
+  
+  💡 LEARNING OBJECTIVES:
+  - Understanding modern API development with Next.js
+  - Working with external financial data APIs
+  - Implementing robust error handling strategies
+  - Creating maintainable and scalable backend services
+*/
+
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
 import { getLLMProvider } from '@/lib/ai/llm-providers';
 
-// Map display symbols to actual FMP symbols
+/*
+  SYMBOL MAPPING CONFIGURATION - DATA NORMALIZATION PATTERN
+  
+  This constant demonstrates the "Symbol Mapping" pattern used in financial applications
+  to handle the complexity of different symbol formats across various data sources.
+  
+  🎯 BUSINESS PROBLEM THIS SOLVES:
+  Financial data comes from multiple sources with different symbol conventions:
+  - User-friendly names: "S&P 500", "NASDAQ" 
+  - API symbols: "^GSPC", "^IXIC"
+  - Futures contracts: "ES=F", "NQ=F"
+  - Corrupted/alternative formats: "ESUSD", "NQUSD"
+  
+  🔧 TYPESCRIPT INTERFACE PATTERN:
+  { [key: string]: { fmpSymbol: string; name: string } }
+  
+  BREAKDOWN:
+  - [key: string]: Index signature - any string can be a key
+  - { fmpSymbol: string; name: string }: Value must have these exact properties
+  - This provides type safety while allowing flexible key names
+  
+  📊 RECENT ADDITIONS EXPLAINED:
+  The new entries handle three important scenarios:
+  
+  1. FUTURES CONTRACTS (ES=F, NQ=F, YM=F, RTY=F):
+     - Used when regular markets are closed
+     - Provide forward-looking price discovery
+     - E-mini contracts are electronically traded futures
+     - Allow 24/7 market sentiment tracking
+  
+  2. CORRUPTED SYMBOL MAPPINGS (ESUSD, NQUSD, etc.):
+     - Handle data corruption from external APIs
+     - Map malformed symbols back to correct indices
+     - Prevent application crashes from bad data
+     - Maintain user experience during data quality issues
+  
+  💡 PRODUCTION PATTERN BENEFITS:
+  - RESILIENCE: App works even with corrupted input data
+  - FLEXIBILITY: Easy to add new symbol formats
+  - MAINTAINABILITY: All symbol logic centralized in one place
+  - TYPE SAFETY: TypeScript prevents mapping errors at compile time
+*/
 const SYMBOL_MAP: { [key: string]: { fmpSymbol: string; name: string } } = {
-  'NASDAQ': { fmpSymbol: '^IXIC', name: 'NASDAQ Composite' },
+  // STANDARD MARKET INDICES - Primary trading session symbols
+  'NASDAQ': { fmpSymbol: '^IXIC', name: 'NASDAQ' },
   'S&P 500': { fmpSymbol: '^GSPC', name: 'S&P 500' },
-  'DOW': { fmpSymbol: '^DJI', name: 'Dow Jones Industrial Average' },
-  'RUSSELL': { fmpSymbol: '^RUT', name: 'Russell 2000' }
+  'DOW': { fmpSymbol: '^DJI', name: 'Dow Jones' },
+  'RUSSELL': { fmpSymbol: '^RUT', name: 'Russell 2000' },
+  
+  // FUTURES CONTRACTS - Extended hours and 24/7 trading
+  'ES=F': { fmpSymbol: 'ES=F', name: 'S&P 500 Futures' },
+  'NQ=F': { fmpSymbol: 'NQ=F', name: 'NASDAQ Futures' },
+  'YM=F': { fmpSymbol: 'YM=F', name: 'Dow Jones Futures' },
+  'RTY=F': { fmpSymbol: 'RTY=F', name: 'Russell 2000 Futures' },
+  
+  // CORRUPTED SYMBOL RECOVERY - Handle malformed data gracefully
+  'ESUSD': { fmpSymbol: '^GSPC', name: 'S&P 500' },
+  'NQUSD': { fmpSymbol: '^IXIC', name: 'NASDAQ' },
+  'YMUSD': { fmpSymbol: '^DJI', name: 'Dow Jones' },
+  'RTYUSD': { fmpSymbol: '^RUT', name: 'Russell 2000' }
 };
 
+/*
+  NEXT.JS API ROUTE HANDLER - HTTP GET METHOD
+  
+  This function demonstrates the Next.js App Router API pattern where:
+  - File location determines the endpoint URL
+  - Named exports (GET, POST, PUT, DELETE) handle HTTP methods
+  - Functions receive NextRequest and return NextResponse
+  
+  🔧 FUNCTION SIGNATURE EXPLAINED:
+  - export: Makes function available as API endpoint
+  - async: Enables await for asynchronous operations (API calls, database queries)
+  - GET: HTTP method name - Next.js automatically routes GET requests here
+  - request: NextRequest - contains URL parameters, headers, body, etc.
+  - Returns: NextResponse - standardized HTTP response with JSON data
+  
+  🎯 API DESIGN PATTERN:
+  This follows RESTful conventions where GET requests:
+  - Retrieve data without side effects
+  - Are cacheable and idempotent
+  - Use query parameters for filtering/configuration
+  - Return consistent JSON response format
+  
+  📊 FINANCIAL API CHARACTERISTICS:
+  - Combines multiple data sources (price, technical analysis, news)
+  - Handles real-time and historical data
+  - Provides fallback data for reliability
+  - Includes comprehensive error handling
+*/
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
+    
+    // Add debugging to see what symbol is being received
+    console.log('Market Index Analysis - Received symbol:', symbol);
     
     if (!symbol) {
       return NextResponse.json({
@@ -589,16 +710,106 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Simple sentiment analysis based on keywords
+/*
+  SENTIMENT ANALYSIS UTILITY FUNCTION - KEYWORD-BASED CLASSIFICATION
+  
+  This function demonstrates a simple but effective approach to sentiment analysis
+  using keyword matching instead of complex machine learning models.
+  
+  🎯 ALGORITHM APPROACH:
+  Instead of using expensive AI APIs or complex NLP models, this uses:
+  - Predefined keyword lists for positive/negative sentiment
+  - Simple counting and comparison logic
+  - Fast, deterministic results with no external dependencies
+  
+  🔧 TYPESCRIPT UNION RETURN TYPE:
+  'positive' | 'negative' | 'neutral'
+  - Restricts return values to only these three strings
+  - Provides compile-time type safety
+  - Enables exhaustive checking in switch statements
+  - Self-documenting (you can see all possible outcomes)
+  
+  📊 FINANCIAL SENTIMENT KEYWORDS:
+  The keyword lists are specifically chosen for financial news:
+  
+  POSITIVE: 'gain', 'rise', 'up', 'bull', 'growth', 'strong', 'positive', 'rally', 'surge', 'climb'
+  - Focus on upward movement and strength
+  - Include both technical terms ('bull', 'rally') and general terms ('growth', 'strong')
+  
+  NEGATIVE: 'fall', 'drop', 'down', 'bear', 'decline', 'weak', 'negative', 'crash', 'plunge', 'tumble'
+  - Focus on downward movement and weakness  
+  - Include both mild ('decline') and severe ('crash') terms
+  
+  🔍 ALGORITHM LOGIC:
+  1. Convert text to lowercase for case-insensitive matching
+  2. Count occurrences of positive keywords using Array.filter()
+  3. Count occurrences of negative keywords using Array.filter()
+  4. Compare counts to determine overall sentiment
+  5. Default to 'neutral' when counts are equal (balanced sentiment)
+  
+  💡 PRODUCTION BENEFITS:
+  - FAST: No API calls or complex processing
+  - RELIABLE: Always returns a result, never fails
+  - COST-EFFECTIVE: No per-request charges
+  - CUSTOMIZABLE: Easy to add domain-specific keywords
+  - TRANSPARENT: Logic is clear and auditable
+  
+  🚀 WHEN TO USE THIS APPROACH:
+  - High-volume applications where speed matters
+  - Cost-sensitive environments
+  - When you need guaranteed availability
+  - Domain-specific sentiment (financial, medical, etc.)
+  
+  🔄 ALTERNATIVE APPROACHES:
+  - Cloud AI APIs (Google Cloud Natural Language, AWS Comprehend)
+  - Open-source NLP libraries (VADER, TextBlob)
+  - Custom machine learning models
+  - Transformer-based models (BERT, RoBERTa)
+  
+  This keyword approach is chosen here for reliability and performance
+  in a financial application where consistent results matter more
+  than nuanced language understanding.
+*/
 function determineSentiment(text: string): 'positive' | 'negative' | 'neutral' {
+  // CASE NORMALIZATION: Convert to lowercase for consistent matching
   const lowerText = text.toLowerCase();
   
+  // FINANCIAL SENTIMENT KEYWORD DICTIONARIES
+  // These arrays contain words commonly associated with positive/negative market sentiment
   const positiveKeywords = ['gain', 'rise', 'up', 'bull', 'growth', 'strong', 'positive', 'rally', 'surge', 'climb'];
   const negativeKeywords = ['fall', 'drop', 'down', 'bear', 'decline', 'weak', 'negative', 'crash', 'plunge', 'tumble'];
   
+  /*
+    KEYWORD COUNTING WITH ARRAY.FILTER() PATTERN
+    
+    This demonstrates a functional programming approach to counting:
+    1. filter() creates new array containing only matching elements
+    2. includes() checks if text contains the keyword
+    3. .length gives us the count of matches
+    
+    ALTERNATIVE APPROACHES:
+    - for loop with counter variable
+    - reduce() with accumulator
+    - Regular expressions with global match
+    
+    The filter() approach is chosen for readability and functional style.
+  */
   const positiveCount = positiveKeywords.filter(keyword => lowerText.includes(keyword)).length;
   const negativeCount = negativeKeywords.filter(keyword => lowerText.includes(keyword)).length;
   
+  /*
+    SENTIMENT CLASSIFICATION LOGIC
+    
+    Simple majority-wins approach:
+    - More positive keywords = positive sentiment
+    - More negative keywords = negative sentiment  
+    - Equal counts or no keywords = neutral sentiment
+    
+    This handles edge cases gracefully:
+    - Text with no sentiment keywords → neutral
+    - Text with equal positive/negative keywords → neutral
+    - Text with only one type of keyword → that sentiment
+  */
   if (positiveCount > negativeCount) return 'positive';
   if (negativeCount > positiveCount) return 'negative';
   return 'neutral';

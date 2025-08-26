@@ -1,26 +1,231 @@
+/*
+  GLOBAL STYLES - TAILWIND CSS V4 CONFIGURATION
+  
+  This file demonstrates modern CSS architecture patterns and Tailwind CSS v4 setup.
+  
+  🎨 CSS ARCHITECTURE CONCEPTS:
+  - CSS Custom Properties (CSS Variables) for theming
+  - Tailwind CSS utility-first approach
+  - Dark mode support with system preferences
+  - Design token system for consistent styling
+  
+  💡 LEARNING OBJECTIVES:
+  - Understanding CSS custom properties and their benefits
+  - Modern CSS theming patterns
+  - Tailwind CSS integration and configuration
+  - Responsive design with system preferences
+*/
+
+/*
+  TAILWIND CSS IMPORT:
+  @import "tailwindcss" loads all Tailwind utilities, components, and base styles.
+  
+  TAILWIND V4 CHANGES:
+  - Simplified import syntax (no separate base/components/utilities)
+  - Better performance with automatic purging
+  - Enhanced dark mode support
+  - Improved CSS custom property integration
+*/
 @import "tailwindcss";
 
+/*
+  CSS CUSTOM PROPERTIES (CSS VARIABLES) - ROOT SCOPE:
+  
+  The :root selector defines global CSS variables available throughout the document.
+  These create a design token system for consistent theming.
+  
+  🎨 DESIGN TOKEN BENEFITS:
+  1. CONSISTENCY: Same colors used across entire application
+  2. MAINTAINABILITY: Change theme colors in one place
+  3. DYNAMIC THEMING: Can be modified with JavaScript
+  4. PERFORMANCE: No runtime CSS generation needed
+  
+  🔧 CSS CUSTOM PROPERTY SYNTAX:
+  --property-name: value;
+  - Double dashes (--) indicate custom property
+  - Can contain any valid CSS value
+  - Inherited by child elements
+  - Can be overridden in specific contexts
+  
+  💡 NAMING CONVENTION:
+  Using semantic names (background, foreground) instead of specific colors
+  (white, black) makes the system more flexible and meaningful.
+*/
 :root {
   --background: #ffffff;
+  /* Light mode background - pure white */
   --foreground: #171717;
+  /* Light mode text - very dark gray (not pure black for better readability) */
 }
 
+/*
+  TAILWIND CSS V4 THEME CONFIGURATION:
+  
+  The @theme directive is Tailwind v4's new way to define custom design tokens
+  that integrate seamlessly with Tailwind's utility classes.
+  
+  🚀 TAILWIND V4 FEATURES:
+  - @theme directive replaces traditional tailwind.config.js theme extensions
+  - Better integration with CSS custom properties
+  - Automatic dark mode variant generation
+  - Improved IntelliSense support in editors
+  
+  🔧 INLINE THEME DEFINITION:
+  @theme inline allows defining theme tokens directly in CSS files
+  instead of separate configuration files.
+  
+  BENEFITS:
+  - Co-location: Theme tokens near where they're used
+  - Better performance: No separate config file parsing
+  - Easier maintenance: See tokens and usage together
+  - Dynamic theming: Can be modified at runtime
+*/
 @theme inline {
+  /*
+    COLOR SYSTEM INTEGRATION:
+    These map CSS custom properties to Tailwind color utilities.
+    
+    USAGE EXAMPLES:
+    - bg-background → uses var(--background)
+    - text-foreground → uses var(--foreground)
+    - This creates semantic utility classes
+  */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /*
+    TYPOGRAPHY SYSTEM:
+    Font family tokens that can be used with Tailwind utilities.
+    
+    FONT LOADING STRATEGY:
+    These reference fonts loaded in the Next.js layout component.
+    Using CSS variables allows fallback fonts if custom fonts fail to load.
+    
+    USAGE EXAMPLES:
+    - font-sans → uses var(--font-geist-sans)
+    - font-mono → uses var(--font-geist-mono)
+  */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+  DARK MODE IMPLEMENTATION - SYSTEM PREFERENCE DETECTION:
+  
+  This media query demonstrates modern dark mode implementation using
+  system preferences rather than manual toggles.
+  
+  🌙 PREFERS-COLOR-SCHEME EXPLAINED:
+  - CSS media query that detects user's system theme preference
+  - Automatically switches themes based on OS settings
+  - No JavaScript required for basic dark mode functionality
+  - Respects user's accessibility preferences
+  
+  🎨 DARK MODE DESIGN PRINCIPLES:
+  - Background: Very dark but not pure black (#0a0a0a vs #000000)
+  - Foreground: Light gray instead of pure white for reduced eye strain
+  - Maintains sufficient contrast ratio for accessibility (WCAG compliance)
+  
+  💡 COLOR PSYCHOLOGY IN DARK MODE:
+  - Pure black can cause eye strain and halation effects
+  - Slightly lighter dark colors (#0a0a0a) are more comfortable
+  - Light gray text (#ededed) reduces harsh contrast
+  - Better for extended reading and low-light environments
+*/
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
+    /* Very dark gray - easier on eyes than pure black */
     --foreground: #ededed;
+    /* Light gray - less harsh than pure white */
   }
 }
 
+/*
+  BODY ELEMENT STYLING - GLOBAL FOUNDATION:
+  
+  These styles establish the foundation for the entire application.
+  Applied to the <body> element, they cascade to all child elements.
+  
+  🏗️ GLOBAL STYLING STRATEGY:
+  - Use CSS custom properties for dynamic theming
+  - Establish baseline typography and colors
+  - Provide fallback fonts for reliability
+  
+  🔧 CSS PROPERTY EXPLANATIONS:
+  
+  BACKGROUND PROPERTY:
+  - Uses var(--background) CSS custom property
+  - Automatically switches between light/dark based on media query above
+  - Provides consistent background across entire application
+  
+  COLOR PROPERTY:
+  - Sets default text color using var(--foreground)
+  - Inherited by all child elements unless overridden
+  - Ensures readable contrast with background
+  
+  FONT-FAMILY FALLBACK STRATEGY:
+  - Arial: Widely available sans-serif font (Windows/Mac)
+  - Helvetica: High-quality alternative (Mac/iOS)
+  - sans-serif: Generic fallback (browser default)
+  
+  💡 WHY FALLBACK FONTS MATTER:
+  - Custom fonts (Geist) might fail to load due to network issues
+  - Fallback fonts ensure text remains readable
+  - Progressive enhancement: works without custom fonts, better with them
+  - Performance: fallback fonts display immediately while custom fonts load
+  
+  🚀 PERFORMANCE CONSIDERATIONS:
+  - CSS custom properties have minimal performance impact
+  - System fonts (Arial, Helvetica) load instantly
+  - No flash of unstyled text (FOUT) with proper fallbacks
+  - Dark mode switching is hardware-accelerated by browsers
+  
+  ♿ ACCESSIBILITY BENEFITS:
+  - Respects user's system theme preferences
+  - Maintains proper contrast ratios in both themes
+  - Uses readable font families with good character spacing
+  - No motion or animations that could trigger vestibular disorders
+*/
 body {
   background: var(--background);
+  /* Dynamic background color */
   color: var(--foreground);
+  /* Dynamic text color */
   font-family: Arial, Helvetica, sans-serif;
+  /* Reliable font stack with fallbacks */
 }
+
+/*
+  CSS ARCHITECTURE SUMMARY - KEY LEARNING TAKEAWAYS:
+  
+  This globals.css file demonstrates several important web development concepts:
+  
+  🎨 MODERN CSS PATTERNS:
+  1. CSS Custom Properties for dynamic theming
+  2. System preference detection with prefers-color-scheme
+  3. Semantic naming conventions for design tokens
+  4. Progressive enhancement with fallback fonts
+  
+  🔧 TAILWIND CSS V4 INTEGRATION:
+  1. Simplified import syntax for better performance
+  2. @theme inline directive for co-located configuration
+  3. CSS custom property integration with utility classes
+  4. Automatic dark mode variant generation
+  
+  ♿ ACCESSIBILITY CONSIDERATIONS:
+  1. Respects user system preferences
+  2. Maintains proper contrast ratios
+  3. Uses readable font families
+  4. No forced theme switching
+  
+  🚀 PERFORMANCE OPTIMIZATIONS:
+  1. Minimal CSS custom property overhead
+  2. System font fallbacks for instant loading
+  3. Hardware-accelerated theme switching
+  4. No JavaScript required for basic theming
+  
+  This approach creates a solid foundation for a modern, accessible,
+  and performant web application that respects user preferences
+  and provides excellent developer experience.
+*/
