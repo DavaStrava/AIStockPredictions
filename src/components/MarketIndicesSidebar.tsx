@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
 
 interface MarketIndex {
-  symbol: string;
+  symbol: string;          // Display symbol (e.g., "NASDAQ", "S&P 500")
+  tickerSymbol: string;    // Original ticker symbol (e.g., "^IXIC", "^GSPC")
   name: string;
   price: number;
   change: number;
@@ -157,7 +158,82 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
         {indices.map((index) => (
           <div
             key={index.symbol}
-            onClick={() => onIndexClick(index.symbol)}
+            onClick={() => {
+              /*
+                DEBUGGING PATTERN - COMPONENT INTERACTION TRACING
+                
+                This console.log demonstrates essential debugging practices for React component
+                interactions, especially when data flows between components through callbacks.
+                
+                🔍 WHY DEBUGGING IS CRITICAL IN COMPONENT COMMUNICATION:
+                - Props and callbacks create complex data flows between components
+                - User interactions trigger cascading effects across multiple components
+                - State updates are asynchronous and may not happen immediately
+                - Integration bugs often occur at component boundaries
+                - Data transformation can happen at different levels of the component tree
+                
+                📊 STRUCTURED DEBUGGING APPROACH:
+                
+                1. **DESCRIPTIVE PREFIXES**: "MarketIndicesSidebar -" helps identify the source
+                   component when multiple components are logging simultaneously in production
+                
+                2. **INPUT VALIDATION**: Log the parameter being passed to verify:
+                   - The correct data is being passed to the parent component
+                   - Data format matches expectations (technical symbol vs display name)
+                   - No corruption or transformation occurred during user interaction
+                
+                3. **INTERACTION CONFIRMATION**: Confirms the click handler executed successfully
+                   - Verifies the onClick event fired correctly
+                   - Shows which specific index was clicked by the user
+                   - Provides audit trail for user actions
+                
+                🛡️ PRODUCTION DEBUGGING BENEFITS:
+                - COMPONENT INTEGRATION: Verify data flows correctly between components
+                - USER INTERACTION TRACKING: Trace user actions through the component tree
+                - CALLBACK VALIDATION: Ensure parent components receive correct data
+                - PROP VERIFICATION: Confirm the right technical symbols are being passed
+                
+                💡 DEBUGGING WORKFLOW:
+                When issues occur with market index selection, developers can:
+                1. Check browser console for this log entry
+                2. Verify the sidebar is passing the correct technical symbol
+                3. Trace the data flow to the parent StockDashboard component
+                4. Confirm the MarketIndexAnalysis component receives the right symbol
+                5. Identify where in the chain any issues occur
+                
+                🔧 CONSOLE.LOG BEST PRACTICES DEMONSTRATED:
+                - Use consistent prefixes for easy filtering in browser DevTools
+                - Log the actual data being passed, not just generic messages
+                - Include context about what the log represents
+                - Place logs at key interaction points in the user flow
+                
+                🚀 PRODUCTION CONSIDERATIONS:
+                In production builds, consider:
+                - Wrapping in development-only conditions: if (process.env.NODE_ENV === 'development')
+                - Replacing with proper analytics tracking (Google Analytics, Mixpanel, etc.)
+                - Using structured logging libraries for better searchability
+                - Removing or minimizing console output to avoid performance impact
+                
+                📈 COMPONENT ARCHITECTURE CONTEXT:
+                This debugging is especially valuable because:
+                - The sidebar uses dual symbol architecture (display vs technical symbols)
+                - User clicks need to pass technical symbols for accurate API calls
+                - The parent component needs to handle the symbol correctly for analysis
+                - Integration between UI components and data fetching must work seamlessly
+                
+                🎯 REAL-WORLD DEBUGGING SCENARIO:
+                If a user clicks "S&P 500" but the analysis fails to load, this log helps determine:
+                - Did the click handler fire? (This log should appear)
+                - What symbol was passed? (Should be "^GSPC", not "S&P 500")
+                - Did the parent component receive it? (Check StockDashboard logs)
+                - Did the API call use the right symbol? (Check network tab)
+                
+                This systematic approach makes debugging component interactions much more efficient
+                and helps maintain reliable user experiences in complex React applications.
+              */
+              console.log('MarketIndicesSidebar - Index clicked:', index.tickerSymbol);
+              onIndexClick(index.tickerSymbol);
+            }}
             className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${getChangeBg(index.change)}`}
           >
             <div className="flex items-start justify-between mb-2">

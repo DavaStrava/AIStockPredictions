@@ -57,6 +57,7 @@ interface PredictionResult {
   while still providing appropriate feedback during longer operations.
 */
 export default function StockDashboard() {
+  console.log('StockDashboard - Component loaded');
   /*
     REACT STATE MANAGEMENT WITH TYPESCRIPT:
     useState is React's primary way to add state to functional components.
@@ -471,9 +472,98 @@ export default function StockDashboard() {
     }
   };
 
-  // MARKET INDEX HANDLER: Open detailed analysis for market index
+  /*
+    MARKET INDEX CLICK HANDLER - TECHNICAL SYMBOL PROCESSING WITH DEBUGGING
+    
+    🔧 PARAMETER EXPLANATION:
+    The 'indexSymbol' parameter now receives the technical ticker symbol (e.g., "^GSPC")
+    rather than the display symbol (e.g., "S&P 500") due to the dual symbol architecture.
+    
+    🎯 WHY TECHNICAL SYMBOLS ARE PASSED:
+    - Chart APIs require exact ticker symbols for accurate data fetching
+    - Analysis components need technical symbols for API calls
+    - Display formatting is handled within the analysis components
+    
+    📊 DATA FLOW:
+    1. User clicks on market index in sidebar
+    2. Sidebar passes technical symbol (e.g., "^GSPC") to this handler
+    3. Handler stores technical symbol in selectedIndex state
+    4. MarketIndexAnalysis component receives technical symbol
+    5. Analysis component uses technical symbol for API calls
+    6. Analysis component handles display formatting internally
+    
+    This ensures accurate data fetching while maintaining clean component separation.
+  */
   const handleIndexClick = (indexSymbol: string) => {
+    /*
+      DEBUGGING PATTERN - COMPONENT INTERACTION TRACING
+      
+      These console.log statements demonstrate essential debugging practices for
+      React component interactions, especially when data flows between components.
+      
+      🔍 WHY DEBUGGING IS CRITICAL IN COMPONENT COMMUNICATION:
+      - Props and callbacks create complex data flows between components
+      - State updates are asynchronous and may not happen immediately
+      - Component re-renders can cause unexpected behavior
+      - User interactions trigger cascading effects across multiple components
+      - Integration bugs often occur at component boundaries
+      
+      📊 STRUCTURED DEBUGGING APPROACH:
+      
+      1. **DESCRIPTIVE PREFIXES**: "StockDashboard -" helps identify the source
+         component when multiple components are logging simultaneously
+      
+      2. **INPUT VALIDATION**: Log the received parameter to verify:
+         - The correct data is being passed from the parent component
+         - Data format matches expectations (technical symbol vs display name)
+         - No corruption or transformation occurred during prop passing
+      
+      3. **STATE CHANGE CONFIRMATION**: Log after setState to verify:
+         - The state update function was called successfully
+         - The correct value is being stored in component state
+         - No race conditions or timing issues are occurring
+      
+      🛡️ PRODUCTION DEBUGGING BENEFITS:
+      - COMPONENT INTEGRATION: Verify data flows correctly between components
+      - USER INTERACTION TRACKING: Trace user actions through the component tree
+      - STATE MANAGEMENT: Confirm state updates happen as expected
+      - PROP VALIDATION: Ensure parent components pass correct data
+      
+      💡 DEBUGGING WORKFLOW:
+      When issues occur with market index selection, developers can:
+      1. Check browser console for these logs
+      2. Verify the sidebar is passing the correct technical symbol
+      3. Confirm the dashboard receives and stores the symbol correctly
+      4. Trace the data flow to the MarketIndexAnalysis component
+      5. Identify where in the chain the issue occurs
+      
+      🔧 CONSOLE.LOG BEST PRACTICES DEMONSTRATED:
+      - Use consistent prefixes for easy filtering in browser DevTools
+      - Log both input parameters and resulting state changes
+      - Include context about what the log represents
+      - Place logs at key decision points in the data flow
+      
+      🚀 PRODUCTION CONSIDERATIONS:
+      In production builds, consider:
+      - Wrapping in development-only conditions: if (process.env.NODE_ENV === 'development')
+      - Replacing with proper error tracking (Sentry, LogRocket, etc.)
+      - Using structured logging libraries for better searchability
+      - Removing or minimizing console output to avoid performance impact
+      
+      📈 COMPONENT ARCHITECTURE CONTEXT:
+      This debugging pattern is especially valuable in complex React applications where:
+      - Multiple components share state through props and callbacks
+      - User interactions trigger state changes across component boundaries
+      - Data transformation occurs at different levels of the component tree
+      - Integration between different UI sections needs to work seamlessly
+      
+      The dual symbol architecture (display vs technical symbols) makes this debugging
+      even more important because it's easy for components to pass the wrong symbol type,
+      leading to API failures or incorrect data display.
+    */
+    console.log('StockDashboard - Index clicked:', indexSymbol);
     setSelectedIndex(indexSymbol);
+    console.log('StockDashboard - selectedIndex set to:', indexSymbol);
   };
 
   // CLOSE INDEX ANALYSIS HANDLER: Close market index analysis modal

@@ -15,12 +15,19 @@
  * - ERROR ISOLATION: API failures don't crash the entire application
  * - DEFENSIVE PROGRAMMING: Validate data before processing
  * 
+ * 🔧 DUAL SYMBOL ARCHITECTURE:
+ * - DISPLAY SYMBOLS: User-friendly names for UI components (e.g., "S&P 500", "NASDAQ")
+ * - TECHNICAL SYMBOLS: API-compatible ticker symbols (e.g., "^GSPC", "^IXIC")
+ * - SEPARATION OF CONCERNS: UI uses display symbols, APIs use technical symbols
+ * - SINGLE RESPONSE: Both symbol types provided in same API response
+ * 
  * 💡 LEARNING OBJECTIVES:
  * - Understanding nested error handling strategies
  * - Working with external APIs and handling failures
  * - Date/time manipulation and timezone conversions
  * - Data transformation and mapping patterns
  * - Building resilient systems that handle real-world failures
+ * - Implementing dual data formats for different use cases
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -172,6 +179,14 @@ const MARKET_INDICES = [
     displaySymbol: 'S&P 500',           // Full name fits well in most UI contexts
     futuresSymbol: 'ESUSD'              // S&P 500 E-mini futures - FMP API format
     /*
+     * 📊 MOST IMPORTANT INDEX - S&P 500:
+     * This is the most widely followed stock market index globally.
+     * The futures symbol change from 'ES=F' to 'ESUSD' represents:
+     * - MIGRATION TO PROFESSIONAL API: FMP provides institutional-grade data
+     * - CONSISTENT NAMING: All futures now follow XXXUSD pattern
+     * - BETTER RELIABILITY: Reduced dependency on free APIs with rate limits
+     */
+    /*
      * S&P 500 INDEX DETAILS:
      * - Tracks 500 largest US companies by market capitalization
      * - Considered the best representation of the US stock market
@@ -208,9 +223,42 @@ const MARKET_INDICES = [
 ];
 
 /**
- * 🔄 CODE SIMPLIFICATION AND MAINTAINABILITY PRINCIPLES
+ * 🔄 API MIGRATION AND CONFIGURATION MANAGEMENT PRINCIPLES
  * 
- * The recent changes to the MARKET_INDICES configuration demonstrate several
+ * The recent futures symbol format changes (NQ=F → NQUSD, ES=F → ESUSD, etc.) 
+ * demonstrate several important software engineering principles and best practices:
+ * 
+ * 🚀 API MIGRATION STRATEGY - CONFIGURATION-DRIVEN APPROACH:
+ * This change showcases how well-designed configuration makes API migrations manageable:
+ * 
+ * 1. 📍 CENTRALIZED CONFIGURATION:
+ *    - All API symbols defined in one place (this MARKET_INDICES array)
+ *    - No scattered hardcoded symbols throughout the codebase
+ *    - Single source of truth for all market data endpoints
+ * 
+ * 2. 🔧 ZERO-DOWNTIME MIGRATION:
+ *    - Change symbols in configuration → entire app uses new API format
+ *    - No business logic changes required
+ *    - Can test new format in development before production deployment
+ * 
+ * 3. 🛡️ RISK MITIGATION:
+ *    - Easy rollback: revert configuration if new API has issues
+ *    - Gradual migration possible: could migrate one symbol at a time
+ *    - Type safety ensures all code uses correct symbol format
+ * 
+ * 4. 💰 COST OPTIMIZATION:
+ *    - Consolidating from multiple APIs (Yahoo + FMP) to single provider (FMP)
+ *    - Reduces complexity of managing different rate limits and authentication
+ *    - Professional API provides better reliability and support
+ * 
+ * 🎯 REAL-WORLD API MIGRATION CHALLENGES THIS SOLVES:
+ * - SYMBOL FORMAT DIFFERENCES: Yahoo uses 'ES=F', FMP uses 'ESUSD'
+ * - AUTHENTICATION METHODS: Free APIs vs paid APIs with API keys
+ * - RATE LIMITING: Different providers have different usage restrictions
+ * - DATA QUALITY: Professional APIs often provide more accurate/timely data
+ * - RELIABILITY: Paid services typically offer better uptime guarantees
+ * 
+ * The recent changes to the MARKET_INDICES configuration also demonstrate several
  * important software engineering principles and best practices:
  * 
  * 1. 📝 DOCUMENTATION BALANCE:
@@ -275,9 +323,33 @@ const MARKET_INDICES = [
  * - Business rules and validation criteria
  * - Database connection strings and environment settings
  * 
+ * 🔄 HOW THIS FUTURES SYMBOL CHANGE AFFECTS THE APPLICATION:
+ * 
+ * 1. 📊 DATA FETCHING LOGIC:
+ *    - When markets are closed, app automatically switches to futures data
+ *    - Uses futuresSymbol from this configuration to fetch NQUSD instead of NQ=F
+ *    - All downstream components receive data in same format regardless of source
+ * 
+ * 2. 🎨 USER INTERFACE:
+ *    - UI components show "Futures Data" indicators when using futures symbols
+ *    - Charts and displays work identically with new symbol format
+ *    - No user-facing changes despite backend API migration
+ * 
+ * 3. 🔍 LOGGING AND DEBUGGING:
+ *    - API calls now use ESUSD, NQUSD, etc. in request URLs
+ *    - Error messages and logs reference new symbol format
+ *    - Easier to trace issues with consistent API provider
+ * 
+ * 4. 💾 DATA STORAGE:
+ *    - Database records may store symbol references for caching
+ *    - New format ensures consistency between cached and live data
+ *    - Historical data remains valid with proper symbol mapping
+ * 
  * The key insight is that configuration should be data-driven rather than
  * code-driven, enabling changes without deployments and making the system
- * more flexible and maintainable over time.
+ * more flexible and maintainable over time. This futures symbol migration
+ * perfectly demonstrates how good architecture pays dividends during inevitable
+ * API changes and service migrations.
  */
 
 /**
@@ -1191,6 +1263,131 @@ export async function GET(request: NextRequest) {
           symbol: indexInfo?.displaySymbol || quote.symbol,
           
           /*
+            ORIGINAL TICKER SYMBOL - DUAL SYMBOL ARCHITECTURE PATTERN
+            
+            🔧 PROBLEM THIS SOLVES:
+            We need TWO different symbol formats for different purposes:
+            1. USER-FRIENDLY SYMBOLS: For display in the UI (e.g., "S&P 500", "NASDAQ")
+            2. TECHNICAL SYMBOLS: For API calls and data fetching (e.g., "^GSPC", "^IXIC")
+            
+            🎯 WHY WE NEED BOTH:
+            
+            DISPLAY SYMBOLS (stored in 'symbol' field):
+            - Human-readable names that users recognize
+            - Examples: "S&P 500", "NASDAQ", "DOW", "RUSSELL"
+            - Used in UI components, charts titles, and user-facing displays
+            - Optimized for readability and space constraints
+            
+            TICKER SYMBOLS (stored in 'tickerSymbol' field):
+            - Technical symbols required by financial APIs
+            - Examples: "^GSPC", "^IXIC", "^DJI", "^RUT"
+            - Used for data fetching, chart APIs, and backend processing
+            - Must match exact format expected by data providers
+            
+            🔄 DATA FLOW EXAMPLE:
+            
+            1. CONFIGURATION PHASE:
+               - MARKET_INDICES defines: { symbol: '^GSPC', displaySymbol: 'S&P 500' }
+               - We store both the technical symbol and user-friendly name
+            
+            2. API RESPONSE BUILDING:
+               - symbol: 'S&P 500' (for UI display)
+               - tickerSymbol: '^GSPC' (for chart APIs)
+               - Frontend receives both formats in the same response
+            
+            3. FRONTEND USAGE:
+               - UI components use 'symbol' for display: "S&P 500"
+               - Chart components use 'tickerSymbol' for data: "^GSPC"
+               - No additional mapping or lookups required
+            
+            🏗️ ARCHITECTURAL BENEFITS:
+            
+            1. SEPARATION OF CONCERNS:
+               - Display logic uses display-optimized symbols
+               - Data fetching logic uses API-compatible symbols
+               - Each system uses the format it needs without conversion
+            
+            2. PERFORMANCE OPTIMIZATION:
+               - No runtime symbol mapping or lookups required
+               - Frontend receives both formats in single API call
+               - Reduces complexity in chart components
+            
+            3. MAINTAINABILITY:
+               - Symbol format changes only require config updates
+               - No code changes needed when switching data providers
+               - Clear distinction between display and technical symbols
+            
+            4. FLEXIBILITY:
+               - Can customize display names without affecting data fetching
+               - Easy to support multiple languages for display symbols
+               - Technical symbols remain stable regardless of UI changes
+            
+            🔧 FALLBACK PATTERN EXPLANATION:
+            indexInfo?.symbol || quote.symbol
+            
+            PRIMARY SOURCE (indexInfo?.symbol):
+            - Our curated technical symbols from MARKET_INDICES configuration
+            - Examples: "^GSPC", "^IXIC", "^DJI", "^RUT"
+            - Ensures we use the correct symbols for our supported indices
+            
+            FALLBACK SOURCE (quote.symbol):
+            - Symbol from the external API response
+            - Used when we don't have the symbol in our configuration
+            - Provides graceful degradation for unknown symbols
+            
+            📊 REAL-WORLD USE CASES:
+            
+            SCENARIO 1 - CHART COMPONENT NEEDS DATA:
+            ```typescript
+            // Chart component receives market index data
+            const chartData = await fetch(`/api/chart?symbol=${index.tickerSymbol}`);
+            // Uses "^GSPC" for accurate S&P 500 chart data
+            ```
+            
+            SCENARIO 2 - UI COMPONENT SHOWS NAME:
+            ```jsx
+            // UI component displays user-friendly name
+            <h3>{index.symbol}</h3>
+            // Shows "S&P 500" instead of "^GSPC"
+            ```
+            
+            SCENARIO 3 - ANALYSIS API CALL:
+            ```typescript
+            // Technical analysis needs precise symbol
+            const analysis = await fetch(`/api/analysis?symbol=${index.tickerSymbol}`);
+            // Uses "^GSPC" to get correct S&P 500 analysis data
+            ```
+            
+            🚀 PRODUCTION BENEFITS:
+            
+            1. USER EXPERIENCE:
+               - Users see friendly names like "S&P 500" instead of "^GSPC"
+               - Charts and analysis use correct technical symbols
+               - No confusion between display and data symbols
+            
+            2. DEVELOPER EXPERIENCE:
+               - Clear separation between display and data concerns
+               - No need to remember symbol mappings in components
+               - Both formats available in single API response
+            
+            3. SYSTEM RELIABILITY:
+               - Correct symbols ensure accurate data fetching
+               - Fallback pattern handles missing configuration gracefully
+               - Reduces errors from symbol format mismatches
+            
+            💡 LEARNING TAKEAWAY:
+            When building systems that interface with external APIs, it's common
+            to need different data formats for different purposes. The dual symbol
+            pattern (display + technical) is a clean way to handle this requirement
+            without forcing components to do runtime conversions or lookups.
+            
+            This pattern is especially important in financial applications where
+            symbol accuracy is critical for data integrity, but user experience
+            requires human-readable names.
+          */
+          tickerSymbol: indexInfo?.symbol || quote.symbol,
+          
+          /*
             ENHANCED NAME FALLBACK PATTERN - SIMPLIFIED CONDITIONAL LOGIC
             
             🔄 CODE CHANGE EXPLANATION:
@@ -1421,6 +1618,7 @@ export async function GET(request: NextRequest) {
         
         return {
           symbol: index.displaySymbol,
+          tickerSymbol: index.symbol,  // Original ticker symbol for chart API
           name: index.name,
           price: Math.round(currentPrice * 100) / 100,
           change: Math.round(change * 100) / 100,

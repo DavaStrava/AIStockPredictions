@@ -62,9 +62,20 @@ import { TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
 /*
   MARKET INDEX DATA MODEL:
   This interface defines the structure of market index data from our API.
+  
+  🔧 DUAL SYMBOL ARCHITECTURE:
+  The interface includes both 'symbol' and 'tickerSymbol' fields to support
+  different use cases within the same component:
+  
+  - symbol: User-friendly display names for UI elements
+  - tickerSymbol: Technical symbols for API calls and data fetching
+  
+  This separation allows the component to show readable names to users
+  while using correct technical symbols for chart data and analysis.
 */
 interface MarketIndex {
-  symbol: string;           // e.g., "^GSPC", "^DJI", "^IXIC"
+  symbol: string;           // Display symbol (e.g., "S&P 500", "NASDAQ", "DOW")
+  tickerSymbol: string;     // Technical ticker symbol (e.g., "^GSPC", "^IXIC", "^DJI")
   name: string;             // e.g., "S&P 500", "Dow Jones"
   price: number;            // e.g., 4500.25
   change: number;           // e.g., +15.30
@@ -251,7 +262,17 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
         {indices.map((index) => (
           <div
             key={index.symbol}
-            onClick={() => onIndexClick(index.symbol)}
+            /*
+              DUAL SYMBOL USAGE PATTERN:
+              - key={index.symbol}: Uses display symbol for React key (stable, user-friendly)
+              - onClick={index.tickerSymbol}: Passes technical symbol to parent component
+              
+              WHY DIFFERENT SYMBOLS:
+              - React key should be stable and readable for debugging
+              - Parent component needs technical symbol for API calls and chart data
+              - This ensures correct data fetching while maintaining good developer experience
+            */
+            onClick={() => onIndexClick(index.tickerSymbol)}
             className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${getChangeBg(index.change)}`}
           >
             {/* Card header */}

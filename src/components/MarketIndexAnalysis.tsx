@@ -1,5 +1,105 @@
 'use client';
 
+/*
+  MODULE LOADING DEBUGGING PATTERN - EDUCATIONAL OVERVIEW
+  
+  This console.log statement demonstrates an essential debugging technique for React applications,
+  particularly useful when troubleshooting component loading and module resolution issues.
+  
+  🔍 WHY MODULE LOADING LOGS ARE VALUABLE:
+  
+  1. **COMPONENT LIFECYCLE VERIFICATION**:
+     - Confirms the component file is being loaded by the JavaScript engine
+     - Helps identify if import/export issues are preventing component registration
+     - Useful when components aren't rendering and you need to verify they're being found
+  
+  2. **BUILD SYSTEM DEBUGGING**:
+     - Next.js uses complex bundling with Turbopack/Webpack
+     - Module loading logs help verify files are included in the bundle
+     - Can identify tree-shaking issues where components are unexpectedly excluded
+  
+  3. **DEVELOPMENT WORKFLOW BENEFITS**:
+     - Immediate feedback when files are processed during development
+     - Helps track hot-reload behavior and file watching
+     - Useful for debugging dynamic imports and code splitting
+  
+  🎯 WHEN TO USE MODULE LOADING LOGS:
+  
+  - **Component Not Rendering**: When a component should appear but doesn't
+  - **Import/Export Issues**: When getting "module not found" or similar errors
+  - **Build Problems**: When components work in development but fail in production
+  - **Dynamic Loading**: When using React.lazy() or dynamic imports
+  - **Hot Reload Issues**: When changes aren't reflecting during development
+  
+  📊 CONSOLE OUTPUT PATTERN:
+  
+  The format "ComponentName - Module loaded" provides:
+  - COMPONENT IDENTIFICATION: Clear indication of which component is loading
+  - CONSISTENT NAMING: Easy to search/filter in browser DevTools console
+  - TIMING INFORMATION: Shows the order in which modules are processed
+  - DEBUGGING CONTEXT: Helps trace execution flow through the application
+  
+  🔧 PLACEMENT STRATEGY:
+  
+  This log is placed immediately after 'use client' because:
+  - EARLY EXECUTION: Runs as soon as the module is evaluated
+  - BEFORE IMPORTS: Executes before any import statements that might fail
+  - CLIENT-SIDE ONLY: Only runs in browser context (not during SSR)
+  - MINIMAL OVERHEAD: Simple string log with minimal performance impact
+  
+  💡 PRODUCTION CONSIDERATIONS:
+  
+  In production applications, consider:
+  - Wrapping in development-only conditions: if (process.env.NODE_ENV === 'development')
+  - Using proper logging libraries (Winston, Pino) for structured logging
+  - Implementing log levels (debug, info, warn, error) for better control
+  - Removing or minimizing console output to reduce bundle size and improve performance
+  
+  🚀 ADVANCED DEBUGGING TECHNIQUES:
+  
+  This basic pattern can be extended with:
+  - Performance timing: console.time('ComponentName loading')
+  - Environment information: console.log('ComponentName - Environment:', process.env.NODE_ENV)
+  - Bundle analysis: console.log('ComponentName - Bundle chunk:', __webpack_require__.cache)
+  - Memory usage: console.log('ComponentName - Memory:', performance.memory)
+  
+  🎨 REAL-WORLD DEBUGGING SCENARIOS:
+  
+  1. **Component Not Found**: If this log doesn't appear, the file isn't being imported
+  2. **Multiple Loads**: If this log appears multiple times, there might be circular dependencies
+  3. **Load Order Issues**: Compare timestamps to understand component loading sequence
+  4. **Hot Reload Problems**: Missing logs during development indicate file watching issues
+  
+  📈 INTEGRATION WITH DEVELOPMENT TOOLS:
+  
+  This logging pattern works well with:
+  - Browser DevTools Console (filter by "MarketIndexAnalysis")
+  - React Developer Tools (component tree inspection)
+  - Next.js development server logs (build and compilation info)
+  - VS Code debugging (breakpoints and variable inspection)
+  
+  🔄 COMPONENT LIFECYCLE CONTEXT:
+  
+  This log occurs during the MODULE EVALUATION phase, which happens:
+  1. BEFORE component function definition
+  2. BEFORE React hooks setup
+  3. BEFORE component mounting/rendering
+  4. DURING initial JavaScript parsing and execution
+  
+  Understanding this timing helps debug issues that occur at different lifecycle stages.
+  
+  ⚡ PERFORMANCE IMPACT:
+  
+  Module loading logs have minimal performance impact because:
+  - They execute only once per module (not per component instance)
+  - Simple string operations are very fast
+  - Browser console APIs are optimized for development use
+  - No complex object serialization or network requests involved
+  
+  This makes them safe to use during development without significantly affecting app performance.
+*/
+console.log('MarketIndexAnalysis - Module loaded');
+
 import { useState, useEffect } from 'react';
 import { X, TrendingUp, TrendingDown, BarChart3, Clock, AlertCircle, Newspaper } from 'lucide-react';
 import AdvancedStockChart from './AdvancedStockChart';
@@ -44,15 +144,19 @@ interface IndexAnalysisData {
 }
 
 export default function MarketIndexAnalysis({ symbol, onClose }: MarketIndexAnalysisProps) {
+  console.log('MarketIndexAnalysis - Component mounted with symbol:', symbol);
+  
   const [data, setData] = useState<IndexAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('MarketIndexAnalysis - useEffect triggered for symbol:', symbol);
     fetchIndexAnalysis();
   }, [symbol]);
 
   const fetchIndexAnalysis = async () => {
+    console.log('MarketIndexAnalysis - fetchIndexAnalysis called for symbol:', symbol);
     try {
       setLoading(true);
       setError(null);
@@ -64,14 +168,124 @@ export default function MarketIndexAnalysis({ symbol, onClose }: MarketIndexAnal
       }
 
       const result = await response.json();
+      
+      /**
+       * DEBUGGING PATTERN - API RESPONSE VALIDATION
+       * 
+       * These console.log statements demonstrate essential debugging practices for
+       * React components that integrate with external APIs.
+       * 
+       * 🔍 WHY DEBUGGING IS CRITICAL IN API INTEGRATION:
+       * - External APIs can return unexpected data structures
+       * - Network issues may cause partial or corrupted responses
+       * - Component state updates depend on specific response formats
+       * - Chart rendering requires exact data structures to function properly
+       * - Users expect reliable financial data for investment decisions
+       * 
+       * 📊 STRUCTURED DEBUGGING APPROACH:
+       * 
+       * 1. **DESCRIPTIVE PREFIXES**: "Market Index Analysis -" helps identify the source
+       *    component when multiple components are logging simultaneously in production
+       * 
+       * 2. **FULL RESPONSE LOGGING**: Log the complete result object to inspect:
+       *    - Overall response structure and nested properties
+       *    - Data types and formats returned by the API
+       *    - Any unexpected fields or missing expected fields
+       *    - Error messages or status codes embedded in the response
+       * 
+       * 3. **SPECIFIC FLAG VALIDATION**: Log result.success separately to verify:
+       *    - The API's success/failure indication is working correctly
+       *    - Boolean logic in conditional statements will behave as expected
+       *    - The response follows the expected { success: boolean, data?: any, error?: string } pattern
+       * 
+       * 🛡️ PRODUCTION DEBUGGING BENEFITS:
+       * - EARLY DETECTION: Spot API contract changes before they break the UI
+       * - DATA VALIDATION: Verify response structure matches TypeScript interfaces
+       * - NETWORK MONITORING: Track API reliability and response consistency
+       * - USER EXPERIENCE: Prevent blank charts or error screens from bad data
+       * 
+       * 💡 DEBUGGING WORKFLOW:
+       * When issues occur, developers can:
+       * 1. Check browser console for these logs
+       * 2. Verify API is returning expected data structure
+       * 3. Confirm success flag is boolean true/false as expected
+       * 4. Trace data flow from API → component state → chart rendering
+       * 
+       * 🔧 CONSOLE.LOG BEST PRACTICES DEMONSTRATED:
+       * - Use consistent prefixes for easy filtering in browser DevTools
+       * - Log both the full object and specific critical fields
+       * - Place logs immediately after data transformation points
+       * - Include context about what the log represents
+       * 
+       * 🚀 PRODUCTION CONSIDERATIONS:
+       * In production builds, consider:
+       * - Wrapping in development-only conditions: if (process.env.NODE_ENV === 'development')
+       * - Replacing with proper error tracking (Sentry, LogRocket, etc.)
+       * - Using structured logging libraries for better searchability
+       * - Removing or minimizing console output to avoid performance impact
+       * 
+       * This debugging pattern is especially valuable when integrating with financial APIs
+       * where data accuracy is critical and response formats may change over time.
+       */
+      console.log('Market Index Analysis - Full API response:', result);
+      console.log('Market Index Analysis - Success flag:', result.success);
 
       if (result.success) {
+        /*
+          DEBUGGING AND DEVELOPMENT LOGGING PATTERN:
+          
+          These console.log statements demonstrate important debugging practices for React applications:
+          
+          🔍 WHY LOGGING IS ESSENTIAL IN REACT:
+          - React components re-render frequently, making it hard to track data flow
+          - API responses can be complex nested objects that are difficult to inspect
+          - State updates happen asynchronously, so timing issues can occur
+          - Network requests may succeed but return unexpected data structures
+          
+          📊 STRUCTURED LOGGING APPROACH:
+          1. DESCRIPTIVE PREFIXES: "Market Index Analysis -" helps identify the source component
+             when multiple components are logging simultaneously
+          2. DATA INSPECTION: Log the entire result.data object to see its complete structure
+          3. SPECIFIC METRICS: Log priceData length to verify data availability for charts
+          
+          🛡️ DEFENSIVE PROGRAMMING WITH OPTIONAL CHAINING:
+          result.data.priceData?.length || 0 demonstrates several important concepts:
+          
+          - OPTIONAL CHAINING (?.): Safely accesses priceData even if it doesn't exist
+          - LOGICAL OR (||): Provides fallback value (0) if length is undefined
+          - NULL SAFETY: Prevents "Cannot read property 'length' of undefined" errors
+          
+          🎯 PRACTICAL DEBUGGING BENEFITS:
+          - Verify API response structure matches TypeScript interfaces
+          - Confirm data is being received before component tries to render it
+          - Identify when API returns success=true but with empty/missing data
+          - Track data flow from API → component state → child components (charts)
+          
+          💡 PRODUCTION CONSIDERATIONS:
+          In production builds, these logs should be:
+          - Removed or wrapped in development-only conditions: if (process.env.NODE_ENV === 'development')
+          - Replaced with proper error tracking (Sentry, LogRocket, etc.)
+          - Used sparingly to avoid console spam and potential performance impact
+          
+          🔧 ALTERNATIVE DEBUGGING APPROACHES:
+          - React DevTools for component state inspection
+          - Network tab in browser DevTools for API response analysis
+          - Breakpoints in browser debugger for step-through debugging
+          - Custom error boundaries for catching and logging React errors
+          
+          This logging pattern is especially valuable when integrating with external APIs
+          where the data structure might change or when debugging chart rendering issues
+          that depend on specific data formats.
+        */
+        console.log('Market Index Analysis - Received data:', result.data);
+        console.log('Market Index Analysis - Price data length:', result.data.priceData?.length || 0);
         setData(result.data);
       } else {
         throw new Error(result.error || 'Failed to fetch index analysis');
       }
     } catch (error) {
-      console.error('Failed to fetch index analysis:', error);
+      console.error('Market Index Analysis - Error occurred:', error);
+      console.error('Market Index Analysis - Error type:', typeof error);
       setError(error instanceof Error ? error.message : 'Failed to load analysis');
     } finally {
       setLoading(false);
