@@ -18,6 +18,7 @@ import TermsGlossary from './TermsGlossary';
 import CollapsibleSection from './CollapsibleSection';
 import MarketIndicesSidebar from './MarketIndicesSidebar';
 import MarketIndexAnalysis from './MarketIndexAnalysis';
+import ResponsiveGrid from './ResponsiveGrid';
 
 /*
   TYPESCRIPT INTERFACE DEFINITION:
@@ -830,14 +831,25 @@ export default function StockDashboard() {
       </div>
 
       {/* 
-        RESPONSIVE GRID LAYOUT:
-        CSS Grid with responsive breakpoints:
-        - grid-cols-1: 1 column on mobile (default)
-        - md:grid-cols-2: 2 columns on medium screens (768px+)
-        - lg:grid-cols-3: 3 columns on large screens (1024px+)
-        This creates a fluid layout that adapts to screen size.
+        RESPONSIVE GRID LAYOUT WITH ENHANCED BREAKPOINTS:
+        Using ResponsiveGrid component with progressive column scaling:
+        - Mobile (< 768px): 1 column
+        - Tablet (768px - 1024px): 2 columns  
+        - Desktop (1024px - 1440px): 3 columns
+        - Large Desktop (> 1440px): 4 columns
+        - Extra Large (> 1536px): 5 columns (auto-generated)
+        This provides better space utilization on larger screens.
       */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <ResponsiveGrid
+        columns={{
+          mobile: 1,
+          tablet: 2,
+          desktop: 3,
+          large: 4
+        }}
+        gap="gap-6"
+        minItemWidth="320px"
+      >
         {/* 
           ARRAY RENDERING WITH MAP FUNCTION:
           This is React's fundamental pattern for rendering dynamic lists.
@@ -957,7 +969,7 @@ export default function StockDashboard() {
 
           </div>
         ))}
-      </div>
+      </ResponsiveGrid>
 
       {/* 
         CONDITIONAL RENDERING WITH MULTIPLE CONDITIONS:
