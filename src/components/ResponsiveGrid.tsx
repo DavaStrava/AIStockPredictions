@@ -47,26 +47,32 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
     const baseClasses = ['grid'];
     
     // Mobile columns (default: 1)
-    baseClasses.push(`grid-cols-${columns.mobile || 1}`);
+    baseClasses.push(`grid-cols-${columns.mobile !== undefined ? columns.mobile : 1}`);
     
     // Tablet columns (md breakpoint: 768px+)
-    if (columns.tablet) {
+    if (columns.tablet !== undefined) {
       baseClasses.push(`md:grid-cols-${columns.tablet}`);
     }
     
     // Desktop columns (lg breakpoint: 1024px+)  
-    if (columns.desktop) {
+    if (columns.desktop !== undefined) {
       baseClasses.push(`lg:grid-cols-${columns.desktop}`);
     }
     
     // Large desktop columns (xl breakpoint: 1280px+)
-    if (columns.large) {
+    if (columns.large !== undefined) {
       baseClasses.push(`xl:grid-cols-${columns.large}`);
+    } else if (columns.desktop !== undefined) {
+      // If large is not specified but desktop is, use desktop value for xl
+      baseClasses.push(`xl:grid-cols-${columns.desktop}`);
     }
     
     // Add 2xl breakpoint for very large screens (1536px+)
-    if (columns.large && columns.large < 5) {
-      baseClasses.push(`2xl:grid-cols-${Math.min(columns.large + 1, 5)}`);
+    const largeValue = columns.large !== undefined ? columns.large : columns.desktop;
+    if (largeValue !== undefined && largeValue < 5) {
+      baseClasses.push(`2xl:grid-cols-${Math.min(largeValue + 1, 5)}`);
+    } else if (largeValue === 5) {
+      baseClasses.push(`2xl:grid-cols-5`);
     }
     
     return baseClasses.join(' ');

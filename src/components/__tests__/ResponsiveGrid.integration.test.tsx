@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ResponsiveGrid from '../ResponsiveGrid';
@@ -415,17 +416,17 @@ describe('ResponsiveGrid Integration Tests', () => {
 
   describe('Memory and Cleanup', () => {
     it('should not cause memory leaks with frequent re-renders', () => {
-      const TestGrid = ({ key: testKey }: { key: string }) => (
+      const TestGrid = ({ testKey }: { testKey: string }) => (
         <ResponsiveGrid key={testKey}>
           <div>Memory Test Item</div>
         </ResponsiveGrid>
       );
 
-      const { rerender, unmount } = render(<TestGrid key="test-1" />);
+      const { rerender, unmount } = render(<TestGrid testKey="test-1" />);
 
       // Simulate frequent re-renders
       for (let i = 2; i <= 10; i++) {
-        rerender(<TestGrid key={`test-${i}`} />);
+        rerender(<TestGrid testKey={`test-${i}`} />);
         expect(screen.getByText('Memory Test Item')).toBeInTheDocument();
       }
 

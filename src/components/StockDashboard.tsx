@@ -979,7 +979,7 @@ export default function StockDashboard() {
         3. priceData has items (length > 0)
         This prevents showing incomplete analysis UI.
       */}
-      {analysis && selectedStock && priceData.length > 0 && (
+      {analysis && analysis.summary && selectedStock && priceData.length > 0 && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold text-foreground">
