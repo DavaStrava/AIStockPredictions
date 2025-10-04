@@ -152,7 +152,6 @@ describe('ResponsiveContainer', () => {
       );
       
       const wrapper = container.firstChild as HTMLElement;
-      const classList = wrapper.className;
       
       // Verify all expected classes are present
       expect(wrapper).toHaveClass('mx-auto', 'px-4', 'sm:px-6', 'lg:px-8'); // base classes

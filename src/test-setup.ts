@@ -6,6 +6,10 @@
  */
 
 import '@testing-library/jest-dom';
+import React from 'react';
+
+// Make React available globally for JSX
+global.React = React;
 
 // Mock CSS imports to prevent PostCSS issues during testing
 // This allows components to import CSS files without breaking tests

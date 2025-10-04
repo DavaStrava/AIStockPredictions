@@ -70,20 +70,12 @@ export default function Home() {
       
       <main className="py-8">
         <ResponsiveContainer variant="wide">
-          <div className="text-center">
-            <h2 className="text-xl font-bold mb-4">Responsive Container Test</h2>
-            <p>If you can see this, the ResponsiveContainer is working!</p>
-            {activeTab === 'dashboard' && (
-              <div className="mt-8">
-                <StockDashboard />
-              </div>
-            )}
-            {activeTab === 'watchlists' && (
-              <div className="mt-8">
-                <MockWatchlistManager />
-              </div>
-            )}
-          </div>
+          {activeTab === 'dashboard' && (
+            <StockDashboard />
+          )}
+          {activeTab === 'watchlists' && (
+            <MockWatchlistManager />
+          )}
         </ResponsiveContainer>
       </main>
       

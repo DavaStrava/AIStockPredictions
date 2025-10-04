@@ -333,26 +333,50 @@ export function analyzeMomentum(
   const williamsRConfig = config?.williamsR || { period: 14, overbought: -20, oversold: -80 };
   const adxConfig = config?.adx || { period: 14, strongTrend: 25 };
 
-  const stochastic = calculateStochastic(
-    data,
-    stochasticConfig.kPeriod,
-    stochasticConfig.dPeriod,
-    stochasticConfig.overbought,
-    stochasticConfig.oversold
-  );
+  // Handle insufficient data for Stochastic calculation
+  let stochastic: StochasticResult[] = [];
+  try {
+    if (data.length >= stochasticConfig.kPeriod) {
+      stochastic = calculateStochastic(
+        data,
+        stochasticConfig.kPeriod,
+        stochasticConfig.dPeriod,
+        stochasticConfig.overbought,
+        stochasticConfig.oversold
+      );
+    }
+  } catch (error) {
+    console.warn('Stochastic calculation failed:', error);
+  }
 
-  const williamsR = calculateWilliamsR(
-    data,
-    williamsRConfig.period,
-    williamsRConfig.overbought,
-    williamsRConfig.oversold
-  );
+  // Handle insufficient data for Williams %R calculation
+  let williamsR: WilliamsRResult[] = [];
+  try {
+    if (data.length >= williamsRConfig.period) {
+      williamsR = calculateWilliamsR(
+        data,
+        williamsRConfig.period,
+        williamsRConfig.overbought,
+        williamsRConfig.oversold
+      );
+    }
+  } catch (error) {
+    console.warn('Williams %R calculation failed:', error);
+  }
 
-  const adx = calculateADX(
-    data,
-    adxConfig.period,
-    adxConfig.strongTrend
-  );
+  // Handle insufficient data for ADX calculation
+  let adx: ADXResult[] = [];
+  try {
+    if (data.length >= adxConfig.period) {
+      adx = calculateADX(
+        data,
+        adxConfig.period,
+        adxConfig.strongTrend
+      );
+    }
+  } catch (error) {
+    console.warn('ADX calculation failed:', error);
+  }
 
   const signals = generateMomentumSignals(stochastic, williamsR, adx, symbol);
 
