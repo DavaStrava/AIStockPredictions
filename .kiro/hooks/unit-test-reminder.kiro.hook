@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Unit Test Reminder",
+  "description": "Monitors code changes and reminds developers to write unit tests for feature logic, complex branching/loops, critical code paths (payment, auth, security, data handling), bug fixes, and edge cases",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "infrastructure/lib/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the recent code changes and automatically write unit tests based on these criteria:\n\n1) Feature logic – if a function/method does something non-trivial, test it\n2) Complex logic – anything with branching (if/else), loops, or multiple inputs\n3) Critical code paths – payment, authentication, security, data handling\n4) Bug fixes – always write a test to ensure the bug doesn't reappear\n5) Edge cases – unusual inputs, empty values, max/min ranges\n\nFor each modified file that meets the criteria:\n1. Create comprehensive unit tests using the project's testing framework (Vitest)\n2. Place test files in appropriate locations (either __tests__ folders or .test.ts files alongside source)\n3. Test all public functions/methods, edge cases, error conditions, and complex logic paths\n4. Include proper mocking for external dependencies\n5. Write descriptive test names and organize tests logically\n\nGenerate complete, runnable test files that provide good coverage for the new/modified functionality."
+  }
+}
