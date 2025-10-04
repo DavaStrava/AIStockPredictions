@@ -70,25 +70,42 @@ export default defineConfig({
     globals: true,
 
     /**
-     * Test Environment (environment: 'node')
+     * Test Environment (environment: 'jsdom')
      * 
      * Specifies the JavaScript runtime environment for executing tests.
      * 
      * 🖥️ ENVIRONMENT OPTIONS:
-     * - 'node': Server-side Node.js environment (our choice)
-     * - 'jsdom': Browser-like environment with DOM APIs
+     * - 'node': Server-side Node.js environment
+     * - 'jsdom': Browser-like environment with DOM APIs (our choice for React components)
      * - 'happy-dom': Lightweight browser environment alternative
      * - 'edge-runtime': Edge computing environment
      * 
-     * 🎯 WHY 'node' FOR OUR PROJECT:
-     * - Our technical analysis engine runs server-side calculations
-     * - No DOM manipulation needed for mathematical computations
-     * - Better performance for CPU-intensive indicator calculations
-     * - Matches the Lambda runtime environment where code will deploy
+     * 🎯 WHY 'jsdom' FOR REACT COMPONENT TESTS:
+     * - React components need DOM APIs for rendering
+     * - Testing Library requires DOM environment for queries
+     * - Simulates browser environment for component testing
+     * - Supports CSS class testing and DOM manipulation
      * 
-     * This ensures our tests run in an environment similar to production.
+     * Note: For pure technical analysis tests, 'node' environment is still preferred
+     * but React component tests require DOM APIs.
      */
-    environment: 'node',
+    environment: 'jsdom',
+
+    /**
+     * Setup Files
+     * 
+     * Files to run before each test file to set up the testing environment.
+     * This is useful for configuring testing libraries, polyfills, or global mocks.
+     */
+    setupFiles: ['./src/test-setup.ts'],
+
+    /**
+     * CSS Handling
+     * 
+     * Configure how CSS imports are handled during testing.
+     * For component tests, we often don't need actual CSS processing.
+     */
+    css: false
   },
 
   /**

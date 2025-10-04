@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import StockDashboard from '@/components/StockDashboard';
 import MockWatchlistManager from '@/components/MockWatchlistManager';
 import DevErrorDashboard from '@/components/DevErrorDashboard';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitoring';
 
 type ActiveTab = 'dashboard' | 'watchlists';
@@ -67,9 +68,23 @@ export default function Home() {
         </div>
       </header>
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' && <StockDashboard />}
-        {activeTab === 'watchlists' && <MockWatchlistManager />}
+      <main className="py-8">
+        <ResponsiveContainer variant="wide">
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-4">Responsive Container Test</h2>
+            <p>If you can see this, the ResponsiveContainer is working!</p>
+            {activeTab === 'dashboard' && (
+              <div className="mt-8">
+                <StockDashboard />
+              </div>
+            )}
+            {activeTab === 'watchlists' && (
+              <div className="mt-8">
+                <MockWatchlistManager />
+              </div>
+            )}
+          </div>
+        </ResponsiveContainer>
       </main>
       
       {/* Development Error Dashboard */}
