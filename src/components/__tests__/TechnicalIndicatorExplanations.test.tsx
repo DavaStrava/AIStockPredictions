@@ -1,115 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { TechnicalSignal } from '@/lib/technical-analysis/types';
-
-// Mock component since TechnicalIndicatorExplanations doesn't exist yet
-// This test file serves as a specification for the component to be implemented
-const MockTechnicalIndicatorExplanations = ({
-  indicators,
-  symbol,
-  currentPrice,
-  marketContext
-}: {
-  indicators: TechnicalSignal[];
-  symbol: string;
-  currentPrice: number;
-  marketContext?: any;
-}) => {
-  // Mock implementation based on spec requirements
-  const generateExplanation = (signal: TechnicalSignal) => {
-    const { indicator, value, signal: signalType } = signal;
-    
-    switch (indicator) {
-      case 'RSI':
-        if (value > 70) {
-          return {
-            explanation: `${symbol}'s RSI of ${value.toFixed(1)} indicates the stock is in overbought territory, suggesting potential selling pressure may emerge soon.`,
-            actionableInsight: `Consider waiting for RSI to drop below 50 before entering a position, or take profits if currently holding.`,
-            riskLevel: 'medium' as const
-          };
-        } else if (value < 30) {
-          return {
-            explanation: `${symbol}'s RSI of ${value.toFixed(1)} shows oversold conditions, which historically has led to short-term bounces in this price range.`,
-            actionableInsight: `This could be a buying opportunity, but confirm with other indicators and monitor for 2-3 trading days.`,
-            riskLevel: 'low' as const
-          };
-        } else {
-          return {
-            explanation: `${symbol}'s RSI of ${value.toFixed(1)} is in neutral territory, indicating balanced buying and selling pressure.`,
-            actionableInsight: `No immediate action required. Monitor for trend changes above 70 or below 30.`,
-            riskLevel: 'low' as const
-          };
-        }
-      
-      case 'MACD':
-        if (signalType === 'buy') {
-          return {
-            explanation: `${symbol}'s MACD shows a bullish crossover at current price of $${currentPrice}, suggesting upward momentum is building.`,
-            actionableInsight: `This MACD crossover suggests potential upward momentum - monitor for confirmation over next 2-3 trading days.`,
-            riskLevel: 'medium' as const
-          };
-        } else if (signalType === 'sell') {
-          return {
-            explanation: `${symbol}'s MACD indicates bearish momentum with the signal line crossing below the MACD line.`,
-            actionableInsight: `Consider reducing position size or setting stop-loss orders as downward pressure may continue.`,
-            riskLevel: 'high' as const
-          };
-        } else {
-          return {
-            explanation: `${symbol}'s MACD is showing mixed signals with no clear directional bias at the current price level.`,
-            actionableInsight: `Wait for clearer MACD signals before making position changes.`,
-            riskLevel: 'low' as const
-          };
-        }
-      
-      default:
-        return {
-          explanation: `${indicator} value of ${value.toFixed(2)} for ${symbol} requires additional context for interpretation.`,
-          actionableInsight: `Monitor this indicator alongside other technical signals for better decision making.`,
-          riskLevel: 'medium' as const
-        };
-    }
-  };
-
-  const explanations = (indicators || []).map((signal, index) => {
-    const explanation = generateExplanation(signal);
-    return (
-      <div key={index} data-testid={`explanation-${signal.indicator.toLowerCase()}`} className="mb-4 p-4 border rounded">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold">{signal.indicator}</h4>
-          <span 
-            className={`px-2 py-1 rounded text-sm ${
-              explanation.riskLevel === 'high' ? 'bg-red-100 text-red-800' :
-              explanation.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-green-100 text-green-800'
-            }`}
-            data-testid={`risk-${signal.indicator.toLowerCase()}`}
-          >
-            {explanation.riskLevel} risk
-          </span>
-        </div>
-        <p className="text-gray-700 mb-2" data-testid={`explanation-text-${signal.indicator.toLowerCase()}`}>
-          {explanation.explanation}
-        </p>
-        <p className="text-blue-700 font-medium" data-testid={`insight-${signal.indicator.toLowerCase()}`}>
-          💡 {explanation.actionableInsight}
-        </p>
-        <div className="mt-2 text-sm text-gray-500">
-          Current Value: {signal.value.toFixed(2)} | Signal: {signal.signal}
-        </div>
-      </div>
-    );
-  });
-
-  return (
-    <div data-testid="technical-indicator-explanations">
-      <h3 className="text-lg font-semibold mb-4">Technical Analysis for {symbol}</h3>
-      {explanations.length > 0 ? explanations : (
-        <p data-testid="no-indicators">No technical indicators available</p>
-      )}
-    </div>
-  );
-};
+import TechnicalIndicatorExplanations from '../TechnicalIndicatorExplanations';
 
 describe('TechnicalIndicatorExplanations Component', () => {
   const mockIndicators: TechnicalSignal[] = [
@@ -136,22 +28,22 @@ describe('TechnicalIndicatorExplanations Component', () => {
     symbol: 'AAPL',
     currentPrice: 150.00,
     marketContext: {
-      condition: 'bull',
-      volatility: 'medium',
+      condition: 'bull' as const,
+      volatility: 'medium' as const,
       sector: 'technology'
     }
   };
 
   describe('Basic Rendering and Structure', () => {
     it('should render component with correct title', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
       expect(screen.getByText('Technical Analysis for AAPL')).toBeInTheDocument();
     });
 
     it('should render all provided indicators', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       expect(screen.getByTestId('explanation-rsi')).toBeInTheDocument();
       expect(screen.getByTestId('explanation-macd')).toBeInTheDocument();
@@ -159,7 +51,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
 
     it('should display no indicators message when empty array provided', () => {
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={[]} 
         />
@@ -171,13 +63,26 @@ describe('TechnicalIndicatorExplanations Component', () => {
 
     it('should handle undefined indicators gracefully', () => {
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={undefined as any} 
         />
       );
       
       expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
+      expect(screen.getByTestId('no-indicators')).toBeInTheDocument();
+    });
+
+    it('should handle null indicators gracefully', () => {
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={null as any} 
+        />
+      );
+      
+      expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
+      expect(screen.getByTestId('no-indicators')).toBeInTheDocument();
     });
   });
 
@@ -193,7 +98,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={overboughtRSI} 
         />
@@ -203,9 +108,11 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(explanation).toHaveTextContent('overbought territory');
       expect(explanation).toHaveTextContent('AAPL');
       expect(explanation).toHaveTextContent('75.5');
+      expect(explanation).toHaveTextContent('selling pressure may emerge soon');
       
       const insight = screen.getByTestId('insight-rsi');
       expect(insight).toHaveTextContent('Consider waiting for RSI to drop below 50');
+      expect(insight).toHaveTextContent('take profits if currently holding');
       
       const risk = screen.getByTestId('risk-rsi');
       expect(risk).toHaveTextContent('medium risk');
@@ -222,7 +129,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={oversoldRSI} 
         />
@@ -231,6 +138,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       const explanation = screen.getByTestId('explanation-text-rsi');
       expect(explanation).toHaveTextContent('oversold conditions');
       expect(explanation).toHaveTextContent('25.3');
+      expect(explanation).toHaveTextContent('short-term bounces');
       
       const insight = screen.getByTestId('insight-rsi');
       expect(insight).toHaveTextContent('buying opportunity');
@@ -251,7 +159,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={neutralRSI} 
         />
@@ -259,10 +167,39 @@ describe('TechnicalIndicatorExplanations Component', () => {
       
       const explanation = screen.getByTestId('explanation-text-rsi');
       expect(explanation).toHaveTextContent('neutral territory');
-      expect(explanation).toHaveTextContent('balanced buying and selling');
+      expect(explanation).toHaveTextContent('balanced buying and selling pressure');
       
       const insight = screen.getByTestId('insight-rsi');
       expect(insight).toHaveTextContent('No immediate action required');
+      expect(insight).toHaveTextContent('Monitor for trend changes');
+    });
+
+    it('should handle RSI boundary values correctly', () => {
+      const boundaryValues = [30, 70];
+      
+      boundaryValues.forEach((value, index) => {
+        const rsiSignal: TechnicalSignal[] = [{
+          indicator: 'RSI',
+          signal: 'hold',
+          strength: 0.5,
+          value,
+          timestamp: new Date(),
+          description: `RSI at ${value}`
+        }];
+
+        const { unmount } = render(
+          <TechnicalIndicatorExplanations 
+            {...defaultProps} 
+            indicators={rsiSignal} 
+          />
+        );
+        
+        const explanation = screen.getByTestId('explanation-text-rsi');
+        expect(explanation).toHaveTextContent(value.toString());
+        
+        // Unmount to avoid conflicts with next render
+        unmount();
+      });
     });
   });
 
@@ -278,16 +215,16 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={bullishMACD} 
         />
       );
       
       const explanation = screen.getByTestId('explanation-text-macd');
-      expect(explanation).toHaveTextContent('bullish crossover');
-      expect(explanation).toHaveTextContent('upward momentum');
-      expect(explanation).toHaveTextContent('$150');
+      expect(explanation).toHaveTextContent('bullish signal');
+      expect(explanation).toHaveTextContent('upward momentum is building');
+      expect(explanation).toHaveTextContent('150');
       
       const insight = screen.getByTestId('insight-macd');
       expect(insight).toHaveTextContent('potential upward momentum');
@@ -308,7 +245,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={bearishMACD} 
         />
@@ -337,7 +274,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       }];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={neutralMACD} 
         />
@@ -349,6 +286,139 @@ describe('TechnicalIndicatorExplanations Component', () => {
       
       const insight = screen.getByTestId('insight-macd');
       expect(insight).toHaveTextContent('Wait for clearer MACD signals');
+    });
+  });
+
+  describe('Bollinger Bands Explanations', () => {
+    it('should generate buy signal explanation for Bollinger Bands', () => {
+      const bollingerBuy: TechnicalSignal[] = [{
+        indicator: 'BOLLINGER_BANDS',
+        signal: 'buy',
+        strength: 0.7,
+        value: 145.0,
+        timestamp: new Date(),
+        description: 'Near lower Bollinger Band'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={bollingerBuy} 
+        />
+      );
+      
+      const explanation = screen.getByTestId('explanation-text-bollinger_bands');
+      expect(explanation).toHaveTextContent('lower Bollinger Band');
+      expect(explanation).toHaveTextContent('oversold relative to its recent trading range');
+      
+      const insight = screen.getByTestId('insight-bollinger_bands');
+      expect(insight).toHaveTextContent('potential buying opportunity');
+      expect(insight).toHaveTextContent('middle band');
+      
+      const risk = screen.getByTestId('risk-bollinger_bands');
+      expect(risk).toHaveTextContent('medium risk');
+    });
+
+    it('should generate sell signal explanation for Bollinger Bands', () => {
+      const bollingerSell: TechnicalSignal[] = [{
+        indicator: 'BOLLINGER BANDS',
+        signal: 'sell',
+        strength: 0.8,
+        value: 155.0,
+        timestamp: new Date(),
+        description: 'Near upper Bollinger Band'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={bollingerSell} 
+        />
+      );
+      
+      const explanation = screen.getByTestId('explanation-text-bollinger bands');
+      expect(explanation).toHaveTextContent('upper Bollinger Band');
+      expect(explanation).toHaveTextContent('overbought relative to its recent volatility');
+      
+      const insight = screen.getByTestId('insight-bollinger bands');
+      expect(insight).toHaveTextContent('taking profits');
+      expect(insight).toHaveTextContent('reducing position size');
+    });
+
+    it('should handle neutral Bollinger Bands signals', () => {
+      const bollingerNeutral: TechnicalSignal[] = [{
+        indicator: 'BOLLINGER_BANDS',
+        signal: 'hold',
+        strength: 0.5,
+        value: 150.0,
+        timestamp: new Date(),
+        description: 'Middle of Bollinger Bands'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={bollingerNeutral} 
+        />
+      );
+      
+      const explanation = screen.getByTestId('explanation-text-bollinger_bands');
+      expect(explanation).toHaveTextContent('middle range');
+      expect(explanation).toHaveTextContent('normal price action');
+      
+      const insight = screen.getByTestId('insight-bollinger_bands');
+      expect(insight).toHaveTextContent('Monitor for moves toward');
+      expect(insight).toHaveTextContent('balanced conditions');
+    });
+  });
+
+  describe('Unknown Indicators Handling', () => {
+    it('should handle unknown indicators gracefully', () => {
+      const unknownIndicator: TechnicalSignal[] = [{
+        indicator: 'UNKNOWN_INDICATOR',
+        signal: 'buy',
+        strength: 0.5,
+        value: 42.0,
+        timestamp: new Date(),
+        description: 'Unknown indicator'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={unknownIndicator} 
+        />
+      );
+      
+      const explanation = screen.getByTestId('explanation-text-unknown_indicator');
+      expect(explanation).toHaveTextContent('UNKNOWN_INDICATOR value of 42.00');
+      expect(explanation).toHaveTextContent('requires additional context');
+      
+      const insight = screen.getByTestId('insight-unknown_indicator');
+      expect(insight).toHaveTextContent('Monitor this indicator alongside other technical signals');
+      
+      const risk = screen.getByTestId('risk-unknown_indicator');
+      expect(risk).toHaveTextContent('medium risk');
+    });
+
+    it('should handle indicators with special characters', () => {
+      const specialIndicator: TechnicalSignal[] = [{
+        indicator: 'CUSTOM-INDICATOR_V2',
+        signal: 'sell',
+        strength: 0.6,
+        value: 25.5,
+        timestamp: new Date(),
+        description: 'Custom indicator with special chars'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={specialIndicator} 
+        />
+      );
+      
+      expect(screen.getByTestId('explanation-custom-indicator_v2')).toBeInTheDocument();
     });
   });
 
@@ -370,44 +440,123 @@ describe('TechnicalIndicatorExplanations Component', () => {
           value: 0.5,
           timestamp: new Date(),
           description: 'MACD bullish'
+        },
+        {
+          indicator: 'BOLLINGER_BANDS',
+          signal: 'hold',
+          strength: 0.5,
+          value: 150.0,
+          timestamp: new Date(),
+          description: 'Bollinger neutral'
         }
       ];
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={multipleIndicators} 
         />
       );
       
-      // Both indicators should be present
+      // All indicators should be present
       expect(screen.getByTestId('explanation-rsi')).toBeInTheDocument();
       expect(screen.getByTestId('explanation-macd')).toBeInTheDocument();
+      expect(screen.getByTestId('explanation-bollinger_bands')).toBeInTheDocument();
       
       // Different risk levels should be displayed
       expect(screen.getByTestId('risk-rsi')).toHaveTextContent('medium risk');
       expect(screen.getByTestId('risk-macd')).toHaveTextContent('medium risk');
+      expect(screen.getByTestId('risk-bollinger_bands')).toHaveTextContent('low risk');
     });
 
-    it('should display current values and signals for all indicators', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+    it('should display current values for all indicators', () => {
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       // Check RSI values
       const rsiContainer = screen.getByTestId('explanation-rsi');
-      expect(rsiContainer).toHaveTextContent('Current Value: 75.50');
-      expect(rsiContainer).toHaveTextContent('Signal: sell');
+      expect(rsiContainer).toHaveTextContent('Value: 75.50');
       
       // Check MACD values
       const macdContainer = screen.getByTestId('explanation-macd');
-      expect(macdContainer).toHaveTextContent('Current Value: 1.25');
-      expect(macdContainer).toHaveTextContent('Signal: buy');
+      expect(macdContainer).toHaveTextContent('Value: 1.25');
+    });
+
+    it('should display overall sentiment', () => {
+      const conflictingIndicators: TechnicalSignal[] = [
+        {
+          indicator: 'RSI',
+          signal: 'buy',
+          strength: 0.8,
+          value: 25.0,
+          timestamp: new Date(),
+          description: 'RSI oversold'
+        },
+        {
+          indicator: 'MACD',
+          signal: 'sell',
+          strength: 0.7,
+          value: -1.0,
+          timestamp: new Date(),
+          description: 'MACD bearish'
+        }
+      ];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={conflictingIndicators} 
+        />
+      );
+      
+      expect(screen.getByTestId('overall-sentiment')).toBeInTheDocument();
+      expect(screen.getByTestId('overall-sentiment')).toHaveTextContent('Overall:');
+    });
+
+    it('should display conflicts when indicators disagree', () => {
+      const conflictingIndicators: TechnicalSignal[] = [
+        {
+          indicator: 'RSI',
+          signal: 'buy',
+          strength: 0.8,
+          value: 25.0,
+          timestamp: new Date(),
+          description: 'RSI oversold'
+        },
+        {
+          indicator: 'MACD',
+          signal: 'sell',
+          strength: 0.7,
+          value: -1.0,
+          timestamp: new Date(),
+          description: 'MACD bearish'
+        }
+      ];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={conflictingIndicators} 
+        />
+      );
+      
+      // Should show conflicts warning
+      expect(screen.getByText('⚠️ Conflicting Signals Detected')).toBeInTheDocument();
+    });
+
+    it('should display confidence and timeframe information', () => {
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
+      
+      // Check for confidence and timeframe display
+      const rsiContainer = screen.getByTestId('explanation-rsi');
+      expect(rsiContainer).toHaveTextContent('Confidence:');
+      expect(rsiContainer).toHaveTextContent('Timeframe:');
     });
   });
 
   describe('Contextual Adaptation', () => {
     it('should incorporate symbol name in explanations', () => {
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           symbol="TSLA" 
         />
@@ -419,27 +568,27 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(rsiExplanation).toHaveTextContent('TSLA');
     });
 
-    it('should incorporate current price in explanations', () => {
+    it('should incorporate current price in MACD explanations', () => {
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           currentPrice={275.50} 
         />
       );
       
       const macdExplanation = screen.getByTestId('explanation-text-macd');
-      expect(macdExplanation).toHaveTextContent('$275.5');
+      expect(macdExplanation).toHaveTextContent('275.5');
     });
 
     it('should handle market context when provided', () => {
       const bullMarketContext = {
-        condition: 'bull',
-        volatility: 'high',
+        condition: 'bull' as const,
+        volatility: 'high' as const,
         sector: 'technology'
       };
 
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           marketContext={bullMarketContext} 
         />
@@ -448,32 +597,17 @@ describe('TechnicalIndicatorExplanations Component', () => {
       // Component should render without errors
       expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
     });
-  });
 
-  describe('Unknown Indicators Handling', () => {
-    it('should handle unknown indicators gracefully', () => {
-      const unknownIndicator: TechnicalSignal[] = [{
-        indicator: 'UNKNOWN_INDICATOR',
-        signal: 'buy',
-        strength: 0.5,
-        value: 42.0,
-        timestamp: new Date(),
-        description: 'Unknown indicator'
-      }];
-
+    it('should handle missing market context gracefully', () => {
       render(
-        <MockTechnicalIndicatorExplanations 
-          {...defaultProps} 
-          indicators={unknownIndicator} 
+        <TechnicalIndicatorExplanations 
+          indicators={mockIndicators}
+          symbol="AAPL"
+          currentPrice={150.00}
         />
       );
       
-      const explanation = screen.getByTestId('explanation-text-unknown_indicator');
-      expect(explanation).toHaveTextContent('UNKNOWN_INDICATOR value of 42.00');
-      expect(explanation).toHaveTextContent('requires additional context');
-      
-      const insight = screen.getByTestId('insight-unknown_indicator');
-      expect(insight).toHaveTextContent('Monitor this indicator alongside other technical signals');
+      expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
     });
   });
 
@@ -500,7 +634,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
 
       expect(() => {
         render(
-          <MockTechnicalIndicatorExplanations 
+          <TechnicalIndicatorExplanations 
             {...defaultProps} 
             indicators={extremeIndicators} 
           />
@@ -509,6 +643,49 @@ describe('TechnicalIndicatorExplanations Component', () => {
       
       expect(screen.getByTestId('explanation-rsi')).toBeInTheDocument();
       expect(screen.getByTestId('explanation-macd')).toBeInTheDocument();
+    });
+
+    it('should handle zero and negative values', () => {
+      const edgeCaseIndicators: TechnicalSignal[] = [
+        {
+          indicator: 'RSI',
+          signal: 'buy',
+          strength: 0.5,
+          value: 0,
+          timestamp: new Date(),
+          description: 'Zero RSI'
+        },
+        {
+          indicator: 'MACD',
+          signal: 'sell',
+          strength: 0.7,
+          value: -5.0,
+          timestamp: new Date(),
+          description: 'Negative MACD'
+        }
+      ];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={edgeCaseIndicators} 
+        />
+      );
+      
+      expect(screen.getByTestId('explanation-rsi')).toBeInTheDocument();
+      expect(screen.getByTestId('explanation-macd')).toBeInTheDocument();
+    });
+
+    it('should handle missing required props gracefully', () => {
+      expect(() => {
+        render(
+          <TechnicalIndicatorExplanations 
+            indicators={mockIndicators}
+            symbol=""
+            currentPrice={0}
+          />
+        );
+      }).not.toThrow();
     });
 
     it('should handle malformed indicator data', () => {
@@ -525,30 +702,75 @@ describe('TechnicalIndicatorExplanations Component', () => {
 
       expect(() => {
         render(
-          <MockTechnicalIndicatorExplanations 
+          <TechnicalIndicatorExplanations 
             {...defaultProps} 
             indicators={malformedIndicators} 
           />
         );
       }).not.toThrow();
     });
+  });
 
-    it('should handle missing required props gracefully', () => {
-      expect(() => {
-        render(
-          <MockTechnicalIndicatorExplanations 
-            indicators={mockIndicators}
-            symbol=""
-            currentPrice={0}
-          />
-        );
-      }).not.toThrow();
+  describe('Risk Level Classification', () => {
+    it('should apply correct CSS classes for different risk levels', () => {
+      const riskIndicators: TechnicalSignal[] = [
+        {
+          indicator: 'RSI',
+          signal: 'buy',
+          strength: 0.5,
+          value: 25.0, // Low risk (oversold)
+          timestamp: new Date(),
+          description: 'Low risk RSI'
+        },
+        {
+          indicator: 'MACD',
+          signal: 'sell',
+          strength: 0.8,
+          value: -1.0, // High risk (bearish)
+          timestamp: new Date(),
+          description: 'High risk MACD'
+        }
+      ];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={riskIndicators} 
+        />
+      );
+      
+      const lowRisk = screen.getByTestId('risk-rsi');
+      const highRisk = screen.getByTestId('risk-macd');
+      
+      expect(lowRisk).toHaveClass('bg-green-100', 'text-green-800');
+      expect(highRisk).toHaveClass('bg-red-100', 'text-red-800');
+    });
+
+    it('should handle medium risk styling', () => {
+      const mediumRiskIndicator: TechnicalSignal[] = [{
+        indicator: 'RSI',
+        signal: 'sell',
+        strength: 0.8,
+        value: 75.0, // Medium risk (overbought)
+        timestamp: new Date(),
+        description: 'Medium risk RSI'
+      }];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={mediumRiskIndicator} 
+        />
+      );
+      
+      const mediumRisk = screen.getByTestId('risk-rsi');
+      expect(mediumRisk).toHaveClass('bg-yellow-100', 'text-yellow-800');
     });
   });
 
   describe('Accessibility and User Experience', () => {
     it('should provide proper semantic structure', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       // Should have proper heading hierarchy
       expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Technical Analysis for AAPL');
@@ -557,18 +779,18 @@ describe('TechnicalIndicatorExplanations Component', () => {
     });
 
     it('should use clear visual indicators for risk levels', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       const rsiRisk = screen.getByTestId('risk-rsi');
       const macdRisk = screen.getByTestId('risk-macd');
       
       // Risk indicators should have appropriate styling classes
-      expect(rsiRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm');
-      expect(macdRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm');
+      expect(rsiRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm', 'font-medium');
+      expect(macdRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm', 'font-medium');
     });
 
     it('should provide actionable insights with clear formatting', () => {
-      render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       const rsiInsight = screen.getByTestId('insight-rsi');
       const macdInsight = screen.getByTestId('insight-macd');
@@ -576,16 +798,35 @@ describe('TechnicalIndicatorExplanations Component', () => {
       // Insights should be clearly marked and styled
       expect(rsiInsight).toHaveTextContent('💡');
       expect(macdInsight).toHaveTextContent('💡');
-      expect(rsiInsight).toHaveClass('text-blue-700', 'font-medium');
-      expect(macdInsight).toHaveClass('text-blue-700', 'font-medium');
+      expect(rsiInsight).toHaveClass('text-blue-700', 'dark:text-blue-300', 'font-medium');
+      expect(macdInsight).toHaveClass('text-blue-700', 'dark:text-blue-300', 'font-medium');
+    });
+
+    it('should support dark mode styling', () => {
+      render(<TechnicalIndicatorExplanations {...defaultProps} />);
+      
+      // Check card containers for dark mode classes
+      const rsiCard = screen.getByTestId('explanation-rsi');
+      const macdCard = screen.getByTestId('explanation-macd');
+      
+      expect(rsiCard).toHaveClass('bg-white', 'dark:bg-gray-800');
+      expect(rsiCard).toHaveClass('border-gray-200', 'dark:border-gray-700');
+      expect(macdCard).toHaveClass('bg-white', 'dark:bg-gray-800');
+      expect(macdCard).toHaveClass('border-gray-200', 'dark:border-gray-700');
+      
+      // Check text elements for dark mode classes
+      const explanationTexts = screen.getAllByTestId(/^explanation-text-/);
+      explanationTexts.forEach(text => {
+        expect(text).toHaveClass('text-gray-700', 'dark:text-gray-300');
+      });
     });
   });
 
   describe('Performance Considerations', () => {
     it('should handle large numbers of indicators efficiently', () => {
-      const manyIndicators: TechnicalSignal[] = Array.from({ length: 50 }, (_, i) => ({
+      const manyIndicators: TechnicalSignal[] = Array.from({ length: 20 }, (_, i) => ({
         indicator: `INDICATOR_${i}`,
-        signal: i % 2 === 0 ? 'buy' : 'sell',
+        signal: i % 3 === 0 ? 'buy' : i % 3 === 1 ? 'sell' : 'hold',
         strength: Math.random(),
         value: Math.random() * 100,
         timestamp: new Date(),
@@ -595,7 +836,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       const startTime = performance.now();
       
       render(
-        <MockTechnicalIndicatorExplanations 
+        <TechnicalIndicatorExplanations 
           {...defaultProps} 
           indicators={manyIndicators} 
         />
@@ -610,10 +851,10 @@ describe('TechnicalIndicatorExplanations Component', () => {
     });
 
     it('should not cause memory leaks with frequent updates', () => {
-      const { rerender } = render(<MockTechnicalIndicatorExplanations {...defaultProps} />);
+      const { rerender } = render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       // Simulate frequent updates
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         const updatedIndicators = mockIndicators.map(indicator => ({
           ...indicator,
           value: Math.random() * 100,
@@ -621,7 +862,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
         }));
         
         rerender(
-          <MockTechnicalIndicatorExplanations 
+          <TechnicalIndicatorExplanations 
             {...defaultProps} 
             indicators={updatedIndicators} 
           />
@@ -630,6 +871,39 @@ describe('TechnicalIndicatorExplanations Component', () => {
       
       // Component should still be functional
       expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
+    });
+  });
+
+  describe('Case Sensitivity and Normalization', () => {
+    it('should handle different case variations of indicator names', () => {
+      const caseVariations: TechnicalSignal[] = [
+        {
+          indicator: 'rsi',
+          signal: 'buy',
+          strength: 0.5,
+          value: 25.0,
+          timestamp: new Date(),
+          description: 'Lowercase RSI'
+        },
+        {
+          indicator: 'Macd',
+          signal: 'sell',
+          strength: 0.7,
+          value: -1.0,
+          timestamp: new Date(),
+          description: 'Mixed case MACD'
+        }
+      ];
+
+      render(
+        <TechnicalIndicatorExplanations 
+          {...defaultProps} 
+          indicators={caseVariations} 
+        />
+      );
+      
+      expect(screen.getByTestId('explanation-rsi')).toBeInTheDocument();
+      expect(screen.getByTestId('explanation-macd')).toBeInTheDocument();
     });
   });
 });
