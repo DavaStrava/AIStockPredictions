@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ResponsiveGrid from '../ResponsiveGrid';
 import ResponsiveContainer from '../ResponsiveContainer';
 import ErrorBoundary from '../ErrorBoundary';
+import React from 'react';
 
 // Mock console methods to suppress error logs during tests
 const mockConsole = () => {
   const originalError = console.error;
   const originalWarn = console.warn;
-  
+
   beforeEach(() => {
     console.error = vi.fn();
     console.warn = vi.fn();
@@ -42,7 +43,7 @@ describe('Responsive Layout Error Handling', () => {
 
           // Component should still render
           expect(screen.getByTestId(`invalid-test-${index}`)).toBeInTheDocument();
-          
+
           // Grid classes should still be applied (even if invalid)
           const gridElement = container.firstChild as HTMLElement;
           expect(gridElement).toHaveClass('grid');
@@ -87,7 +88,7 @@ describe('Responsive Layout Error Handling', () => {
 
       // Component should still render despite invalid CSS
       expect(screen.getByTestId('css-error-item')).toBeInTheDocument();
-      
+
       const gridElement = container.firstChild as HTMLElement;
       expect(gridElement).toHaveClass('grid');
     });
@@ -225,7 +226,7 @@ describe('Responsive Layout Error Handling', () => {
       );
 
       const gridElement = container.firstChild as HTMLElement;
-      
+
       // Should still have grid classes (Tailwind provides fallbacks)
       expect(gridElement).toHaveClass('grid');
       expect(gridElement).toHaveClass('grid-cols-1');
@@ -273,7 +274,7 @@ describe('Responsive Layout Error Handling', () => {
       // Simulate rapid viewport changes
       for (let i = 0; i < 10; i++) {
         fireEvent(window, new Event('resize'));
-        
+
         // Grid should remain functional
         expect(gridElement).toHaveClass('grid');
         expect(screen.getByTestId('viewport-change-test')).toBeInTheDocument();
@@ -339,7 +340,7 @@ describe('Responsive Layout Error Handling', () => {
     it('should handle rapid mount/unmount cycles', () => {
       const TestComponent = ({ show }: { show: boolean }) => {
         if (!show) return null;
-        
+
         return (
           <ResponsiveGrid>
             <div data-testid="cycle-test">Cycle Test</div>
@@ -409,7 +410,7 @@ describe('Responsive Layout Error Handling', () => {
       );
 
       const button = screen.getByTestId('focus-error-button');
-      
+
       // Clicking should not throw an error
       expect(() => {
         fireEvent.click(button);
@@ -448,7 +449,7 @@ describe('Responsive Layout Error Handling', () => {
 
       // Tab navigation should continue to work
       fireEvent.keyDown(problematicElement, { key: 'Tab' });
-      
+
       // Safe button should still be accessible
       safeButton.focus();
       expect(document.activeElement).toBe(safeButton);
@@ -481,7 +482,7 @@ describe('Responsive Layout Error Handling', () => {
     it('should work with different document modes', () => {
       // Mock different document modes
       const originalDocumentMode = (document as any).documentMode;
-      
+
       // Simulate IE compatibility mode
       (document as any).documentMode = 8;
 

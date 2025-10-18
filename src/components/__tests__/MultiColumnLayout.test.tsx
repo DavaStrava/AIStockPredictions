@@ -1,49 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Mock MultiColumnLayout component since it doesn't exist yet
-// This test file serves as a specification for the component to be implemented
-const MockMultiColumnLayout = ({
-  leftColumn,
-  centerColumn,
-  rightColumn,
-  sidebarWidth = 'medium'
-}: {
-  leftColumn: React.ReactNode;
-  centerColumn: React.ReactNode;
-  rightColumn?: React.ReactNode;
-  sidebarWidth?: 'narrow' | 'medium' | 'wide';
-}) => {
-  const sidebarWidths = {
-    narrow: 'w-64',
-    medium: 'w-80',
-    wide: 'w-96'
-  };
-
-  return (
-    <div className="flex gap-6 min-h-screen" data-testid="multi-column-layout">
-      {/* Left Sidebar */}
-      <aside 
-        className={`${sidebarWidths[sidebarWidth]} flex-shrink-0 hidden lg:block`}
-        data-testid="left-sidebar"
-      >
-        {leftColumn}
-      </aside>
-      
-      {/* Main Content */}
-      <main className="flex-1 min-w-0" data-testid="main-content">
-        {centerColumn}
-      </main>
-      
-      {/* Right Sidebar (optional) */}
-      {rightColumn && (
-        <aside className="w-80 flex-shrink-0 hidden xl:block" data-testid="right-sidebar">
-          {rightColumn}
-        </aside>
-      )}
-    </div>
-  );
-};
+import MultiColumnLayout from '../MultiColumnLayout';
 
 describe('MultiColumnLayout Component', () => {
   const defaultProps = {
@@ -54,112 +11,118 @@ describe('MultiColumnLayout Component', () => {
 
   describe('Basic Layout Structure', () => {
     it('should render three-column layout with all sections', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      expect(screen.getByTestId('multi-column-layout')).toBeInTheDocument();
-      expect(screen.getByTestId('left-sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('main-content')).toBeInTheDocument();
-      expect(screen.getByTestId('right-sidebar')).toBeInTheDocument();
+      // Check for the main container
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toBeInTheDocument();
+      expect(layout).toHaveClass('flex', 'gap-6', 'min-h-screen');
       
+      // Check for all content
       expect(screen.getByTestId('left-content')).toBeInTheDocument();
       expect(screen.getByTestId('center-content')).toBeInTheDocument();
       expect(screen.getByTestId('right-content')).toBeInTheDocument();
     });
 
     it('should render two-column layout when right column is not provided', () => {
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={defaultProps.centerColumn}
         />
       );
       
-      expect(screen.getByTestId('left-sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('main-content')).toBeInTheDocument();
-      expect(screen.queryByTestId('right-sidebar')).not.toBeInTheDocument();
+      expect(screen.getByTestId('left-content')).toBeInTheDocument();
+      expect(screen.getByTestId('center-content')).toBeInTheDocument();
+      expect(screen.queryByTestId('right-content')).not.toBeInTheDocument();
+      
+      // Should only have 2 aside elements (left sidebar only)
+      const asides = container.querySelectorAll('aside');
+      expect(asides.length).toBe(1);
     });
 
     it('should apply correct flexbox layout classes', () => {
-      const { container } = render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      const layout = screen.getByTestId('multi-column-layout');
+      const layout = container.firstChild as HTMLElement;
       expect(layout).toHaveClass('flex', 'gap-6', 'min-h-screen');
       
-      const leftSidebar = screen.getByTestId('left-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar).toHaveClass('flex-shrink-0', 'hidden', 'lg:block');
       
-      const mainContent = screen.getByTestId('main-content');
+      const mainContent = container.querySelector('main');
       expect(mainContent).toHaveClass('flex-1', 'min-w-0');
       
-      const rightSidebar = screen.getByTestId('right-sidebar');
+      const rightSidebar = container.querySelector('aside:last-of-type');
       expect(rightSidebar).toHaveClass('w-80', 'flex-shrink-0', 'hidden', 'xl:block');
     });
   });
 
   describe('Sidebar Width Configuration', () => {
     it('should apply narrow sidebar width correctly', () => {
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           {...defaultProps}
           sidebarWidth="narrow"
         />
       );
       
-      const leftSidebar = screen.getByTestId('left-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar).toHaveClass('w-64');
     });
 
     it('should apply medium sidebar width by default', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      const leftSidebar = screen.getByTestId('left-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar).toHaveClass('w-80');
     });
 
     it('should apply wide sidebar width correctly', () => {
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           {...defaultProps}
           sidebarWidth="wide"
         />
       );
       
-      const leftSidebar = screen.getByTestId('left-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar).toHaveClass('w-96');
     });
 
     it('should handle invalid sidebar width gracefully', () => {
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           {...defaultProps}
           sidebarWidth={'invalid' as any}
         />
       );
       
       // Should still render without errors
-      expect(screen.getByTestId('left-sidebar')).toBeInTheDocument();
+      const leftSidebar = container.querySelector('aside:first-of-type');
+      expect(leftSidebar).toBeInTheDocument();
     });
   });
 
   describe('Responsive Behavior', () => {
     it('should hide left sidebar on smaller screens', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      const leftSidebar = screen.getByTestId('left-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar).toHaveClass('hidden', 'lg:block');
     });
 
     it('should hide right sidebar on smaller screens', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      const rightSidebar = screen.getByTestId('right-sidebar');
+      const rightSidebar = container.querySelector('aside:last-of-type');
       expect(rightSidebar).toHaveClass('hidden', 'xl:block');
     });
 
     it('should maintain main content visibility across all screen sizes', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
-      const mainContent = screen.getByTestId('main-content');
+      const mainContent = container.querySelector('main');
       expect(mainContent).not.toHaveClass('hidden');
       expect(mainContent).toHaveClass('flex-1');
     });
@@ -183,7 +146,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={complexLeftContent}
           centerColumn={defaultProps.centerColumn}
         />
@@ -211,7 +174,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={interactiveContent}
         />
@@ -244,7 +207,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={defaultProps.centerColumn}
           rightColumn={rightSidebarContent}
@@ -259,17 +222,19 @@ describe('MultiColumnLayout Component', () => {
 
   describe('Layout Flexibility', () => {
     it('should handle empty content gracefully', () => {
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           leftColumn={null}
           centerColumn={<div>Only Center</div>}
           rightColumn={undefined}
         />
       );
       
-      expect(screen.getByTestId('left-sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('main-content')).toBeInTheDocument();
-      expect(screen.queryByTestId('right-sidebar')).not.toBeInTheDocument();
+      const leftSidebar = container.querySelector('aside:first-of-type');
+      const mainContent = container.querySelector('main');
+      expect(leftSidebar).toBeInTheDocument();
+      expect(mainContent).toBeInTheDocument();
+      expect(screen.queryByTestId('right-content')).not.toBeInTheDocument();
       expect(screen.getByText('Only Center')).toBeInTheDocument();
     });
 
@@ -282,7 +247,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       const { rerender } = render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={<DynamicContent showExtra={false} />}
         />
@@ -291,7 +256,7 @@ describe('MultiColumnLayout Component', () => {
       expect(screen.queryByTestId('extra-content')).not.toBeInTheDocument();
       
       rerender(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={<DynamicContent showExtra={true} />}
         />
@@ -310,19 +275,19 @@ describe('MultiColumnLayout Component', () => {
         </div>
       );
 
-      const { rerender } = render(
-        <MockMultiColumnLayout 
+      const { rerender, container } = render(
+        <MultiColumnLayout 
           leftColumn={shortContent}
           centerColumn={shortContent}
           rightColumn={shortContent}
         />
       );
       
-      const layout = screen.getByTestId('multi-column-layout');
+      const layout = container.firstChild as HTMLElement;
       expect(layout).toHaveClass('flex');
       
       rerender(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={longContent}
           centerColumn={longContent}
           rightColumn={longContent}
@@ -331,24 +296,27 @@ describe('MultiColumnLayout Component', () => {
       
       // Layout should maintain structure with long content
       expect(layout).toHaveClass('flex');
-      expect(screen.getByTestId('left-sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('main-content')).toBeInTheDocument();
-      expect(screen.getByTestId('right-sidebar')).toBeInTheDocument();
+      const leftSidebar = container.querySelector('aside:first-of-type');
+      const mainContent = container.querySelector('main');
+      const rightSidebar = container.querySelector('aside:last-of-type');
+      expect(leftSidebar).toBeInTheDocument();
+      expect(mainContent).toBeInTheDocument();
+      expect(rightSidebar).toBeInTheDocument();
     });
   });
 
   describe('Accessibility and Semantics', () => {
     it('should use proper semantic HTML elements', () => {
-      render(<MockMultiColumnLayout {...defaultProps} />);
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
       // Should use semantic HTML elements
-      const leftSidebar = screen.getByTestId('left-sidebar');
-      const mainContent = screen.getByTestId('main-content');
-      const rightSidebar = screen.getByTestId('right-sidebar');
+      const leftSidebar = container.querySelector('aside:first-of-type');
+      const mainContent = container.querySelector('main');
+      const rightSidebar = container.querySelector('aside:last-of-type');
       
-      expect(leftSidebar.tagName).toBe('ASIDE');
-      expect(mainContent.tagName).toBe('MAIN');
-      expect(rightSidebar.tagName).toBe('ASIDE');
+      expect(leftSidebar?.tagName).toBe('ASIDE');
+      expect(mainContent?.tagName).toBe('MAIN');
+      expect(rightSidebar?.tagName).toBe('ASIDE');
     });
 
     it('should maintain focus management across columns', () => {
@@ -360,7 +328,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={<FocusableContent id="left" />}
           centerColumn={<FocusableContent id="center" />}
           rightColumn={<FocusableContent id="right" />}
@@ -399,7 +367,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={<KeyboardContent />}
           centerColumn={defaultProps.centerColumn}
         />
@@ -415,14 +383,14 @@ describe('MultiColumnLayout Component', () => {
 
   describe('Performance and Edge Cases', () => {
     it('should handle rapid layout changes efficiently', () => {
-      const { rerender } = render(<MockMultiColumnLayout {...defaultProps} />);
+      const { rerender, container } = render(<MultiColumnLayout {...defaultProps} />);
       
       const startTime = performance.now();
       
       // Rapid layout changes
       for (let i = 0; i < 10; i++) {
         rerender(
-          <MockMultiColumnLayout 
+          <MultiColumnLayout 
             leftColumn={<div>Left {i}</div>}
             centerColumn={<div>Center {i}</div>}
             rightColumn={i % 2 === 0 ? <div>Right {i}</div> : undefined}
@@ -435,11 +403,12 @@ describe('MultiColumnLayout Component', () => {
       const renderTime = endTime - startTime;
       
       expect(renderTime).toBeLessThan(100); // Should be performant
-      expect(screen.getByTestId('multi-column-layout')).toBeInTheDocument();
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toBeInTheDocument();
     });
 
     it('should handle component unmounting gracefully', () => {
-      const { unmount } = render(<MockMultiColumnLayout {...defaultProps} />);
+      const { unmount } = render(<MultiColumnLayout {...defaultProps} />);
       
       expect(() => {
         unmount();
@@ -454,7 +423,7 @@ describe('MultiColumnLayout Component', () => {
       // Test that errors in one column don't break the entire layout
       expect(() => {
         render(
-          <MockMultiColumnLayout 
+          <MultiColumnLayout 
             leftColumn={<ErrorThrowingComponent />}
             centerColumn={defaultProps.centerColumn}
             rightColumn={defaultProps.rightColumn}
@@ -477,16 +446,76 @@ describe('MultiColumnLayout Component', () => {
         </div>
       );
 
-      render(
-        <MockMultiColumnLayout 
+      const { container } = render(
+        <MultiColumnLayout 
           leftColumn={<ConflictingContent />}
           centerColumn={defaultProps.centerColumn}
         />
       );
       
       // Layout should still be present despite CSS conflicts
-      expect(screen.getByTestId('multi-column-layout')).toBeInTheDocument();
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toBeInTheDocument();
       expect(screen.getByTestId('conflicting-content')).toBeInTheDocument();
+    });
+  });
+
+  describe('Sticky Positioning', () => {
+    it('should apply sticky positioning to left sidebar content', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const leftSidebar = container.querySelector('aside:first-of-type > div');
+      expect(leftSidebar).toHaveClass('sticky', 'top-8');
+      expect(leftSidebar).toHaveClass('max-h-[calc(100vh-4rem)]', 'overflow-y-auto');
+    });
+
+    it('should apply sticky positioning to right sidebar content', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const rightSidebar = container.querySelector('aside:last-of-type > div');
+      expect(rightSidebar).toHaveClass('sticky', 'top-8');
+      expect(rightSidebar).toHaveClass('max-h-[calc(100vh-4rem)]', 'overflow-y-auto');
+    });
+
+    it('should not apply sticky positioning to main content', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const mainContent = container.querySelector('main');
+      expect(mainContent).not.toHaveClass('sticky');
+    });
+  });
+
+  describe('Custom ClassName', () => {
+    it('should apply custom className to layout container', () => {
+      const { container } = render(
+        <MultiColumnLayout 
+          {...defaultProps}
+          className="custom-layout-class"
+        />
+      );
+      
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toHaveClass('custom-layout-class');
+      expect(layout).toHaveClass('flex', 'gap-6', 'min-h-screen'); // Should still have base classes
+    });
+
+    it('should handle multiple custom classes', () => {
+      const { container } = render(
+        <MultiColumnLayout 
+          {...defaultProps}
+          className="custom-class-1 custom-class-2 bg-gray-100"
+        />
+      );
+      
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toHaveClass('custom-class-1', 'custom-class-2', 'bg-gray-100');
+    });
+
+    it('should work without custom className', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const layout = container.firstChild as HTMLElement;
+      expect(layout).toHaveClass('flex', 'gap-6', 'min-h-screen');
     });
   });
 
@@ -501,7 +530,7 @@ describe('MultiColumnLayout Component', () => {
       );
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={defaultProps.leftColumn}
           centerColumn={<GridContent />}
         />
@@ -535,7 +564,7 @@ describe('MultiColumnLayout Component', () => {
       };
 
       render(
-        <MockMultiColumnLayout 
+        <MultiColumnLayout 
           leftColumn={<CollapsibleContent />}
           centerColumn={defaultProps.centerColumn}
         />

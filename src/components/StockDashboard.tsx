@@ -19,6 +19,8 @@ import CollapsibleSection from './CollapsibleSection';
 import MarketIndicesSidebar from './MarketIndicesSidebar';
 import MarketIndexAnalysis from './MarketIndexAnalysis';
 import ResponsiveGrid from './ResponsiveGrid';
+import TechnicalIndicatorExplanations from './TechnicalIndicatorExplanations';
+import { inferMarketContext } from '@/lib/technical-analysis/explanations';
 
 /*
   TYPESCRIPT INTERFACE DEFINITION:
@@ -1060,119 +1062,31 @@ export default function StockDashboard() {
           {/* Technical Indicators Interpretation - Collapsible */}
           <CollapsibleSection
             title="Technical Indicators Interpretation"
-            subtitle="Matter-of-fact analysis of current technical indicators"
+            subtitle="Plain-language explanations with actionable insights for novice investors"
             icon="📋"
             defaultExpanded={true}
           >
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="font-semibold text-foreground mb-4">Current Technical Status</h4>
-              <div className="space-y-4">
-                {/* RSI Interpretation */}
-                {analysis.indicators.rsi && analysis.indicators.rsi.length > 0 && (
-                  <div className="border-b border-gray-200 dark:border-gray-700 pb-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-foreground">RSI (14-period)</span>
-                      <span className="text-sm font-mono text-foreground">
-                        {Math.round(analysis.indicators.rsi[analysis.indicators.rsi.length - 1].value)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const rsi = analysis.indicators.rsi[analysis.indicators.rsi.length - 1].value;
-                        if (rsi > 70) return "RSI indicates overbought conditions. Price has risen rapidly and may be due for a pullback.";
-                        if (rsi < 30) return "RSI indicates oversold conditions. Price has declined rapidly and may be due for a bounce.";
-                        if (rsi > 50) return "RSI is above midline, indicating upward momentum is currently stronger than downward momentum.";
-                        return "RSI is below midline, indicating downward momentum is currently stronger than upward momentum.";
-                      })()}
-                    </p>
-                  </div>
-                )}
-
-                {/* MACD Interpretation */}
-                {analysis.indicators.macd && analysis.indicators.macd.length > 0 && (
-                  <div className="border-b border-gray-200 dark:border-gray-700 pb-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-foreground">MACD</span>
-                      <span className="text-sm font-mono text-foreground">
-                        {analysis.indicators.macd[analysis.indicators.macd.length - 1].macd.toFixed(3)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const latest = analysis.indicators.macd[analysis.indicators.macd.length - 1];
-                        const macd = latest.macd;
-                        const signal = latest.signal;
-                        const histogram = latest.histogram;
-                        
-                        if (macd > signal && histogram > 0) {
-                          return "MACD line is above signal line with positive histogram, indicating bullish momentum.";
-                        } else if (macd < signal && histogram < 0) {
-                          return "MACD line is below signal line with negative histogram, indicating bearish momentum.";
-                        } else if (macd > signal) {
-                          return "MACD line is above signal line but histogram is declining, momentum may be weakening.";
-                        } else {
-                          return "MACD line is below signal line but histogram is improving, momentum may be strengthening.";
-                        }
-                      })()}
-                    </p>
-                  </div>
-                )}
-
-                {/* Bollinger Bands Interpretation */}
-                {analysis.indicators.bollingerBands && analysis.indicators.bollingerBands.length > 0 && (
-                  <div className="border-b border-gray-200 dark:border-gray-700 pb-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-foreground">Bollinger Bands %B</span>
-                      <span className="text-sm font-mono text-foreground">
-                        {(analysis.indicators.bollingerBands[analysis.indicators.bollingerBands.length - 1].percentB * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const percentB = analysis.indicators.bollingerBands[analysis.indicators.bollingerBands.length - 1].percentB;
-                        if (percentB > 1) return "Price is above the upper Bollinger Band, indicating potential overbought conditions.";
-                        if (percentB < 0) return "Price is below the lower Bollinger Band, indicating potential oversold conditions.";
-                        if (percentB > 0.8) return "Price is near the upper Bollinger Band, approaching overbought territory.";
-                        if (percentB < 0.2) return "Price is near the lower Bollinger Band, approaching oversold territory.";
-                        return "Price is within normal Bollinger Band range, indicating balanced volatility conditions.";
-                      })()}
-                    </p>
-                  </div>
-                )}
-
-                {/* Moving Averages Interpretation */}
-                {analysis.indicators.sma && analysis.indicators.sma.length > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-foreground">Moving Averages</span>
-                      <div className="text-sm font-mono text-foreground space-x-2">
-                        <span>SMA20: ${analysis.indicators.sma.find(s => s.period === 20)?.value.toFixed(2) || 'N/A'}</span>
-                        <span>SMA50: ${analysis.indicators.sma.find(s => s.period === 50)?.value.toFixed(2) || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const sma20 = analysis.indicators.sma.find(s => s.period === 20)?.value;
-                        const sma50 = analysis.indicators.sma.find(s => s.period === 50)?.value;
-                        const currentPrice = priceData[priceData.length - 1]?.close;
-                        
-                        if (!sma20 || !sma50 || !currentPrice) return "Moving average analysis requires more data points.";
-                        
-                        if (sma20 > sma50 && currentPrice > sma20) {
-                          return "Price is above both short and long-term moving averages, with short-term above long-term, indicating upward trend.";
-                        } else if (sma20 < sma50 && currentPrice < sma20) {
-                          return "Price is below both short and long-term moving averages, with short-term below long-term, indicating downward trend.";
-                        } else if (currentPrice > sma20 && sma20 < sma50) {
-                          return "Price is above short-term average but short-term is below long-term, indicating mixed signals.";
-                        } else {
-                          return "Price is below short-term average, indicating near-term weakness regardless of longer-term trend.";
-                        }
-                      })()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            <TechnicalIndicatorExplanations
+              indicators={(() => {
+                // Get only the latest signal for each unique indicator
+                const latestSignals = new Map<string, TechnicalSignal>();
+                analysis.signals.forEach(signal => {
+                  const existing = latestSignals.get(signal.indicator);
+                  if (!existing || new Date(signal.timestamp) > new Date(existing.timestamp)) {
+                    latestSignals.set(signal.indicator, signal);
+                  }
+                });
+                return Array.from(latestSignals.values());
+              })()}
+              symbol={selectedStock}
+              currentPrice={priceData[priceData.length - 1]?.close || 0}
+              marketContext={inferMarketContext(
+                selectedStock,
+                undefined, // sector - could be added later
+                undefined, // marketCap - could be added later
+                priceData.map(p => ({ close: p.close, date: new Date(p.date) }))
+              )}
+            />
           </CollapsibleSection>
 
           {/* Analysis Summary Grid - Collapsible */}

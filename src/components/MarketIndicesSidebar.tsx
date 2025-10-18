@@ -109,7 +109,7 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
 
   if (loading) {
     return (
-      <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="h-5 w-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Market Indices</h3>
@@ -129,7 +129,7 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
 
   if (error) {
     return (
-      <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="h-5 w-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Market Indices</h3>
@@ -148,7 +148,7 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
   }
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-6 overflow-y-auto">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center gap-2 mb-6">
         <BarChart3 className="h-5 w-5 text-blue-600" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">US Market Indices</h3>

@@ -480,7 +480,7 @@ export function generateBollingerBandsExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -518,7 +518,7 @@ export function generateStochasticExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -556,7 +556,7 @@ export function generateWilliamsRExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -594,7 +594,7 @@ export function generateADXExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -634,7 +634,7 @@ export function generateOBVExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -676,7 +676,7 @@ export function generateMovingAverageExplanation(
   const baseExplanation = `${symbol} ${rangeData.explanation}`;
   const baseAction = rangeData.action;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
@@ -701,7 +701,7 @@ export function generateFallbackExplanation(
   const baseExplanation = `${signal.indicator} value of ${signal.value.toFixed(2)} for ${symbol} requires additional context for interpretation. This indicator is showing ${signal.signal} conditions based on its current reading.`;
   const baseAction = `Monitor this indicator alongside other technical signals for better decision making. Consider the overall market context when interpreting this signal.`;
 
-  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext, signal.signal);
+  const { explanation, action } = applyMarketContext(baseExplanation, baseAction, symbol, marketContext);
 
   return {
     indicator: signal.indicator,
