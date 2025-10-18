@@ -124,32 +124,37 @@ export default function TechnicalIndicatorExplanations({
   };
 
   return (
-    <div data-testid="technical-indicator-explanations" className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Technical Analysis for {symbol}
+    <div data-testid="technical-indicator-explanations" className="space-y-3">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          {symbol} Technical Indicators
         </h3>
         {explanations.length > 0 && (
           <span 
-            className={`px-3 py-1 rounded-full text-sm font-medium ${getSentimentColorClasses(overallSentiment)}`}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium ${getSentimentColorClasses(overallSentiment)}`}
             data-testid="overall-sentiment"
           >
-            Overall: {overallSentiment}
+            {overallSentiment}
           </span>
         )}
       </div>
 
       {/* Display conflicts if any */}
       {conflicts.length > 0 && (
-        <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-            ⚠️ Conflicting Signals Detected
-          </h4>
-          {conflicts.map((conflict, index) => (
-            <p key={index} className="text-yellow-700 dark:text-yellow-300 text-sm">
-              {conflict}
-            </p>
-          ))}
+        <div className="mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <span className="text-lg flex-shrink-0">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200 text-sm mb-1">
+                Mixed Signals
+              </h4>
+              {conflicts.map((conflict, index) => (
+                <p key={index} className="text-yellow-700 dark:text-yellow-300 text-xs leading-relaxed">
+                  {conflict}
+                </p>
+              ))}
+            </div>
+          </div>
         </div>
       )}
       
