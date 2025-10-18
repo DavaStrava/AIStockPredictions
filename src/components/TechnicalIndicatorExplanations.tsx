@@ -18,7 +18,7 @@ interface TechnicalIndicatorExplanationsProps {
 }
 
 /**
- * Individual indicator card component
+ * Individual indicator card component - Compact version
  */
 const IndicatorCard = ({ explanation }: { explanation: IndicatorExplanation }) => {
   const getRiskColorClasses = (riskLevel: string) => {
@@ -35,45 +35,44 @@ const IndicatorCard = ({ explanation }: { explanation: IndicatorExplanation }) =
 
   return (
     <div 
-      className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+      className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
       data-testid={`explanation-${explanation.indicator.toLowerCase()}`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-          {explanation.indicator}
-        </h4>
-        <span 
-          className={`px-2 py-1 rounded text-sm font-medium ${getRiskColorClasses(explanation.riskLevel)}`}
-          data-testid={`risk-${explanation.indicator.toLowerCase()}`}
-        >
-          {explanation.riskLevel} risk
-        </span>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+            {explanation.indicator}
+          </h4>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
+              {explanation.value.toFixed(2)}
+            </span>
+            <span 
+              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getRiskColorClasses(explanation.riskLevel)}`}
+              data-testid={`risk-${explanation.indicator.toLowerCase()}`}
+            >
+              {explanation.riskLevel}
+            </span>
+          </div>
+        </div>
       </div>
       
       <p 
-        className="text-gray-700 dark:text-gray-300 mb-2 leading-relaxed"
+        className="text-xs text-gray-700 dark:text-gray-300 mb-2 leading-relaxed line-clamp-2"
         data-testid={`explanation-text-${explanation.indicator.toLowerCase()}`}
+        title={explanation.explanation}
       >
         {explanation.explanation}
       </p>
       
       <p 
-        className="text-blue-700 dark:text-blue-300 font-medium flex items-start gap-2"
+        className="text-xs text-blue-700 dark:text-blue-300 font-medium flex items-start gap-1.5 line-clamp-2"
         data-testid={`insight-${explanation.indicator.toLowerCase()}`}
+        title={explanation.actionableInsight}
       >
-        <span className="text-lg">💡</span>
-        <span>{explanation.actionableInsight}</span>
+        <span className="text-sm flex-shrink-0">💡</span>
+        <span className="flex-1 min-w-0">{explanation.actionableInsight}</span>
       </p>
-      
-      <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
-        <span>Value: {explanation.value.toFixed(2)}</span>
-        {explanation.confidence && (
-          <span>Confidence: {(explanation.confidence * 100).toFixed(0)}%</span>
-        )}
-        {explanation.timeframe && (
-          <span>Timeframe: {explanation.timeframe}</span>
-        )}
-      </div>
     </div>
   );
 };
@@ -155,7 +154,7 @@ export default function TechnicalIndicatorExplanations({
       )}
       
       {explanations.length > 0 ? (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {explanations.map((explanation, index) => (
             <IndicatorCard key={index} explanation={explanation} />
           ))}
