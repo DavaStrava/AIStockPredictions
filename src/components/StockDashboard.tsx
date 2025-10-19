@@ -1059,11 +1059,11 @@ export default function StockDashboard() {
             <AIInsights symbol={selectedStock} analysis={analysis} />
           </CollapsibleSection>
 
-          {/* Technical Indicators Interpretation - Collapsible */}
+          {/* Technical Indicators - Collapsible */}
           <CollapsibleSection
-            title="Technical Indicators Interpretation"
-            subtitle="Plain-language explanations with actionable insights for novice investors"
-            icon="📋"
+            title="Technical Indicators"
+            subtitle="Plain-language explanations with actionable insights"
+            icon="📊"
             defaultExpanded={true}
           >
             <TechnicalIndicatorExplanations
@@ -1087,172 +1087,6 @@ export default function StockDashboard() {
                 priceData.map(p => ({ close: p.close, date: new Date(p.date) }))
               )}
             />
-          </CollapsibleSection>
-
-          {/* Analysis Summary Grid - Collapsible */}
-          <CollapsibleSection
-            title="Technical Analysis Summary"
-            subtitle="Market summary and detailed technical indicators"
-            icon="🔍"
-            defaultExpanded={true}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Market Summary */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="font-semibold text-foreground mb-4">Market Summary</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Overall Sentiment:</span>
-                  <span className={`font-medium ${getDirectionColor(analysis.summary.overall)}`}>
-                    {analysis.summary.overall.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Strength:</span>
-                  <span className="font-medium text-foreground">
-                    {Math.round(analysis.summary.strength * 100)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Confidence:</span>
-                  <span className="font-medium text-foreground">
-                    {Math.round(analysis.summary.confidence * 100)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Trend Direction:</span>
-                  <span className="font-medium text-foreground capitalize">
-                    {analysis.summary.trendDirection}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Momentum:</span>
-                  <span className="font-medium text-foreground capitalize">
-                    {analysis.summary.momentum}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Volatility:</span>
-                  <span className="font-medium text-foreground capitalize">
-                    {analysis.summary.volatility}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Technical Indicators */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="font-semibold text-foreground mb-4">Technical Indicators</h4>
-              <div className="space-y-3">
-                {/* 
-                  SAFE DATA ACCESS PATTERN:
-                  Always check if data exists AND has content before accessing.
-                  This prevents runtime errors if API returns incomplete data.
-                */}
-                {analysis.indicators.rsi && analysis.indicators.rsi.length > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">RSI (14):</span>
-                    <span className="font-medium text-foreground">
-                      {/* 
-                        ARRAY ACCESS WITH MATH OPERATIONS:
-                        [array.length - 1] gets the last element (most recent data).
-                        Math.round() converts decimal to integer for cleaner display.
-                        This pattern is common when working with time-series data.
-                      */}
-                      {Math.round(analysis.indicators.rsi[analysis.indicators.rsi.length - 1].value)}
-                    </span>
-                  </div>
-                )}
-                {analysis.indicators.macd && analysis.indicators.macd.length > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">MACD:</span>
-                    <span className="font-medium text-foreground">
-                      {analysis.indicators.macd[analysis.indicators.macd.length - 1].macd.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {analysis.indicators.bollingerBands && analysis.indicators.bollingerBands.length > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">BB %B:</span>
-                    <span className="font-medium text-foreground">
-                      {(analysis.indicators.bollingerBands[analysis.indicators.bollingerBands.length - 1].percentB * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-                {analysis.indicators.sma && analysis.indicators.sma.length > 0 && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">SMA 20:</span>
-                      <span className="font-medium text-foreground">
-                        {/* 
-                          COMPLEX DATA LOOKUP WITH FALLBACK:
-                          1. find() searches array for object with period === 20
-                          2. ?. (optional chaining) safely accesses value property
-                          3. toFixed(2) formats number to 2 decimal places
-                          4. || 'N/A' provides fallback if data not found
-                          This pattern handles missing or incomplete data gracefully.
-                        */}
-                        ${analysis.indicators.sma.find(s => s.period === 20)?.value.toFixed(2) || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">SMA 50:</span>
-                      <span className="font-medium text-foreground">
-                        ${analysis.indicators.sma.find(s => s.period === 50)?.value.toFixed(2) || 'N/A'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Trading Signals - Collapsible */}
-          <CollapsibleSection
-            title="Trading Signals"
-            subtitle={`${analysis.signals.length} signals generated from technical analysis`}
-            icon="⚡"
-            defaultExpanded={false}
-            badge={analysis.signals.length}
-          >
-            <div>
-            <h4 className="font-semibold text-foreground mb-4">Trading Signals</h4>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {analysis.signals.map((signal, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-foreground">{signal.indicator}</span>
-                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        signal.signal === 'buy' 
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                          : signal.signal === 'sell'
-                          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                          : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'
-                      }`}>
-                        {signal.signal.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {signal.description}
-                    </p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <div className="text-sm font-medium text-foreground">
-                      {Math.round(signal.strength * 100)}%
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      strength
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {analysis.signals.length === 0 && (
-                <p className="text-gray-500 text-center py-4">No trading signals generated</p>
-              )}
-            </div>
-            </div>
           </CollapsibleSection>
 
           {/* Terms & Definitions Glossary */}
