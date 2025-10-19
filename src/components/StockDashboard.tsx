@@ -750,8 +750,8 @@ export default function StockDashboard() {
         */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Stock Predictions</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <h2 className="hierarchy-critical">Stock Predictions</h2>
+            <p className="hierarchy-tertiary mt-1">
               AI-powered technical analysis with real market data
             </p>
           </div>
@@ -792,7 +792,7 @@ export default function StockDashboard() {
           This demonstrates several important React and JavaScript patterns
         */}
         <div className="flex flex-wrap gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Popular:</span>
+          <span className="text-responsive-label text-gray-600 dark:text-gray-400">Popular:</span>
           {/*
             ARRAY MAPPING PATTERN:
             This is one of the most common patterns in React for rendering lists.
@@ -824,7 +824,7 @@ export default function StockDashboard() {
             <button
               key={symbol}
               onClick={() => fetchDetailedAnalysis(symbol)}
-              className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="px-3 py-1 text-responsive-badge bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               {symbol}
             </button>
@@ -927,16 +927,16 @@ export default function StockDashboard() {
               ✕
             </button>
             
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">{prediction.symbol}</h3>
-                <p className="text-2xl font-bold text-foreground">${prediction.currentPrice}</p>
+            <div className="flex justify-between items-start mb-4 md:mb-6">
+              <div className="space-responsive-compact">
+                <h3 className="text-responsive-h4 text-foreground">{prediction.symbol}</h3>
+                <p className="text-responsive-price-sm text-foreground">${prediction.currentPrice}</p>
               </div>
               <div className="text-right pr-8"> {/* Add padding to avoid overlap with X button */}
-                <span className={`text-sm font-medium ${getDirectionColor(prediction.prediction.direction)}`}>
+                <span className={`text-responsive-label font-semibold ${getDirectionColor(prediction.prediction.direction)}`}>
                   {prediction.prediction.direction.toUpperCase()}
                 </span>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-responsive-caption text-gray-500 mt-1">
                   {Math.round(prediction.prediction.confidence * 100)}% confidence
                 </p>
               </div>
@@ -948,23 +948,23 @@ export default function StockDashboard() {
               Uses flexbox with justify-between to align labels left and values right.
               Consistent spacing with space-y-2 (0.5rem between items).
             */}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Target:</span>
-                <span className="font-medium text-foreground">${prediction.prediction.targetPrice}</span>
+            <div className="space-responsive-compact mb-4 md:mb-6">
+              <div className="flex justify-between text-responsive-body-sm">
+                <span className="text-low-contrast">Target:</span>
+                <span className="font-semibold text-high-contrast">${prediction.prediction.targetPrice}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Timeframe:</span>
-                <span className="font-medium text-foreground">{prediction.prediction.timeframe}</span>
+              <div className="flex justify-between text-responsive-body-sm">
+                <span className="text-low-contrast">Timeframe:</span>
+                <span className="font-semibold text-high-contrast">{prediction.prediction.timeframe}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Volatility:</span>
+              <div className="flex justify-between text-responsive-body-sm">
+                <span className="text-low-contrast">Volatility:</span>
                 {/* 
                   CSS CAPITALIZE: 
                   The 'capitalize' class transforms the first letter to uppercase.
                   This handles cases where API returns "low" but we want "Low".
                 */}
-                <span className="font-medium text-foreground capitalize">{prediction.riskMetrics.volatility}</span>
+                <span className="font-semibold text-high-contrast capitalize">{prediction.riskMetrics.volatility}</span>
               </div>
             </div>
 
@@ -982,9 +982,9 @@ export default function StockDashboard() {
         This prevents showing incomplete analysis UI.
       */}
       {analysis && analysis.summary && selectedStock && priceData.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-responsive-section">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold text-foreground">
+            <h3 className="hierarchy-critical">
               Detailed Analysis: {selectedStock}
             </h3>
             {/* 

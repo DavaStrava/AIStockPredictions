@@ -139,12 +139,12 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h4 className="text-lg font-semibold text-foreground">
+        <h4 className="hierarchy-primary">
           Analysis for {symbol}
         </h4>
         <button
           onClick={fetchInsights}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+          className="text-responsive-button text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
         >
           🔄 Refresh
         </button>
@@ -175,22 +175,22 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
               {/* Insight Header */}
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getProviderIcon(currentInsight.provider)}</span>
+                  <span className="text-responsive-price-sm">{getProviderIcon(currentInsight.provider)}</span>
                   <div>
-                    <h4 className="font-medium text-foreground">
+                    <h4 className="hierarchy-secondary">
                       {tabs.find(t => t.id === activeTab)?.label} Analysis
                     </h4>
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className={`text-sm font-medium ${getConfidenceColor(currentInsight.confidence)}`}>
+                      <span className={`text-responsive-label font-semibold ${getConfidenceColor(currentInsight.confidence)}`}>
                         {Math.round(currentInsight.confidence * 100)}% confidence
                       </span>
-                      <span className={`px-2 py-1 text-xs rounded-full ${getDataQualityBadge(currentInsight.metadata.data_quality)}`}>
+                      <span className={`px-2 py-1 text-responsive-badge rounded-full ${getDataQualityBadge(currentInsight.metadata.data_quality)}`}>
                         {currentInsight.metadata.data_quality || 'medium'} quality
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-responsive-caption text-gray-500">
                   {currentInsight.provider === 'openai' ? 'GPT-4' :
                     currentInsight.provider === 'bedrock' ? 'AWS Bedrock' : 'Cached'}
                 </div>
@@ -198,8 +198,8 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
 
               {/* Insight Content */}
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg padding-responsive-card">
+                  <p className="text-responsive-body text-high-contrast reading-line-height whitespace-pre-wrap">
                     {currentInsight.content}
                   </p>
                 </div>
@@ -208,8 +208,8 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
               {/* Metadata */}
               {currentInsight.metadata && (
                 <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                  <h5 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Analysis Details</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <h5 className="hierarchy-tertiary mb-2">Analysis Details</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-responsive-body-sm">
                     {currentInsight.metadata.timeframe && (
                       <div>
                         <span className="text-gray-500">Timeframe:</span>

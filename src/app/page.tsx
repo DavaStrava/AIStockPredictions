@@ -30,14 +30,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-responsive-h2 text-foreground">
                 AI Stock Prediction
               </h1>
-              <span className="ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
+              <span className="ml-2 px-2 py-1 text-responsive-badge bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
                 MVP
               </span>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-responsive-caption text-gray-500">
               Technical Analysis Engine
             </div>
           </div>

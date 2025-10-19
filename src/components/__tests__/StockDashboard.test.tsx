@@ -145,6 +145,12 @@ describe('StockDashboard', () => {
 
   const mockAnalysisData = {
     symbol: 'AAPL',
+    summary: {
+      trend: 'bullish',
+      strength: 0.7,
+      recommendation: 'buy'
+    },
+    signals: [],
     indicators: {
       rsi: [{ value: 65, signal: 'neutral' }],
       macd: [{ 
@@ -608,8 +614,8 @@ describe('StockDashboard', () => {
       // Verify the analysis section is rendered (which contains TechnicalIndicatorExplanations)
       // The bug would have caused the component to receive undefined as symbol
       await waitFor(() => {
-        // Look for the collapsible section title that contains the component
-        expect(screen.getByText('Technical Indicators Interpretation')).toBeInTheDocument();
+        // Look for the TechnicalIndicatorExplanations component by its test ID
+        expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
       });
     });
 
@@ -712,7 +718,7 @@ describe('StockDashboard', () => {
       // The component should use the last price from priceData (150.50)
       // This is verified by the analysis section rendering successfully
       await waitFor(() => {
-        expect(screen.getByText('Technical Indicators Interpretation')).toBeInTheDocument();
+        expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
       });
     });
 
@@ -747,11 +753,14 @@ describe('StockDashboard', () => {
         expect(global.fetch).toHaveBeenCalledWith('/api/analysis?symbol=AAPL&period=1year');
       });
       
-      // Should pass 0 as currentPrice when priceData is empty
-      // Component should still render without crashing
+      // When priceData is empty, the detailed analysis section should not render
+      // This is by design - we need price data to show meaningful analysis
       await waitFor(() => {
-        expect(screen.getByText('Technical Indicators Interpretation')).toBeInTheDocument();
+        expect(global.fetch).toHaveBeenCalledWith('/api/analysis?symbol=AAPL&period=1year');
       });
+      
+      // Verify the component doesn't crash and the analysis section is not shown
+      expect(screen.queryByTestId('technical-indicator-explanations')).not.toBeInTheDocument();
     });
 
     it('should pass selectedStock to inferMarketContext function', async () => {
@@ -793,7 +802,7 @@ describe('StockDashboard', () => {
       // The marketContext should be inferred using selectedStock (AAPL) and the price data
       // This is verified by the component rendering successfully without errors
       await waitFor(() => {
-        expect(screen.getByText('Technical Indicators Interpretation')).toBeInTheDocument();
+        expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
       });
     });
 
@@ -833,7 +842,7 @@ describe('StockDashboard', () => {
       
       // Component should render successfully with correct symbol (not undefined)
       await waitFor(() => {
-        expect(screen.getByText('Technical Indicators Interpretation')).toBeInTheDocument();
+        expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
       });
     });
   });

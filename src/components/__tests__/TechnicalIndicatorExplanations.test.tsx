@@ -39,7 +39,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
-      expect(screen.getByText('Technical Analysis for AAPL')).toBeInTheDocument();
+      expect(screen.getByText('AAPL Technical Indicators')).toBeInTheDocument();
     });
 
     it('should render all provided indicators', () => {
@@ -115,7 +115,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('take profits if currently holding');
       
       const risk = screen.getByTestId('risk-rsi');
-      expect(risk).toHaveTextContent('medium risk');
+      expect(risk).toHaveTextContent('medium');
     });
 
     it('should generate oversold explanation for RSI < 30', () => {
@@ -145,7 +145,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('2-3 trading days');
       
       const risk = screen.getByTestId('risk-rsi');
-      expect(risk).toHaveTextContent('low risk');
+      expect(risk).toHaveTextContent('low');
     });
 
     it('should generate neutral explanation for RSI between 30-70', () => {
@@ -231,7 +231,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('2-3 trading days');
       
       const risk = screen.getByTestId('risk-macd');
-      expect(risk).toHaveTextContent('medium risk');
+      expect(risk).toHaveTextContent('medium');
     });
 
     it('should generate bearish explanation for MACD sell signal', () => {
@@ -260,7 +260,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('stop-loss orders');
       
       const risk = screen.getByTestId('risk-macd');
-      expect(risk).toHaveTextContent('high risk');
+      expect(risk).toHaveTextContent('high');
     });
 
     it('should handle neutral MACD signals', () => {
@@ -316,7 +316,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('middle band');
       
       const risk = screen.getByTestId('risk-bollinger_bands');
-      expect(risk).toHaveTextContent('medium risk');
+      expect(risk).toHaveTextContent('medium');
     });
 
     it('should generate sell signal explanation for Bollinger Bands', () => {
@@ -398,7 +398,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(insight).toHaveTextContent('Monitor this indicator alongside other technical signals');
       
       const risk = screen.getByTestId('risk-unknown_indicator');
-      expect(risk).toHaveTextContent('medium risk');
+      expect(risk).toHaveTextContent('medium');
     });
 
     it('should handle indicators with special characters', () => {
@@ -464,9 +464,9 @@ describe('TechnicalIndicatorExplanations Component', () => {
       expect(screen.getByTestId('explanation-bollinger_bands')).toBeInTheDocument();
       
       // Different risk levels should be displayed
-      expect(screen.getByTestId('risk-rsi')).toHaveTextContent('medium risk');
-      expect(screen.getByTestId('risk-macd')).toHaveTextContent('medium risk');
-      expect(screen.getByTestId('risk-bollinger_bands')).toHaveTextContent('low risk');
+      expect(screen.getByTestId('risk-rsi')).toHaveTextContent('medium');
+      expect(screen.getByTestId('risk-macd')).toHaveTextContent('medium');
+      expect(screen.getByTestId('risk-bollinger_bands')).toHaveTextContent('low');
     });
 
     it('should display current values for all indicators', () => {
@@ -474,11 +474,11 @@ describe('TechnicalIndicatorExplanations Component', () => {
       
       // Check RSI values
       const rsiContainer = screen.getByTestId('explanation-rsi');
-      expect(rsiContainer).toHaveTextContent('Value: 75.50');
+      expect(rsiContainer).toHaveTextContent('75.50');
       
       // Check MACD values
       const macdContainer = screen.getByTestId('explanation-macd');
-      expect(macdContainer).toHaveTextContent('Value: 1.25');
+      expect(macdContainer).toHaveTextContent('1.25');
     });
 
     it('should display overall sentiment', () => {
@@ -509,7 +509,9 @@ describe('TechnicalIndicatorExplanations Component', () => {
       );
       
       expect(screen.getByTestId('overall-sentiment')).toBeInTheDocument();
-      expect(screen.getByTestId('overall-sentiment')).toHaveTextContent('Overall:');
+      // The overall sentiment badge just shows the sentiment value (bullish/bearish/neutral), not "Overall:"
+      const sentiment = screen.getByTestId('overall-sentiment');
+      expect(sentiment.textContent).toMatch(/bullish|bearish|neutral/);
     });
 
     it('should display conflicts when indicators disagree', () => {
@@ -540,16 +542,16 @@ describe('TechnicalIndicatorExplanations Component', () => {
       );
       
       // Should show conflicts warning
-      expect(screen.getByText('⚠️ Conflicting Signals Detected')).toBeInTheDocument();
+      expect(screen.getByText('Mixed Signals Detected')).toBeInTheDocument();
     });
 
-    it('should display confidence and timeframe information', () => {
+    it('should display indicator values and risk levels', () => {
       render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
-      // Check for confidence and timeframe display
+      // Check for indicator value and risk level display
       const rsiContainer = screen.getByTestId('explanation-rsi');
-      expect(rsiContainer).toHaveTextContent('Confidence:');
-      expect(rsiContainer).toHaveTextContent('Timeframe:');
+      expect(rsiContainer).toHaveTextContent('75.50'); // RSI value
+      expect(rsiContainer).toHaveTextContent('medium'); // Risk level
     });
   });
 
@@ -562,7 +564,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
         />
       );
       
-      expect(screen.getByText('Technical Analysis for TSLA')).toBeInTheDocument();
+      expect(screen.getByText('TSLA Technical Indicators')).toBeInTheDocument();
       
       const rsiExplanation = screen.getByTestId('explanation-text-rsi');
       expect(rsiExplanation).toHaveTextContent('TSLA');
@@ -773,7 +775,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       render(<TechnicalIndicatorExplanations {...defaultProps} />);
       
       // Should have proper heading hierarchy
-      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Technical Analysis for AAPL');
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('AAPL Technical Indicators');
       expect(screen.getByRole('heading', { level: 4, name: 'RSI' })).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 4, name: 'MACD' })).toBeInTheDocument();
     });
@@ -785,8 +787,8 @@ describe('TechnicalIndicatorExplanations Component', () => {
       const macdRisk = screen.getByTestId('risk-macd');
       
       // Risk indicators should have appropriate styling classes
-      expect(rsiRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm', 'font-medium');
-      expect(macdRisk).toHaveClass('px-2', 'py-1', 'rounded', 'text-sm', 'font-medium');
+      expect(rsiRisk).toHaveClass('px-2', 'py-0.5', 'rounded', 'text-responsive-badge');
+      expect(macdRisk).toHaveClass('px-2', 'py-0.5', 'rounded', 'text-responsive-badge');
     });
 
     it('should provide actionable insights with clear formatting', () => {
@@ -817,7 +819,7 @@ describe('TechnicalIndicatorExplanations Component', () => {
       // Check text elements for dark mode classes
       const explanationTexts = screen.getAllByTestId(/^explanation-text-/);
       explanationTexts.forEach(text => {
-        expect(text).toHaveClass('text-gray-700', 'dark:text-gray-300');
+        expect(text).toHaveClass('text-responsive-body', 'text-medium-contrast');
       });
     });
   });

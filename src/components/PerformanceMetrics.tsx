@@ -133,16 +133,16 @@ export default function PerformanceMetrics({ symbol, priceData }: PerformanceMet
     changePercent?: number; 
     subtitle?: string; 
   }) => (
-    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</div>
-      <div className="text-xl font-semibold text-foreground">{value}</div>
+    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg padding-responsive-card">
+      <div className="text-responsive-label text-low-contrast mb-1">{title}</div>
+      <div className="text-responsive-h4 text-high-contrast">{value}</div>
       {change !== undefined && changePercent !== undefined && (
-        <div className={`text-sm ${getChangeColor(change)}`}>
+        <div className={`text-responsive-body-sm font-medium ${getChangeColor(change)}`}>
           {formatPrice(change)} ({formatPercent(changePercent)})
         </div>
       )}
       {subtitle && (
-        <div className="text-xs text-gray-500 mt-1">{subtitle}</div>
+        <div className="text-responsive-caption text-gray-500 mt-1">{subtitle}</div>
       )}
     </div>
   );
@@ -150,19 +150,19 @@ export default function PerformanceMetrics({ symbol, priceData }: PerformanceMet
   return (
     <div>
       {/* Current Price Header */}
-      <div className="mb-6">
-        <h4 className="text-lg font-semibold text-foreground mb-4">
+      <div className="mb-6 lg:mb-8">
+        <h4 className="hierarchy-primary mb-4">
           {symbol} Current Performance
         </h4>
 
-        <div className="flex items-baseline space-x-4">
-          <span className="text-3xl font-bold text-foreground">
+        <div className="flex items-baseline space-x-3 md:space-x-4 lg:space-x-6">
+          <span className="text-responsive-price text-high-contrast">
             ${formatPrice(stats.currentPrice)}
           </span>
-          <span className={`text-lg font-medium ${getChangeColor(stats.dayChange)}`}>
+          <span className={`text-responsive-h4 font-semibold ${getChangeColor(stats.dayChange)}`}>
             {formatPrice(stats.dayChange)} ({formatPercent(stats.dayChangePercent)})
           </span>
-          <span className="text-sm text-gray-500">Today</span>
+          <span className="text-responsive-label text-gray-500">Today</span>
         </div>
       </div>
 

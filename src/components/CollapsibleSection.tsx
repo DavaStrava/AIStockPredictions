@@ -111,7 +111,7 @@ export default function CollapsibleSection({
    * It demonstrates several important web development concepts.
    */
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow ${className}`}>
       {/* 
         INTERACTIVE HEADER BUTTON
         
@@ -126,9 +126,9 @@ export default function CollapsibleSection({
         - Visual focus indicators from browser defaults
         - Semantic meaning is clear to assistive technologies
         
-        STYLING APPROACH:
+        RESPONSIVE STYLING APPROACH:
         - w-full: Button spans full width of container
-        - px-6 py-4: Comfortable padding for touch targets (44px+ recommended)
+        - padding-responsive-card: Responsive padding that scales with screen size
         - flex items-center justify-between: Spreads content across full width
         - hover:bg-gray-50: Subtle hover feedback for better UX
         - transition-colors: Smooth color transitions for better UX
@@ -136,7 +136,7 @@ export default function CollapsibleSection({
       */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-t-lg"
+        className="w-full padding-responsive-card flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-t-lg"
       >
         {/* 
           LEFT SIDE: Title, Subtitle, and Icon
@@ -146,18 +146,18 @@ export default function CollapsibleSection({
           - items-center: Vertically centers all child elements
           - space-x-3: Adds consistent horizontal spacing between children
         */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 md:space-x-4">
           {/* 
             CONDITIONAL RENDERING: {icon && <span>}
             
             LOGICAL AND OPERATOR (&&): Only renders the <span> if icon exists
             - If icon is truthy (not null, undefined, empty string), render the span
             - If icon is falsy, nothing is rendered (React ignores false/null/undefined)
-            - text-xl: Makes the icon larger and more prominent
+            - text-responsive-h4: Responsive icon size that scales with screen
             
             This is a common React pattern for optional UI elements.
           */}
-          {icon && <span className="text-xl">{icon}</span>}
+          {icon && <span className="text-responsive-h4">{icon}</span>}
 
           {/* 
             TEXT CONTENT CONTAINER
@@ -166,18 +166,16 @@ export default function CollapsibleSection({
             - <h3> for the main title (assumes this is a subsection)
             - <p> for the subtitle (descriptive text)
             
-            STYLING STRATEGY:
+            RESPONSIVE STYLING STRATEGY:
             - text-left: Ensures text alignment is consistent
-            - font-semibold: Makes title stand out without being too bold
-            - text-foreground: Uses theme-aware text color
-            - text-sm: Smaller text size for subtitle
-            - text-gray-600/400: Muted colors for secondary information
+            - hierarchy-secondary: Responsive heading with proper visual weight
+            - hierarchy-tertiary: Responsive subtitle with muted colors
           */}
           <div className="text-left">
-            <h3 className="font-semibold text-foreground">{title}</h3>
+            <h3 className="hierarchy-secondary">{title}</h3>
             {/* Another conditional render - subtitle only shows if provided */}
             {subtitle && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>
+              <p className="hierarchy-tertiary mt-1">{subtitle}</p>
             )}
           </div>
         </div>
@@ -189,7 +187,7 @@ export default function CollapsibleSection({
           - Aligns badge and arrow horizontally
           - Smaller spacing (space-x-2) for tighter grouping
         */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 md:space-x-3">
           {/* 
             OPTIONAL BADGE DISPLAY
             
@@ -197,16 +195,15 @@ export default function CollapsibleSection({
             - Common pattern for showing counts, status, or labels
             - Styled as a "pill" shape with rounded-full
             - Uses muted colors to not compete with main content
-            - px-2 py-1: Compact padding for small badge
+            - text-responsive-badge: Responsive badge text size
             - bg-gray-100: Light background that stands out
-            - text-sm: Smaller text to fit in compact space
             
             🔧 FORMATTING FIXED: Restored proper conditional rendering syntax
             BEFORE: { badge && ( ... ) } (broken across multiple lines incorrectly)
             AFTER: Clean, readable conditional rendering block
           */}
           {badge && (
-            <span className="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+            <span className="text-responsive-badge text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
               {badge}
             </span>
           )}
@@ -224,6 +221,7 @@ export default function CollapsibleSection({
             - transition-transform: Smooth rotation animation
             - rotate-180: CSS class that rotates the arrow 180 degrees
             - Conditional class application: ${isExpanded ? 'rotate-180' : ''}
+            - Responsive sizing: w-5 h-5 md:w-6 md:h-6
             
             This demonstrates three important concepts:
             1. Conditional CSS classes based on state
@@ -231,7 +229,7 @@ export default function CollapsibleSection({
             3. Smooth transitions for better user experience
           */}
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 md:w-6 md:h-6 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -255,7 +253,7 @@ export default function CollapsibleSection({
         
         VISUAL SEPARATION:
         - border-t: Top border to separate header from content
-        - p-6: Generous padding around content for readability
+        - padding-responsive-card: Responsive padding that scales with screen size
         - Same border colors as main container for consistency
         
         CHILDREN PROP PATTERN:
@@ -271,7 +269,7 @@ export default function CollapsibleSection({
         AFTER: Proper indentation and readable structure
       */}
       {isExpanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700 p-6">
+        <div className="border-t border-gray-200 dark:border-gray-700 padding-responsive-card">
           {children}
         </div>
       )}

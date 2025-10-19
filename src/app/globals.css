@@ -27,6 +27,7 @@
   - Improved CSS custom property integration
 */
 @import "tailwindcss";
+@import "./typography.css";
 
 /*
   CSS CUSTOM PROPERTIES (CSS VARIABLES) - ROOT SCOPE:

@@ -1,0 +1,638 @@
+/*
+  RESPONSIVE TYPOGRAPHY SYSTEM
+  
+  This file implements a progressive typography scale that adapts to screen sizes,
+  ensuring optimal readability and visual hierarchy across all breakpoints.
+  
+  DESIGN PRINCIPLES:
+  1. Mobile-first: Base sizes optimized for small screens
+  2. Progressive enhancement: Larger sizes for larger screens
+  3. Accessibility: Maintains WCAG contrast ratios and readable line heights
+  4. Consistency: Uses Tailwind's spacing scale for predictable sizing
+  
+  BREAKPOINTS:
+  - Base (< 768px): Mobile devices
+  - md (768px+): Tablets
+  - lg (1024px+): Desktop
+  - xl (1440px+): Large desktop
+  - 2xl (1536px+): Extra large displays
+*/
+
+/* 
+  HEADING TYPOGRAPHY SCALE
+  Progressive sizing ensures headings remain prominent but not overwhelming
+*/
+
+/* H1 - Page Titles */
+.text-responsive-h1 {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-h1 {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-h1 {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-h1 {
+    font-size: 3rem;
+  }
+}
+
+/* H2 - Section Titles */
+.text-responsive-h2 {
+  font-size: 1.25rem;
+  line-height: 1.375;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-h2 {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-h2 {
+    font-size: 2.25rem;
+  }
+}
+
+/* H3 - Subsection Titles */
+.text-responsive-h3 {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-h3 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-h3 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-h3 {
+    font-size: 1.875rem;
+  }
+}
+
+/* H4 - Card/Component Titles */
+.text-responsive-h4 {
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-h4 {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-h4 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-h4 {
+    font-size: 1.5rem;
+  }
+}
+
+/* H5 - Small Headings */
+.text-responsive-h5 {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-h5 {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-h5 {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-h5 {
+    font-size: 1.25rem;
+  }
+}
+
+/*
+  BODY TEXT SCALE
+  Optimized for reading comfort with appropriate line heights
+*/
+
+/* Body Large - Primary content */
+.text-responsive-body-lg {
+  font-size: 1rem;
+  line-height: 1.625;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-body-lg {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-body-lg {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-body-lg {
+    font-size: 1.5rem;
+  }
+}
+
+/* Body - Standard content */
+.text-responsive-body {
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-body {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-body {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-body {
+    font-size: 1.25rem;
+  }
+}
+
+/* Body Small - Secondary content */
+.text-responsive-body-sm {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-body-sm {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-body-sm {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-body-sm {
+    font-size: 1.125rem;
+  }
+}
+
+/*
+  SPECIALIZED TEXT STYLES
+  For specific UI elements and data display
+*/
+
+/* Price Display - Large, prominent numbers */
+.text-responsive-price {
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-price {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-price {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-price {
+    font-size: 3rem;
+  }
+}
+
+/* Price Small - Card prices */
+.text-responsive-price-sm {
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-price-sm {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-price-sm {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-price-sm {
+    font-size: 2.25rem;
+  }
+}
+
+/* Labels - Form labels and data labels */
+.text-responsive-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-label {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-label {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-label {
+    font-size: 1.125rem;
+  }
+}
+
+/* Caption - Smallest text for metadata */
+.text-responsive-caption {
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-caption {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .text-responsive-caption {
+    font-size: 1rem;
+  }
+}
+
+/* Button Text */
+.text-responsive-button {
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  .text-responsive-button {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-button {
+    font-size: 1.125rem;
+  }
+}
+
+/* Badge/Tag Text */
+.text-responsive-badge {
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-badge {
+    font-size: 0.875rem;
+  }
+}
+
+/*
+  SPACING UTILITIES
+  Responsive spacing that scales with typography
+*/
+
+/* Section Spacing */
+.space-responsive-section > * + * {
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .space-responsive-section > * + * {
+    margin-top: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .space-responsive-section > * + * {
+    margin-top: 2.5rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .space-responsive-section > * + * {
+    margin-top: 3rem;
+  }
+}
+
+/* Card Spacing */
+.space-responsive-card > * + * {
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .space-responsive-card > * + * {
+    margin-top: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .space-responsive-card > * + * {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .space-responsive-card > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Compact Spacing */
+.space-responsive-compact > * + * {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .space-responsive-compact > * + * {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .space-responsive-compact > * + * {
+    margin-top: 1rem;
+  }
+}
+
+/* Padding - Container */
+.padding-responsive-container {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .padding-responsive-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .padding-responsive-container {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .padding-responsive-container {
+    padding: 2.5rem;
+  }
+}
+
+/* Padding - Card */
+.padding-responsive-card {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .padding-responsive-card {
+    padding: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .padding-responsive-card {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .padding-responsive-card {
+    padding: 2rem;
+  }
+}
+
+/*
+  VISUAL HIERARCHY UTILITIES
+  Enhanced spacing and sizing for information prioritization
+*/
+
+/* Critical Information - Highest priority */
+.hierarchy-critical {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .hierarchy-critical {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hierarchy-critical {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+}
+
+/* Primary Information - High priority */
+.hierarchy-primary {
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .hierarchy-primary {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hierarchy-primary {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Secondary Information - Medium priority */
+.hierarchy-secondary {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .hierarchy-secondary {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hierarchy-secondary {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Tertiary Information - Lower priority */
+.hierarchy-tertiary {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+  color: rgb(75 85 99);
+}
+
+@media (prefers-color-scheme: dark) {
+  .hierarchy-tertiary {
+    color: rgb(156 163 175);
+  }
+}
+
+@media (min-width: 768px) {
+  .hierarchy-tertiary {
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/*
+  ACCESSIBILITY ENHANCEMENTS
+  Ensures text remains readable and meets WCAG standards
+*/
+
+/* High Contrast Text */
+.text-high-contrast {
+  color: rgb(17 24 39);
+}
+
+@media (prefers-color-scheme: dark) {
+  .text-high-contrast {
+    color: rgb(243 244 246);
+  }
+}
+
+/* Medium Contrast Text */
+.text-medium-contrast {
+  color: rgb(55 65 81);
+}
+
+@media (prefers-color-scheme: dark) {
+  .text-medium-contrast {
+    color: rgb(209 213 219);
+  }
+}
+
+/* Low Contrast Text (still WCAG AA compliant) */
+.text-low-contrast {
+  color: rgb(75 85 99);
+}
+
+@media (prefers-color-scheme: dark) {
+  .text-low-contrast {
+    color: rgb(156 163 175);
+  }
+}
+
+/*
+  READING OPTIMIZATION
+  Optimal line lengths and spacing for extended reading
+*/
+
+/* Optimal Reading Width - 60-75 characters per line */
+.reading-width {
+  max-width: 65ch;
+}
+
+/* Reading Spacing - Comfortable paragraph spacing */
+.reading-spacing > * + * {
+  margin-top: 1rem;
+}
+
+@media (min-width: 768px) {
+  .reading-spacing > * + * {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .reading-spacing > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Reading Line Height - Optimal for body text */
+.reading-line-height {
+  line-height: 1.625;
+}
+
+@media (min-width: 768px) {
+  .reading-line-height {
+    line-height: 1.75;
+  }
+}
