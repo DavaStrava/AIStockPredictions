@@ -5,6 +5,7 @@ import StockDashboard from '@/components/StockDashboard';
 import MockWatchlistManager from '@/components/MockWatchlistManager';
 import DevErrorDashboard from '@/components/DevErrorDashboard';
 import ResponsiveContainer from '@/components/ResponsiveContainer';
+import ResponsiveLayoutErrorBoundary from '@/components/ResponsiveLayoutErrorBoundary';
 import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitoring';
 
 type ActiveTab = 'dashboard' | 'watchlists';
@@ -69,14 +70,16 @@ export default function Home() {
       </header>
       
       <main className="py-8">
-        <ResponsiveContainer variant="wide">
-          {activeTab === 'dashboard' && (
-            <StockDashboard />
-          )}
-          {activeTab === 'watchlists' && (
-            <MockWatchlistManager />
-          )}
-        </ResponsiveContainer>
+        <ResponsiveLayoutErrorBoundary>
+          <ResponsiveContainer variant="wide">
+            {activeTab === 'dashboard' && (
+              <StockDashboard />
+            )}
+            {activeTab === 'watchlists' && (
+              <MockWatchlistManager />
+            )}
+          </ResponsiveContainer>
+        </ResponsiveLayoutErrorBoundary>
       </main>
       
       {/* Development Error Dashboard */}
