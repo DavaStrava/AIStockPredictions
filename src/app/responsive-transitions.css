@@ -114,13 +114,19 @@ main {
 /**
  * Smooth card resizing during grid reflow
  * Prevents jarring layout shifts when columns change
+ * 
+ * Performance optimization: Use specific properties instead of 'all'
+ * and use GPU-accelerated properties (transform, opacity)
  */
 [class*="rounded-lg"],
 [class*="card"],
 .border {
-  transition: width 0.3s ease-in-out,
-              transform 0.2s ease-in-out,
-              box-shadow 0.2s ease-in-out;
+  /* Only transition layout-related properties during reflow */
+  transition: width 0.3s ease-in-out;
+  /* Enable GPU acceleration for smoother animations */
+  will-change: transform;
+  /* Use transform3d to force GPU acceleration */
+  transform: translate3d(0, 0, 0);
 }
 
 /* ============================================
@@ -227,6 +233,37 @@ svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   HOVER EFFECT OPTIMIZATION
+   ============================================ */
+
+/**
+ * Optimize hover effects for smooth performance
+ * Use GPU-accelerated properties and shorter durations
+ */
+@media (hover: hover) {
+  /* Optimize interactive cards/tiles for hover */
+  .cursor-pointer {
+    /* Use shorter duration for more responsive feel */
+    transition-duration: 0.2s;
+    /* Use ease-out for snappier feel */
+    transition-timing-function: ease-out;
+    /* Hint browser to optimize these properties */
+    will-change: transform, box-shadow;
+    /* Force GPU acceleration */
+    transform: translate3d(0, 0, 0);
+    /* Use hardware acceleration for shadows */
+    backface-visibility: hidden;
+    /* Prevent subpixel rendering issues */
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Remove will-change when not hovering to free resources */
+  .cursor-pointer:not(:hover) {
+    will-change: auto;
   }
 }
 
@@ -376,4 +413,198 @@ h6 {
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* ============================================
+   SKELETON LOADING STATES
+   ============================================ */
+
+/**
+ * Skeleton loading animation
+ * Provides visual feedback during content loading
+ */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/**
+ * Skeleton elements maintain proper spacing
+ * Prevents layout shift when content loads
+ */
+[data-testid*="skeleton"] {
+  /* Reserve space to prevent layout shift */
+  min-height: var(--skeleton-min-height, auto);
+  /* Smooth transition when content replaces skeleton */
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* ============================================
+   LAYOUT SHIFT PREVENTION UTILITIES
+   ============================================ */
+
+/**
+ * Grid items with minimum height to prevent layout shift
+ */
+[data-testid="responsive-grid"] > * {
+  min-height: var(--grid-item-min-height, auto);
+  /* Smooth height transitions */
+  transition: min-height 0.3s ease-in-out;
+}
+
+/**
+ * Prevent layout shift during responsive transitions
+ */
+[data-transitioning="true"] {
+  /* Temporarily disable pointer events during transition */
+  pointer-events: none;
+}
+
+[data-transitioning="false"] {
+  pointer-events: auto;
+}
+
+/**
+ * Aspect ratio containers for images and media
+ * Prevents layout shift before media loads
+ */
+.aspect-ratio-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.aspect-ratio-container::before {
+  content: '';
+  display: block;
+  padding-top: var(--aspect-ratio, 56.25%); /* Default 16:9 */
+}
+
+.aspect-ratio-container > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/**
+ * Content size hints for different breakpoints
+ * Helps prevent layout shift by reserving appropriate space
+ */
+@media (max-width: 767px) {
+  :root {
+    --content-min-height: 260px;
+    --card-min-height: 260px;
+    --sidebar-width: 0px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --content-min-height: 280px;
+    --card-min-height: 280px;
+    --sidebar-width: 0px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root {
+    --content-min-height: 300px;
+    --card-min-height: 300px;
+    --sidebar-width: 256px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  :root {
+    --content-min-height: 320px;
+    --card-min-height: 320px;
+    --sidebar-width: 320px;
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --content-min-height: 320px;
+    --card-min-height: 320px;
+    --sidebar-width: 384px;
+  }
+}
+
+/* ============================================
+   SMOOTH CONTENT LOADING
+   ============================================ */
+
+/**
+ * Fade in content smoothly when it loads
+ * Prevents jarring appearance of new content
+ */
+.content-loaded {
+  animation: contentFadeIn 0.4s ease-in-out;
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
+ * Stagger animation for grid items
+ * Creates a smooth cascade effect when content loads
+ */
+.grid > .content-loaded {
+  animation: contentFadeIn 0.4s ease-in-out;
+}
+
+.grid > .content-loaded:nth-child(1) { animation-delay: 0ms; }
+.grid > .content-loaded:nth-child(2) { animation-delay: 50ms; }
+.grid > .content-loaded:nth-child(3) { animation-delay: 100ms; }
+.grid > .content-loaded:nth-child(4) { animation-delay: 150ms; }
+.grid > .content-loaded:nth-child(5) { animation-delay: 200ms; }
+.grid > .content-loaded:nth-child(n+6) { animation-delay: 250ms; }
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/**
+ * Use CSS containment for better performance
+ * Helps browser optimize layout calculations
+ */
+[data-testid="responsive-grid"],
+[class*="ResponsiveGrid"] {
+  contain: layout style;
+}
+
+/**
+ * Optimize paint performance for cards
+ */
+[class*="card"],
+[class*="rounded-lg"] {
+  contain: layout paint;
+}
+
+/**
+ * Prevent layout thrashing during scroll
+ */
+.scroll-container {
+  contain: layout;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }

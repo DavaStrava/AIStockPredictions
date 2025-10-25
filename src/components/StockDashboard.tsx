@@ -880,7 +880,7 @@ export default function StockDashboard() {
         {predictions.map((prediction) => (
           <div
             key={prediction.symbol}  // UNIQUE KEY: Required for React's reconciliation
-            className={`relative border rounded-lg p-6 cursor-pointer transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-2 hover:scale-105 transform ${getDirectionBg(prediction.prediction.direction)}`}
+            className={`relative border rounded-lg p-6 cursor-pointer transition-[transform,box-shadow] duration-200 ease-out hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-1 transform ${getDirectionBg(prediction.prediction.direction)}`}
             onClick={() => fetchDetailedAnalysis(prediction.symbol)}  // EVENT HANDLER: Arrow function to pass parameter
           >
             {/* 

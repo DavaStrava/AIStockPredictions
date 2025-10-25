@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useContentSizeHints, useResponsiveTransition } from '@/hooks/useLayoutShiftPrevention';
 
 /**
  * Configuration interface for responsive grid behavior
@@ -24,11 +27,22 @@ export interface ResponsiveGridConfig {
  */
 export interface ResponsiveGridProps extends ResponsiveGridConfig {
   children: React.ReactNode;
+  /** Enable layout shift prevention during responsive transitions */
+  preventLayoutShift?: boolean;
+  /** Provide minimum height for grid items to prevent layout shift */
+  itemMinHeight?: string;
 }
 
 /**
  * ResponsiveGrid component that provides a responsive grid layout
- * with configurable breakpoints and column progression (1→2→3→4→5)
+ * with configurable breakpoints, column progression (1→2→3→4→5),
+ * and layout shift prevention
+ * 
+ * Features:
+ * - Smooth transitions between breakpoints
+ * - Layout shift prevention with proper sizing hints
+ * - Configurable minimum item heights
+ * - Responsive gap spacing
  */
 export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   children,
@@ -40,8 +54,12 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
     tablet: 2, 
     desktop: 3,
     large: 4
-  }
+  },
+  preventLayoutShift = true,
+  itemMinHeight
 }) => {
+  const { isTransitioning, transitionClass } = useResponsiveTransition(300);
+  const sizeHints = useContentSizeHints();
   // Generate responsive grid classes based on column configuration
   const generateGridClasses = () => {
     const baseClasses = ['grid'];
@@ -79,14 +97,28 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   };
 
   const gridClasses = generateGridClasses();
+  
+  // Transition classes for smooth responsive changes
+  const transitionClasses = preventLayoutShift 
+    ? 'transition-all duration-300 ease-in-out'
+    : '';
+  
+  // Calculate minimum height based on breakpoint if not provided
+  const calculatedMinHeight = itemMinHeight || sizeHints.cardMinHeight;
 
   return (
     <div 
-      className={`${gridClasses} ${gap} ${className}`}
+      className={`${gridClasses} ${gap} ${transitionClasses} ${transitionClass} ${className}`}
       style={{
         // Use CSS Grid with minmax for responsive behavior
-        gridTemplateColumns: `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`,
+        // Prevent layout shift by setting minimum height for grid items
+        ...(preventLayoutShift && {
+          '--grid-item-min-height': calculatedMinHeight,
+        } as React.CSSProperties)
       }}
+      data-transitioning={isTransitioning}
+      data-testid="responsive-grid"
     >
       {children}
     </div>

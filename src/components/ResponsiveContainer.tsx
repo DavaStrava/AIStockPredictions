@@ -1,23 +1,37 @@
+'use client';
+
 import React from 'react';
+import { useResponsiveTransition } from '@/hooks/useLayoutShiftPrevention';
 
 interface ResponsiveContainerProps {
   children: React.ReactNode;
   variant?: 'narrow' | 'wide' | 'full';
   className?: string;
+  preventLayoutShift?: boolean;
 }
 
 /**
  * ResponsiveContainer provides dynamic width allocation based on screen size
- * Replaces fixed max-w-7xl containers with progressive width scaling
+ * with layout shift prevention during responsive transitions
+ * 
+ * Features:
+ * - Progressive width scaling from mobile to large desktop
+ * - Smooth transitions between breakpoints
+ * - Layout shift prevention during responsive changes
+ * - Proper sizing hints for dynamic content
  */
 const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
   children,
   variant = 'wide',
-  className = ''
+  className = '',
+  preventLayoutShift = true
 }) => {
-  // Start with the original working classes and enhance them
+  const { isTransitioning, transitionClass } = useResponsiveTransition(300);
+  
+  // Base classes for all variants
   const baseClasses = 'mx-auto px-4 sm:px-6 lg:px-8';
   
+  // Width classes based on variant
   let widthClasses = '';
   switch (variant) {
     case 'narrow':
@@ -33,8 +47,16 @@ const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
       widthClasses = 'max-w-7xl xl:max-w-none xl:px-12 2xl:px-16';
   }
   
+  // Transition classes for smooth responsive changes
+  const transitionClasses = preventLayoutShift 
+    ? 'transition-all duration-300 ease-in-out'
+    : '';
+  
   return (
-    <div className={`${baseClasses} ${widthClasses} ${className}`}>
+    <div 
+      className={`${baseClasses} ${widthClasses} ${transitionClasses} ${transitionClass} ${className}`}
+      data-transitioning={isTransitioning}
+    >
       {children}
     </div>
   );
