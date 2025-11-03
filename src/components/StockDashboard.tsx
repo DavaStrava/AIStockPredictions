@@ -20,6 +20,9 @@ import MarketIndicesSidebar from './MarketIndicesSidebar';
 import MarketIndexAnalysis from './MarketIndexAnalysis';
 import ResponsiveGrid from './ResponsiveGrid';
 import TechnicalIndicatorExplanations from './TechnicalIndicatorExplanations';
+import MultiColumnLayout from './MultiColumnLayout';
+import ResponsiveContainer from './ResponsiveContainer';
+import AdditionalInsightsSidebar from './AdditionalInsightsSidebar';
 import { inferMarketContext } from '@/lib/technical-analysis/explanations';
 
 /*
@@ -713,42 +716,21 @@ export default function StockDashboard() {
     - Utility-first approach: small, single-purpose classes compose complex designs
   */
   return (
-    <div className="flex">
-      {/* Main Content */}
-      <div className="flex-1 space-y-8 pr-6">
-      {/* 
-        MAIN COMPONENT RENDER:
-        This return statement defines the JSX structure that React will render to the DOM.
-        
-        JSX FUNDAMENTALS:
-        - JSX looks like HTML but is actually JavaScript that gets compiled to React.createElement() calls
-        - Must return a single parent element (this <div> wraps everything)
-        - Curly braces {} embed JavaScript expressions within JSX
-        - className is used instead of class (class is a JavaScript reserved word)
-        
-        TAILWIND CSS UTILITY CLASSES:
-        - space-y-8: Adds vertical spacing (2rem/32px) between child elements
-        - This is more maintainable than adding individual margins to each child
-        - Tailwind uses a spacing scale: 1=0.25rem, 2=0.5rem, 4=1rem, 8=2rem
-      */}
-      <div className="flex flex-col gap-4">
-        {/*
-          RESPONSIVE FLEXBOX LAYOUT PATTERN:
-          This demonstrates mobile-first responsive design using Tailwind CSS.
-          
-          BREAKPOINT SYSTEM:
-          - Default (no prefix): Mobile-first (all screen sizes)
-          - sm: (640px+): Tablets and up
-          - This creates layouts that adapt gracefully to different screen sizes
-          
-          LAYOUT BEHAVIOR:
-          - Mobile: flex-col (vertical stack) - prevents cramped horizontal space
-          - Tablet+: flex-row (horizontal layout) - utilizes available width
-          - items-start/items-center: Controls cross-axis alignment
-          - justify-between: Spreads items across the main axis
-          - gap-4: Adds consistent spacing (1rem) between flex items
-        */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <ResponsiveContainer variant="wide">
+      <MultiColumnLayout
+        leftColumn={
+          analysis && selectedStock ? (
+            <AdditionalInsightsSidebar
+              symbol={selectedStock}
+              analysis={analysis}
+              priceData={priceData}
+            />
+          ) : undefined
+        }
+        centerColumn={
+          <div className="space-y-8">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div>
             <h2 className="hierarchy-critical">Stock Predictions</h2>
             <p className="hierarchy-tertiary mt-1">
@@ -1093,10 +1075,11 @@ export default function StockDashboard() {
           <TermsGlossary />
         </div>
       )}
-      </div>
-
-      {/* Market Indices Sidebar */}
-      <MarketIndicesSidebar onIndexClick={handleIndexClick} />
+          </div>
+        }
+        rightColumn={<MarketIndicesSidebar onIndexClick={handleIndexClick} />}
+        sidebarWidth="medium"
+      />
 
       {/* Market Index Analysis Modal */}
       {selectedIndex && (
@@ -1105,6 +1088,6 @@ export default function StockDashboard() {
           onClose={closeIndexAnalysis}
         />
       )}
-    </div>
+    </ResponsiveContainer>
   );
 }

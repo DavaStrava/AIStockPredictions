@@ -10,7 +10,7 @@ describe('ResponsiveContainer', () => {
           <div data-testid="test-content">Test Content</div>
         </ResponsiveContainer>
       );
-      
+
       expect(screen.getByTestId('test-content')).toBeInTheDocument();
     });
 
@@ -20,7 +20,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       expect(container.firstChild?.nodeName).toBe('DIV');
     });
   });
@@ -32,7 +32,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('mx-auto', 'px-4', 'sm:px-6', 'lg:px-8');
     });
@@ -45,7 +45,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('max-w-7xl', 'xl:max-w-none', 'xl:px-12', '2xl:px-16');
     });
@@ -56,7 +56,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('max-w-4xl');
       // Should not have wide/full specific classes
@@ -69,7 +69,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('max-w-7xl', 'xl:max-w-none', 'xl:px-12', '2xl:px-16');
       // Should not have narrow/full specific classes
@@ -82,7 +82,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('w-full', 'xl:px-12', '2xl:px-16');
       // Should not have narrow/wide specific classes
@@ -95,7 +95,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       // Should fall back to wide variant classes
       expect(wrapper).toHaveClass('max-w-7xl', 'xl:max-w-none', 'xl:px-12', '2xl:px-16');
@@ -109,7 +109,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('custom-class', 'another-class');
       // Should still have base classes
@@ -124,7 +124,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       // Should still have base and variant classes
       expect(wrapper).toHaveClass('mx-auto', 'px-4', 'max-w-7xl');
@@ -136,7 +136,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       // Should still have base and variant classes
       expect(wrapper).toHaveClass('mx-auto', 'px-4', 'max-w-7xl');
@@ -150,9 +150,9 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
-      
+
       // Verify all expected classes are present
       expect(wrapper).toHaveClass('mx-auto', 'px-4', 'sm:px-6', 'lg:px-8'); // base classes
       expect(wrapper).toHaveClass('max-w-4xl'); // width classes for narrow
@@ -167,7 +167,7 @@ describe('ResponsiveContainer', () => {
           {null}
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toBeInTheDocument();
       expect(wrapper).toHaveClass('mx-auto');
@@ -181,7 +181,7 @@ describe('ResponsiveContainer', () => {
           <span data-testid="child-3">Child 3</span>
         </ResponsiveContainer>
       );
-      
+
       expect(screen.getByTestId('child-1')).toBeInTheDocument();
       expect(screen.getByTestId('child-2')).toBeInTheDocument();
       expect(screen.getByTestId('child-3')).toBeInTheDocument();
@@ -196,7 +196,7 @@ describe('ResponsiveContainer', () => {
           </>
         </ResponsiveContainer>
       );
-      
+
       expect(screen.getByTestId('fragment-child-1')).toBeInTheDocument();
       expect(screen.getByTestId('fragment-child-2')).toBeInTheDocument();
     });
@@ -209,7 +209,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('px-4', 'sm:px-6', 'lg:px-8');
     });
@@ -220,7 +220,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('px-4', 'sm:px-6', 'lg:px-8', 'xl:px-12', '2xl:px-16');
     });
@@ -231,7 +231,7 @@ describe('ResponsiveContainer', () => {
           <div>Content</div>
         </ResponsiveContainer>
       );
-      
+
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('px-4', 'sm:px-6', 'lg:px-8', 'xl:px-12', '2xl:px-16');
     });

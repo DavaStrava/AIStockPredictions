@@ -525,6 +525,16 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
         }
     };
 
+    // Debug logging
+    console.log('AdvancedStockChart rendering:', {
+        symbol,
+        filteredDataLength: filteredData.length,
+        chartDataLength: chartData.length,
+        loading,
+        chartType,
+        selectedTimeRange
+    });
+
     return (
         <div className="space-y-6">
             {/* Chart Controls */}
@@ -603,16 +613,18 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
             )}
 
             {/* Main Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 min-h-[450px]">
                 {loading ? (
                     <div className="flex items-center justify-center h-96">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-2 text-gray-600 dark:text-gray-400">Loading chart data...</span>
                     </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height={400}>
-                        {renderChart()}
-                    </ResponsiveContainer>
+                    <div className="w-full h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            {renderChart()}
+                        </ResponsiveContainer>
+                    </div>
                 )}
             </div>
 

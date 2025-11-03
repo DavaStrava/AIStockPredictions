@@ -36,7 +36,7 @@ describe('MultiColumnLayout Component', () => {
       expect(screen.getByTestId('center-content')).toBeInTheDocument();
       expect(screen.queryByTestId('right-content')).not.toBeInTheDocument();
       
-      // Should only have 2 aside elements (left sidebar only)
+      // Should only have 1 aside element (left sidebar only)
       const asides = container.querySelectorAll('aside');
       expect(asides.length).toBe(1);
     });
@@ -48,7 +48,10 @@ describe('MultiColumnLayout Component', () => {
       expect(layout).toHaveClass('flex', 'gap-6', 'min-h-screen');
       
       const leftSidebar = container.querySelector('aside:first-of-type');
-      expect(leftSidebar).toHaveClass('flex-shrink-0', 'hidden', 'lg:block');
+      // Left sidebar is now always visible (no hidden/lg:block classes)
+      expect(leftSidebar).toHaveClass('flex-shrink-0');
+      expect(leftSidebar).not.toHaveClass('hidden');
+      expect(leftSidebar).not.toHaveClass('lg:block');
       
       const mainContent = container.querySelector('main');
       expect(mainContent).toHaveClass('flex-1', 'min-w-0');
@@ -105,11 +108,14 @@ describe('MultiColumnLayout Component', () => {
   });
 
   describe('Responsive Behavior', () => {
-    it('should hide left sidebar on smaller screens', () => {
+    it('should keep left sidebar always visible (no responsive hiding)', () => {
       const { container } = render(<MultiColumnLayout {...defaultProps} />);
       
       const leftSidebar = container.querySelector('aside:first-of-type');
-      expect(leftSidebar).toHaveClass('hidden', 'lg:block');
+      // Left sidebar is now always visible - no hidden or responsive classes
+      expect(leftSidebar).not.toHaveClass('hidden');
+      expect(leftSidebar).not.toHaveClass('lg:block');
+      expect(leftSidebar).toHaveClass('flex-shrink-0');
     });
 
     it('should hide right sidebar on smaller screens', () => {
@@ -125,6 +131,26 @@ describe('MultiColumnLayout Component', () => {
       const mainContent = container.querySelector('main');
       expect(mainContent).not.toHaveClass('hidden');
       expect(mainContent).toHaveClass('flex-1');
+    });
+
+    it('should apply correct width classes to left sidebar based on sidebarWidth prop', () => {
+      const widthTests = [
+        { width: 'narrow' as const, expectedClass: 'w-64' },
+        { width: 'medium' as const, expectedClass: 'w-80' },
+        { width: 'wide' as const, expectedClass: 'w-96' }
+      ];
+
+      widthTests.forEach(({ width, expectedClass }) => {
+        const { container } = render(
+          <MultiColumnLayout 
+            {...defaultProps}
+            sidebarWidth={width}
+          />
+        );
+        
+        const leftSidebar = container.querySelector('aside:first-of-type');
+        expect(leftSidebar).toHaveClass(expectedClass);
+      });
     });
   });
 
@@ -482,6 +508,51 @@ describe('MultiColumnLayout Component', () => {
       
       const mainContent = container.querySelector('main');
       expect(mainContent).not.toHaveClass('sticky');
+    });
+
+    it('should wrap sidebar content in sticky container', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const leftSidebar = container.querySelector('aside:first-of-type');
+      const stickyWrapper = leftSidebar?.querySelector('div');
+      
+      expect(stickyWrapper).toBeInTheDocument();
+      expect(stickyWrapper).toHaveClass('sticky');
+      expect(leftSidebar?.children.length).toBe(1); // Only one child (the sticky wrapper)
+    });
+
+    it('should apply consistent sticky positioning to both sidebars', () => {
+      const { container } = render(<MultiColumnLayout {...defaultProps} />);
+      
+      const leftSidebarSticky = container.querySelector('aside:first-of-type > div');
+      const rightSidebarSticky = container.querySelector('aside:last-of-type > div');
+      
+      // Both should have identical sticky positioning classes
+      expect(leftSidebarSticky?.className).toContain('sticky top-8');
+      expect(rightSidebarSticky?.className).toContain('sticky top-8');
+      expect(leftSidebarSticky?.className).toContain('max-h-[calc(100vh-4rem)]');
+      expect(rightSidebarSticky?.className).toContain('max-h-[calc(100vh-4rem)]');
+    });
+
+    it('should enable vertical scrolling for sidebar content that exceeds max height', () => {
+      const tallContent = (
+        <div data-testid="tall-content">
+          {Array.from({ length: 100 }, (_, i) => (
+            <p key={i}>Sidebar item {i + 1}</p>
+          ))}
+        </div>
+      );
+
+      const { container } = render(
+        <MultiColumnLayout 
+          leftColumn={tallContent}
+          centerColumn={defaultProps.centerColumn}
+        />
+      );
+      
+      const leftSidebarSticky = container.querySelector('aside:first-of-type > div');
+      expect(leftSidebarSticky).toHaveClass('overflow-y-auto');
+      expect(screen.getByTestId('tall-content')).toBeInTheDocument();
     });
   });
 

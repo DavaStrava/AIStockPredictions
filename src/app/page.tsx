@@ -71,14 +71,14 @@ export default function Home() {
       
       <main className="py-8">
         <ResponsiveLayoutErrorBoundary>
-          <ResponsiveContainer variant="wide">
-            {activeTab === 'dashboard' && (
-              <StockDashboard />
-            )}
-            {activeTab === 'watchlists' && (
+          {activeTab === 'dashboard' && (
+            <StockDashboard />
+          )}
+          {activeTab === 'watchlists' && (
+            <ResponsiveContainer variant="wide">
               <MockWatchlistManager />
-            )}
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          )}
         </ResponsiveLayoutErrorBoundary>
       </main>
       

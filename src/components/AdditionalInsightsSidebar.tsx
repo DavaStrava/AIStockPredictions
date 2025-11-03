@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TrendingUp, AlertTriangle, Info, Lightbulb, Target, Clock } from 'lucide-react';
+import { TechnicalAnalysisResult, PriceData } from '@/lib/technical-analysis/types';
 
 interface MarketInsight {
   id: string;
@@ -12,6 +13,9 @@ interface MarketInsight {
 }
 
 interface AdditionalInsightsSidebarProps {
+  symbol?: string;
+  analysis?: TechnicalAnalysisResult | null;
+  priceData?: PriceData[];
   className?: string;
 }
 
@@ -21,6 +25,9 @@ interface AdditionalInsightsSidebarProps {
  * and contextual information to enhance the user experience.
  */
 const AdditionalInsightsSidebar: React.FC<AdditionalInsightsSidebarProps> = ({
+  symbol,
+  analysis,
+  priceData,
   className = ''
 }) => {
   // Mock insights data - in a real implementation, this would come from props or API
