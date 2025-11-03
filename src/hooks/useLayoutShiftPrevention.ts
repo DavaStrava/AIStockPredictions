@@ -193,7 +193,7 @@ export function useResponsiveTransition(transitionDuration = 300) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const breakpoint = useBreakpoint();
   const previousBreakpoint = useRef(breakpoint);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (previousBreakpoint.current !== breakpoint) {

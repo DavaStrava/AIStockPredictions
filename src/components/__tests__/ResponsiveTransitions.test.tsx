@@ -124,13 +124,13 @@ describe('Responsive Transitions', () => {
       const leftSidebar = container.querySelector('aside:first-of-type');
       const rightSidebar = container.querySelector('aside:last-of-type');
       
-      // Left sidebar hidden on mobile, visible on desktop
+      // Left sidebar hidden on mobile/tablet/desktop, visible on xl
       expect(leftSidebar?.className).toContain('hidden');
-      expect(leftSidebar?.className).toContain('lg:block');
+      expect(leftSidebar?.className).toContain('xl:block');
       
-      // Right sidebar hidden on mobile/tablet/desktop, visible on xl
-      expect(rightSidebar?.className).toContain('hidden');
-      expect(rightSidebar?.className).toContain('xl:block');
+      // Right sidebar always visible (no hidden or responsive classes)
+      expect(rightSidebar?.className).not.toContain('hidden');
+      expect(rightSidebar?.className).not.toContain('xl:block');
     });
   });
 

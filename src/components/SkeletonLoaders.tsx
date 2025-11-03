@@ -16,14 +16,17 @@
  */
 const SkeletonElement = ({ 
   className = '', 
-  'data-testid': testId 
+  'data-testid': testId,
+  style
 }: { 
   className?: string; 
   'data-testid'?: string;
+  style?: React.CSSProperties;
 }) => (
   <div 
     className={`bg-gray-200 dark:bg-gray-700 rounded animate-pulse ${className}`}
     data-testid={testId}
+    style={style}
   />
 );
 

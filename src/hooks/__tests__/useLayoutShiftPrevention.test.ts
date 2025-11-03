@@ -598,27 +598,25 @@ describe('useLayoutShiftPrevention Hooks', () => {
     });
 
     it('should enable detection in development by default', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
       
       const { result } = renderHook(() => useLayoutShiftPrevention());
       
       expect(result.current.shifts).toBeDefined();
       
-      process.env.NODE_ENV = originalEnv;
+      vi.unstubAllEnvs();
     });
 
     it('should log warnings when layout shifts are detected in development', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
       
       renderHook(() => useLayoutShiftPrevention({ enableDetection: true }));
       
       // Note: Actual warning would require triggering layout shifts
       // which is complex to simulate in tests
       
-      process.env.NODE_ENV = originalEnv;
+      vi.unstubAllEnvs();
       consoleSpy.mockRestore();
     });
 
