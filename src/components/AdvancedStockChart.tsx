@@ -407,10 +407,18 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     const totalReturn = ((currentPrice - firstPrice) / firstPrice) * 100;
 
     const renderChart = () => {
+        // Add defensive check
+        if (!chartData || chartData.length === 0) {
+            console.warn('No chart data available for rendering');
+            return null;
+        }
+
         const commonProps = {
             data: chartData,
             margin: { top: 5, right: 30, left: 20, bottom: 5 }
         };
+
+        console.log('Rendering chart:', { chartType, dataPoints: chartData.length });
 
         switch (chartType) {
             case 'line':
@@ -619,11 +627,13 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-2 text-gray-600 dark:text-gray-400">Loading chart data...</span>
                     </div>
+                ) : chartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-96 text-gray-500">
+                        No chart data available
+                    </div>
                 ) : (
-                    <div className="w-full h-[400px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            {renderChart()}
-                        </ResponsiveContainer>
+                    <div style={{ width: '100%', height: '400px' }}>
+                        {renderChart()}
                     </div>
                 )}
             </div>
@@ -635,17 +645,19 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                     {analysis.indicators.rsi && analysis.indicators.rsi.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                             <h4 className="font-medium text-foreground mb-2">RSI (14)</h4>
-                            <ResponsiveContainer width="100%" height={150}>
-                                <LineChart data={chartData}>
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                                    <Tooltip formatter={(value: number) => [value?.toFixed(2), 'RSI']} />
-                                    <Line type="monotone" dataKey="rsi" stroke="#F59E0B" strokeWidth={2} dot={false} />
-                                    {/* Overbought/Oversold lines */}
-                                    <Line type="monotone" dataKey={() => 70} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1} dot={false} />
-                                    <Line type="monotone" dataKey={() => 30} stroke="#10B981" strokeDasharray="3 3" strokeWidth={1} dot={false} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div style={{ width: '100%', height: '150px' }}>
+                                <ResponsiveContainer width="100%" height={150}>
+                                    <LineChart data={chartData}>
+                                        <XAxis dataKey="date" hide />
+                                        <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                                        <Tooltip formatter={(value: number) => [value?.toFixed(2), 'RSI']} />
+                                        <Line type="monotone" dataKey="rsi" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                                        {/* Overbought/Oversold lines */}
+                                        <Line type="monotone" dataKey={() => 70} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1} dot={false} />
+                                        <Line type="monotone" dataKey={() => 30} stroke="#10B981" strokeDasharray="3 3" strokeWidth={1} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     )}
 
@@ -653,28 +665,32 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                     {analysis.indicators.macd && analysis.indicators.macd.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                             <h4 className="font-medium text-foreground mb-2">MACD</h4>
-                            <ResponsiveContainer width="100%" height={150}>
-                                <LineChart data={chartData}>
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis tick={{ fontSize: 10 }} />
-                                    <Tooltip formatter={(value: number) => [value?.toFixed(4), 'MACD']} />
-                                    <Line type="monotone" dataKey="macd" stroke="#8B5CF6" strokeWidth={2} dot={false} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div style={{ width: '100%', height: '150px' }}>
+                                <ResponsiveContainer width="100%" height={150}>
+                                    <LineChart data={chartData}>
+                                        <XAxis dataKey="date" hide />
+                                        <YAxis tick={{ fontSize: 10 }} />
+                                        <Tooltip formatter={(value: number) => [value?.toFixed(4), 'MACD']} />
+                                        <Line type="monotone" dataKey="macd" stroke="#8B5CF6" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     )}
 
                     {/* Volume Trend */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                         <h4 className="font-medium text-foreground mb-2">Volume Trend</h4>
-                        <ResponsiveContainer width="100%" height={150}>
-                            <BarChart data={chartData.slice(-30)}>
-                                <XAxis dataKey="date" hide />
-                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-                                <Tooltip formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M`, 'Volume']} />
-                                <Bar dataKey="volume" fill="#6B7280" opacity={0.6} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <div style={{ width: '100%', height: '150px' }}>
+                            <ResponsiveContainer width="100%" height={150}>
+                                <BarChart data={chartData.slice(-30)}>
+                                    <XAxis dataKey="date" hide />
+                                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
+                                    <Tooltip formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M`, 'Volume']} />
+                                    <Bar dataKey="volume" fill="#6B7280" opacity={0.6} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
                     {/*
