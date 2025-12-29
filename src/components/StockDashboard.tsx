@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from 'react';
 // TYPE IMPORTS: Import TypeScript interfaces for type safety
-import { TechnicalAnalysisResult, TechnicalSignal, PriceData } from '@/lib/technical-analysis/types';
+import { TechnicalAnalysisResult, PriceData } from '@/lib/technical-analysis/types';
+import { PredictionResult } from '@/types/predictions';
 // COMPONENT IMPORTS: Import child components using path aliases (@/ = src/)
 import SimpleStockChart from './SimpleStockChart';
 import AdvancedStockChart from './AdvancedStockChart';
@@ -24,30 +25,6 @@ import MultiColumnLayout from './MultiColumnLayout';
 import ResponsiveContainer from './ResponsiveContainer';
 import AdditionalInsightsSidebar from './AdditionalInsightsSidebar';
 import { inferMarketContext } from '@/lib/technical-analysis/explanations';
-
-/*
-  TYPESCRIPT INTERFACE DEFINITION:
-  Defines the shape of data we expect from our prediction API.
-  This provides compile-time type checking and better IDE support.
-*/
-interface PredictionResult {
-  symbol: string;                    // Stock ticker symbol (e.g., "AAPL")
-  currentPrice: number;              // Current stock price in USD
-  prediction: {
-    direction: 'bullish' | 'bearish' | 'neutral';  // UNION TYPES: Only these 3 values allowed
-    confidence: number;              // Confidence score (0-1)
-    targetPrice: number;             // Predicted future price
-    timeframe: string;               // Time horizon for prediction
-    reasoning: string[];             // Array of reasons for the prediction
-  };
-  signals: TechnicalSignal[];        // Array of technical analysis signals
-  riskMetrics: {
-    volatility: 'low' | 'medium' | 'high';  // Risk level categorization
-    support: number;                 // Support price level
-    resistance: number;              // Resistance price level
-    stopLoss: number;                // Recommended stop-loss price
-  };
-}
 
 /*
   STOCK DASHBOARD COMPONENT:

@@ -1,34 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
-import { TechnicalSignal } from '@/lib/technical-analysis/types';
-import { getFMPProvider, FMPQuote } from '@/lib/data-providers/fmp';
-
-interface PredictionResult {
-  symbol: string;
-  currentPrice: number;
-  prediction: {
-    direction: 'bullish' | 'bearish' | 'neutral';
-    confidence: number;
-    targetPrice: number;
-    timeframe: string;
-    reasoning: string[];
-  };
-  signals: TechnicalSignal[];
-  riskMetrics: {
-    volatility: 'low' | 'medium' | 'high';
-    support: number;
-    resistance: number;
-    stopLoss: number;
-  };
-  marketData: {
-    dayChange: number;
-    dayChangePercent: number;
-    volume: number;
-    avgVolume: number;
-    marketCap: number;
-    pe: number;
-  };
-}
+import { getFMPProvider } from '@/lib/data-providers/fmp';
+import { PredictionResult } from '@/types/predictions';
 
 export async function GET(request: NextRequest) {
   try {

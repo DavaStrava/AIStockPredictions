@@ -114,10 +114,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate AI insights from provided analysis
-    const insightService = getLLMInsightService();
-    const insights: any = {};
-    
     // Generate AI insights with delay between requests to avoid rate limits
     const insightService = getLLMInsightService();
     const insights: any = {};
