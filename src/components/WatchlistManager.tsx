@@ -1,19 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface WatchlistStock {
+  id: string;
+  symbol: string;
+  addedAt: string;
+}
 
 interface Watchlist {
   id: string;
   name: string;
   description?: string;
-  stocks?: Array<{
-    id: string;
-    symbol: string;
-    addedAt: string;
-  }>;
+  stocks?: WatchlistStock[];
 }
 
-export default function WatchlistManager() {
+interface WatchlistManagerProps {
+  useMockData?: boolean;
+}
+
+// Mock data for development/testing
+const MOCK_WATCHLISTS: Watchlist[] = [
+  {
+    id: '1',
+    name: 'Tech Stocks',
+    description: 'Major technology companies',
+    stocks: [
+      { id: '1-1', symbol: 'AAPL', addedAt: new Date().toISOString() },
+      { id: '1-2', symbol: 'GOOGL', addedAt: new Date().toISOString() },
+      { id: '1-3', symbol: 'MSFT', addedAt: new Date().toISOString() },
+    ]
+  },
+  {
+    id: '2',
+    name: 'Blue Chips',
+    description: 'Large cap dividend stocks',
+    stocks: [
+      { id: '2-1', symbol: 'JNJ', addedAt: new Date().toISOString() },
+      { id: '2-2', symbol: 'PG', addedAt: new Date().toISOString() },
+      { id: '2-3', symbol: 'KO', addedAt: new Date().toISOString() },
+    ]
+  },
+];
+
+export default function WatchlistManager({ useMockData = false }: WatchlistManagerProps) {
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -22,11 +52,12 @@ export default function WatchlistManager() {
   const [selectedWatchlist, setSelectedWatchlist] = useState<string | null>(null);
   const [newSymbol, setNewSymbol] = useState('');
 
-  useEffect(() => {
-    fetchWatchlists();
+  const loadMockData = useCallback(() => {
+    setWatchlists([...MOCK_WATCHLISTS]);
+    setLoading(false);
   }, []);
 
-  const fetchWatchlists = async () => {
+  const fetchWatchlistsFromApi = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/watchlists');
@@ -40,11 +71,35 @@ export default function WatchlistManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (useMockData) {
+      loadMockData();
+    } else {
+      fetchWatchlistsFromApi();
+    }
+  }, [useMockData, loadMockData, fetchWatchlistsFromApi]);
 
   const createWatchlist = async () => {
     if (!newWatchlistName.trim()) return;
     
+    if (useMockData) {
+      // Mock mode: update local state only
+      const newWatchlist: Watchlist = {
+        id: Date.now().toString(),
+        name: newWatchlistName.trim(),
+        description: newWatchlistDescription.trim() || undefined,
+        stocks: []
+      };
+      setWatchlists([newWatchlist, ...watchlists]);
+      setNewWatchlistName('');
+      setNewWatchlistDescription('');
+      setShowCreateForm(false);
+      return;
+    }
+
+    // API mode
     try {
       const response = await fetch('/api/watchlists', {
         method: 'POST',
@@ -71,18 +126,36 @@ export default function WatchlistManager() {
   const addStockToWatchlist = async (watchlistId: string) => {
     if (!newSymbol.trim()) return;
     
+    const symbol = newSymbol.trim().toUpperCase();
+
+    if (useMockData) {
+      // Mock mode: update local state only
+      setWatchlists(watchlists.map(w => 
+        w.id === watchlistId 
+          ? { 
+              ...w, 
+              stocks: w.stocks?.some(s => s.symbol === symbol)
+                ? w.stocks
+                : [...(w.stocks || []), { id: `${watchlistId}-${Date.now()}`, symbol, addedAt: new Date().toISOString() }]
+            }
+          : w
+      ));
+      setNewSymbol('');
+      return;
+    }
+
+    // API mode
     try {
       const response = await fetch(`/api/watchlists/${watchlistId}/stocks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: newSymbol.trim().toUpperCase() }),
+        body: JSON.stringify({ symbol }),
       });
       
       const data = await response.json();
       
       if (data.success) {
-        // Refresh watchlists to show the new stock
-        await fetchWatchlists();
+        await fetchWatchlistsFromApi();
         setNewSymbol('');
       }
     } catch (error) {
@@ -91,6 +164,17 @@ export default function WatchlistManager() {
   };
 
   const removeStockFromWatchlist = async (watchlistId: string, symbol: string) => {
+    if (useMockData) {
+      // Mock mode: update local state only
+      setWatchlists(watchlists.map(w => 
+        w.id === watchlistId 
+          ? { ...w, stocks: w.stocks?.filter(s => s.symbol !== symbol) }
+          : w
+      ));
+      return;
+    }
+
+    // API mode
     try {
       const response = await fetch(`/api/watchlists/${watchlistId}/stocks?symbol=${symbol}`, {
         method: 'DELETE',
@@ -99,8 +183,7 @@ export default function WatchlistManager() {
       const data = await response.json();
       
       if (data.success) {
-        // Refresh watchlists to remove the stock
-        await fetchWatchlists();
+        await fetchWatchlistsFromApi();
       }
     } catch (error) {
       console.error('Failed to remove stock:', error);
@@ -110,6 +193,16 @@ export default function WatchlistManager() {
   const deleteWatchlist = async (watchlistId: string) => {
     if (!confirm('Are you sure you want to delete this watchlist?')) return;
     
+    if (useMockData) {
+      // Mock mode: update local state only
+      setWatchlists(watchlists.filter(w => w.id !== watchlistId));
+      if (selectedWatchlist === watchlistId) {
+        setSelectedWatchlist(null);
+      }
+      return;
+    }
+
+    // API mode
     try {
       const response = await fetch(`/api/watchlists/${watchlistId}`, {
         method: 'DELETE',
@@ -140,7 +233,14 @@ export default function WatchlistManager() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-foreground">My Watchlists</h2>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">My Watchlists</h2>
+          {useMockData && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Mock mode - data stored in browser memory
+            </p>
+          )}
+        </div>
         <button
           onClick={() => setShowCreateForm(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"

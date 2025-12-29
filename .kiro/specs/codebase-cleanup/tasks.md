@@ -70,36 +70,36 @@ This implementation plan breaks down the codebase cleanup into discrete, increme
     - Test clearAnalysis resets all state
     - _Requirements: 1.2_
 
-- [ ] 5. Checkpoint - Verify hook extraction
+- [x] 5. Checkpoint - Verify hook extraction
   - Ensure all tests pass, ask the user if questions arise.
   - Verify StockDashboard line count is reduced to ~200-300 lines
 
-- [ ] 5.1 Write property test for behavioral equivalence
+- [x] 5.1 Write property test for behavioral equivalence
   - **Property 2: Behavioral Equivalence After Refactoring**
   - Test that user interactions produce same results as before
   - **Validates: Requirements 1.3**
 
-- [ ] 6. Consolidate WatchlistManager components
-  - [ ] 6.1 Add useMockData prop to WatchlistManager
+- [x] 6. Consolidate WatchlistManager components
+  - [x] 6.1 Add useMockData prop to WatchlistManager
     - Add optional useMockData prop with default false
     - Add mock data loading function
     - Conditionally use mock or API data based on prop
     - _Requirements: 2.2_
-  - [ ] 6.2 Implement mock CRUD operations
+  - [x] 6.2 Implement mock CRUD operations
     - Create operations update local state only when useMockData=true
     - Update operations work with local state in mock mode
     - Delete operations work with local state in mock mode
     - _Requirements: 2.3_
-  - [ ] 6.3 Delete MockWatchlistManager.tsx
+  - [x] 6.3 Delete MockWatchlistManager.tsx
     - Remove the redundant file
     - Update any imports that referenced MockWatchlistManager
     - _Requirements: 2.4_
-  - [ ] 6.4 Write property test for mock data toggle
+  - [x] 6.4 Write property test for mock data toggle
     - **Property 3: Mock Data Toggle Behavior**
     - Verify no network requests when useMockData=true
     - **Validates: Requirements 2.2, 2.3**
 
-- [ ] 7. Checkpoint - Verify watchlist consolidation
+- [x] 7. Checkpoint - Verify watchlist consolidation
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Reduce comment verbosity in FMP provider

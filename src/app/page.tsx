@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import StockDashboard from '@/components/StockDashboard';
-import MockWatchlistManager from '@/components/MockWatchlistManager';
+import WatchlistManager from '@/components/WatchlistManager';
 import DevErrorDashboard from '@/components/DevErrorDashboard';
 import ResponsiveContainer from '@/components/ResponsiveContainer';
 import ResponsiveLayoutErrorBoundary from '@/components/ResponsiveLayoutErrorBoundary';
@@ -76,7 +76,7 @@ export default function Home() {
           )}
           {activeTab === 'watchlists' && (
             <ResponsiveContainer variant="wide">
-              <MockWatchlistManager />
+              <WatchlistManager useMockData={true} />
             </ResponsiveContainer>
           )}
         </ResponsiveLayoutErrorBoundary>
