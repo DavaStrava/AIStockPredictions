@@ -588,19 +588,21 @@ export class OpenAIProvider implements LLMProvider {
      * - LEGAL PROTECTION: "Do NOT provide direct investment advice"
      *   Critical disclaimer to avoid regulatory and liability issues
      */
-    const basePrompt = `You are a seasoned financial advisor with 20+ years of experience, speaking to a sophisticated investor in their 40s with approximately $700,000 in savings who is focused on building wealth for retirement while managing risk appropriately for their life stage.
+    const basePrompt = `You are a seasoned financial advisor with 20+ years of experience, speaking to a sophisticated investor who is focused on building wealth for retirement while managing risk appropriately.
 
 Your analysis should be:
 - Narrative and conversational, like explaining to a knowledgeable friend
 - Detailed with specific reasoning and context (aim for 400-600 words)
 - Focused on practical implications for someone with substantial savings
-- Mindful of risk management for someone approaching their peak earning years
+- Mindful of risk management for long-term wealth building
 - Educational, explaining the "why" behind patterns and indicators
 - Forward-looking with actionable next steps
 
 Write in a professional but approachable tone. Use specific examples and analogies when helpful. Structure your response as flowing narrative paragraphs, not bullet points.
 
-IMPORTANT: Do NOT provide direct investment advice. Instead, explain what the data suggests and let the investor draw their own conclusions.`;
+IMPORTANT: 
+- Do NOT provide direct investment advice. Instead, explain what the data suggests and let the investor draw their own conclusions.
+- Do NOT reference specific ages, life stages, or dollar amounts in your response. Keep the analysis general and applicable to any serious investor.`;
 
     /**
      * SPECIALIZED PROMPT SELECTION - The Strategy Pattern in Action
@@ -640,7 +642,7 @@ For technical analysis, provide a comprehensive narrative covering:
 
 **Indicator Analysis**: Explain each key indicator in detail - not just the numbers, but what they mean in practical terms and why they matter. Connect the dots between different indicators.
 
-**Risk Assessment**: Given their substantial portfolio, discuss position sizing considerations, stop-loss levels, and risk management strategies. What percentage of a $700K portfolio might this represent?
+**Risk Assessment**: Discuss position sizing considerations, stop-loss levels, and risk management strategies in general terms (e.g., percentage-based allocation).
 
 **Entry/Exit Strategy**: Provide specific levels to watch and potential scenarios. Explain the reasoning behind key support/resistance levels.
 
@@ -664,9 +666,9 @@ For technical analysis, provide a comprehensive narrative covering:
          */
         return `${basePrompt}
 
-For portfolio analysis, provide insights tailored to someone building wealth in their 40s:
+For portfolio analysis, provide insights for a wealth-building investor:
 
-**Portfolio Context**: Discuss how this position fits into a $500K portfolio; consider another $200K as an active roth IRA with divesified investments growing at 12% a year - this will not be touched. What allocation makes sense? How does it complement other holdings for someone in their wealth-building phase?
+**Portfolio Context**: Discuss how this position might fit into a diversified portfolio. What allocation percentage makes sense? How might it complement other typical holdings?
 
 /*
   FINANCIAL MODELING CONCEPT - PORTFOLIO SEGMENTATION STRATEGY:
@@ -731,13 +733,13 @@ For portfolio analysis, provide insights tailored to someone building wealth in 
   financial planning framework that mirrors real-world wealth management strategies.
 */
 
-**Risk-Return Profile**: Explain metrics like Sharpe ratio, beta, and volatility in practical terms. What do these numbers mean for someone who needs their money to work efficiently but can't afford major losses?
+**Risk-Return Profile**: Explain metrics like Sharpe ratio, beta, and volatility in practical terms. What do these numbers mean for someone focused on efficient growth while managing downside risk?
 
-**Diversification Strategy**: Analyze how this stock fits into a well-diversified portfolio. What correlations should they be aware of?
+**Diversification Strategy**: Analyze how this stock fits into a well-diversified portfolio. What correlations should investors be aware of?
 
-**Life Stage Considerations**: Address the balance between growth and preservation appropriate for someone in their 40s - aggressive enough to build wealth, conservative enough to protect what they've built.
+**Growth vs Preservation**: Address the balance between growth and capital preservation that serious investors should consider.
 
-**Strategic Positioning**: Discuss optimal position sizing and rebalancing considerations for someone with substantial assets.`;
+**Strategic Positioning**: Discuss optimal position sizing and rebalancing considerations in percentage terms.`;
 
       case 'sentiment':
         /**
@@ -1037,29 +1039,29 @@ export class MockLLMProvider implements LLMProvider {
     symbol: string
   ): Promise<LLMInsight> {
     const mockInsights: Record<string, string> = {
-      technical: `Looking at ${symbol} from a technical perspective, the current chart setup presents an interesting story for someone managing a substantial portfolio like yours. The stock is showing ${data?.summary?.trendDirection ?? 'sideways'} price action with ${data?.summary?.volatility ?? 'medium'} volatility, which suggests we're in a period where patience and careful position sizing will be key.
+      technical: `Looking at ${symbol} from a technical perspective, the current chart setup presents an interesting story for investors managing a diversified portfolio. The stock is showing ${data?.summary?.trendDirection ?? 'sideways'} price action with ${data?.summary?.volatility ?? 'medium'} volatility, which suggests we're in a period where patience and careful position sizing will be key.
 
-From a risk management standpoint, given your $700K portfolio, this would likely represent a 2-5% position at most, depending on your overall allocation strategy. The technical indicators are painting a mixed picture right now - not screaming "buy" but not flashing major warning signs either. This is actually quite common and often represents the best opportunities for disciplined investors.
+From a risk management standpoint, this would likely represent a modest position in a well-balanced portfolio, depending on your overall allocation strategy. The technical indicators are painting a mixed picture right now - not screaming "buy" but not flashing major warning signs either. This is actually quite common and often represents the best opportunities for disciplined investors.
 
-What I'd be watching closely are the key support and resistance levels that have been established over the recent trading sessions. These levels often act as psychological barriers where institutional money tends to make decisions. For someone in your position, having predetermined entry and exit points becomes crucial - you want to protect the wealth you've built while still participating in potential upside.
+What I'd be watching closely are the key support and resistance levels that have been established over the recent trading sessions. These levels often act as psychological barriers where institutional money tends to make decisions. Having predetermined entry and exit points becomes crucial - you want to protect the wealth you've built while still participating in potential upside.
 
 The volume patterns suggest we're in a consolidation phase, which historically has been followed by more decisive moves in either direction. This gives you time to plan your approach rather than feeling pressured to act immediately.`,
 
-      portfolio: `From a portfolio construction standpoint, ${symbol} presents some interesting considerations for someone in your wealth-building phase. At your asset level of around $700K, you have the luxury of being selective while still maintaining the growth orientation needed to reach your retirement goals.
+      portfolio: `From a portfolio construction standpoint, ${symbol} presents some interesting considerations for wealth-building investors. With a diversified approach, you have the luxury of being selective while still maintaining the growth orientation needed to reach your financial goals.
 
-This stock would fit into what I'd call the "core growth" portion of a well-diversified portfolio for someone in their 40s. You're at that sweet spot where you can still take calculated risks for growth, but you can't afford to be reckless with positions that could significantly impact your overall wealth trajectory.
+This stock would fit into what I'd call the "core growth" portion of a well-diversified portfolio. You're at a point where you can still take calculated risks for growth, but you can't afford to be reckless with positions that could significantly impact your overall wealth trajectory.
 
 The correlation characteristics of this stock suggest it would complement rather than duplicate existing technology or growth positions you might already hold. This is important because true diversification isn't just about owning different stocks - it's about owning stocks that behave differently under various market conditions.
 
-Position sizing becomes critical here. With your asset base, a 3-4% allocation would give you meaningful exposure without creating undue concentration risk. This allows you to participate in the upside while ensuring that even a significant decline wouldn't derail your long-term financial plans.
+Position sizing becomes critical here. A 3-4% allocation would give you meaningful exposure without creating undue concentration risk. This allows you to participate in the upside while ensuring that even a significant decline wouldn't derail your long-term financial plans.
 
-The risk-adjusted return profile suggests this could be a multi-year holding rather than a trading position, which aligns well with the tax efficiency goals someone in your bracket should be considering.`,
+The risk-adjusted return profile suggests this could be a multi-year holding rather than a trading position, which aligns well with tax efficiency goals that serious investors should be considering.`,
 
-      sentiment: `The sentiment picture around ${symbol} tells a fascinating story about market psychology right now. What we're seeing is a classic case of institutional money being more cautious while retail investors remain relatively optimistic - a dynamic that often creates opportunities for patient, well-capitalized investors like yourself.
+      sentiment: `The sentiment picture around ${symbol} tells a fascinating story about market psychology right now. What we're seeing is a classic case of institutional money being more cautious while retail investors remain relatively optimistic - a dynamic that often creates opportunities for patient, well-capitalized investors.
 
 The professional money managers seem to be taking a "wait and see" approach, which isn't necessarily bearish but suggests they're looking for better entry points or more clarity on fundamental drivers. This creates an interesting dynamic where the stock might trade in a range while smart money accumulates positions.
 
-For someone with your investment horizon and capital base, this type of sentiment environment can actually be quite favorable. You're not forced to chase momentum or make hasty decisions based on short-term noise. Instead, you can use periods of uncertainty to build positions methodically.
+For investors with a longer time horizon and solid capital base, this type of sentiment environment can actually be quite favorable. You're not forced to chase momentum or make hasty decisions based on short-term noise. Instead, you can use periods of uncertainty to build positions methodically.
 
 What's particularly interesting is how quickly sentiment can shift in today's market environment. Social media and algorithmic trading can create rapid sentiment swings that may not reflect underlying business fundamentals. This volatility in sentiment often creates the best opportunities for investors who can maintain a longer-term perspective.
 

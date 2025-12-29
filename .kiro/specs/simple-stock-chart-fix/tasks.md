@@ -49,8 +49,8 @@ This plan implements a proper SimpleStockChart component to replace the accident
   - Test with a selected stock to confirm data flows correctly
   - Ask the user if questions arise
 
-- [ ] 3. Write tests for SimpleStockChart
-  - [ ] 3.1 Write unit tests for empty states and edge cases
+- [x] 3. Write tests for SimpleStockChart
+  - [x] 3.1 Write unit tests for empty states and edge cases
     - Test rendering with undefined priceData
     - Test rendering with null priceData
     - Test rendering with empty array
@@ -58,32 +58,32 @@ This plan implements a proper SimpleStockChart component to replace the accident
     - Test volume formatting function
     - _Requirements: 1.4, 4.1, 4.2, 4.3, 3.6_
 
-  - [ ] 3.2 Write property test for component interface acceptance
+  - [x] 3.2 Write property test for component interface acceptance
     - **Property 1: Component Interface Acceptance**
     - Generate random valid props and verify no crashes
     - **Validates: Requirements 1.1, 1.2, 1.3**
 
-  - [ ] 3.3 Write property test for null/undefined handling
+  - [x] 3.3 Write property test for null/undefined handling
     - **Property 2: Graceful Null/Undefined Handling**
     - Generate various falsy inputs and verify graceful handling
     - **Validates: Requirements 1.4, 4.1, 4.3**
 
-  - [ ] 3.4 Write property test for price change calculation
+  - [x] 3.4 Write property test for price change calculation
     - **Property 5: Price Change Calculation**
     - Generate random price arrays and verify calculation accuracy
     - **Validates: Requirements 3.2**
 
-  - [ ] 3.5 Write property test for price change color styling
+  - [x] 3.5 Write property test for price change color styling
     - **Property 6: Price Change Color Styling**
     - Generate random price changes and verify correct color classes
     - **Validates: Requirements 3.3, 3.4**
 
-  - [ ] 3.6 Write property test for volume formatting
+  - [x] 3.6 Write property test for volume formatting
     - **Property 7: Volume Formatting**
     - Generate random volume values and verify correct magnitude suffix
     - **Validates: Requirements 3.6**
 
-- [ ] 4. Final checkpoint - Ensure all tests pass
+- [x] 4. Final checkpoint - Ensure all tests pass
   - Run `npm run test:run` to verify all tests pass
   - Ensure no TypeScript errors in the codebase
   - Ask the user if questions arise
