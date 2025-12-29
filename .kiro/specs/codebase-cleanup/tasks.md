@@ -28,8 +28,8 @@ This implementation plan breaks down the codebase cleanup into discrete, increme
 - [x] 2. Checkpoint - Verify type centralization
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Extract usePredictions hook
-  - [ ] 3.1 Create `src/components/dashboard/hooks/usePredictions.ts`
+- [x] 3. Extract usePredictions hook
+  - [x] 3.1 Create `src/components/dashboard/hooks/usePredictions.ts`
     - Create directory structure
     - Extract predictions state (predictions, loading, searchLoading)
     - Extract fetchPredictions function
@@ -37,20 +37,20 @@ This implementation plan breaks down the codebase cleanup into discrete, increme
     - Extract removeTile function
     - Define and export UsePredictionsReturn interface
     - _Requirements: 1.1, 1.4_
-  - [ ] 3.2 Update StockDashboard to use usePredictions hook
+  - [x] 3.2 Update StockDashboard to use usePredictions hook
     - Import usePredictions hook
     - Replace inline state with hook return values
     - Remove extracted code from component
     - Verify component renders correctly
     - _Requirements: 1.3_
-  - [ ] 3.3 Write unit tests for usePredictions hook
+  - [x] 3.3 Write unit tests for usePredictions hook
     - Test initial state values
     - Test fetchPredictions updates state correctly
     - Test removeTile removes correct prediction
     - _Requirements: 1.1_
 
-- [ ] 4. Extract useStockAnalysis hook
-  - [ ] 4.1 Create `src/components/dashboard/hooks/useStockAnalysis.ts`
+- [x] 4. Extract useStockAnalysis hook
+  - [x] 4.1 Create `src/components/dashboard/hooks/useStockAnalysis.ts`
     - Extract analysis state (selectedStock, analysis, priceData, selectedIndex)
     - Extract fetchDetailedAnalysis function
     - Extract handleIndexClick function
@@ -58,13 +58,13 @@ This implementation plan breaks down the codebase cleanup into discrete, increme
     - Add clearAnalysis helper function
     - Define and export UseStockAnalysisReturn interface
     - _Requirements: 1.2, 1.4_
-  - [ ] 4.2 Update StockDashboard to use useStockAnalysis hook
+  - [x] 4.2 Update StockDashboard to use useStockAnalysis hook
     - Import useStockAnalysis hook
     - Replace inline state with hook return values
     - Remove extracted code from component
     - Verify detailed analysis still works
     - _Requirements: 1.3_
-  - [ ] 4.3 Write unit tests for useStockAnalysis hook
+  - [x] 4.3 Write unit tests for useStockAnalysis hook
     - Test initial state values
     - Test fetchDetailedAnalysis updates state correctly
     - Test clearAnalysis resets all state

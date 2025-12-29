@@ -196,10 +196,12 @@ src/
 
 ## Remaining Improvements
 
-### Phase 2: Code Organization (2-4 hours)
-1. Extract StockDashboard hooks
-2. Consolidate watchlist components
-3. Centralize type definitions
+### Phase 2: Code Organization (In Progress)
+1. ~~Extract StockDashboard hooks~~ ✅ (December 29, 2025)
+   - `usePredictions` hook extracted ✅
+   - `useStockAnalysis` hook extracted ✅
+2. Consolidate watchlist components (pending)
+3. ~~Centralize type definitions~~ ✅ (December 29, 2025)
 
 ### Phase 3: Documentation Cleanup (1-2 hours)
 1. Trim excessive comments in FMP provider

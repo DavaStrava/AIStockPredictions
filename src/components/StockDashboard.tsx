@@ -5,10 +5,11 @@
 */
 'use client';
 
-import { useState, useEffect } from 'react';
 // TYPE IMPORTS: Import TypeScript interfaces for type safety
-import { TechnicalAnalysisResult, PriceData } from '@/lib/technical-analysis/types';
-import { PredictionResult } from '@/types/predictions';
+import { TechnicalSignal } from '@/lib/technical-analysis/types';
+// HOOK IMPORTS: Import custom hooks for state management
+import { usePredictions } from './dashboard/hooks/usePredictions';
+import { useStockAnalysis } from './dashboard/hooks/useStockAnalysis';
 // COMPONENT IMPORTS: Import child components using path aliases (@/ = src/)
 import SimpleStockChart from './SimpleStockChart';
 import AdvancedStockChart from './AdvancedStockChart';
@@ -41,520 +42,38 @@ import { inferMarketContext } from '@/lib/technical-analysis/explanations';
 */
 export default function StockDashboard() {
   console.log('StockDashboard - Component loaded');
-  /*
-    REACT STATE MANAGEMENT WITH TYPESCRIPT:
-    useState is React's primary way to add state to functional components.
-    
-    ANATOMY OF useState:
-    const [currentValue, setterFunction] = useState<Type>(initialValue);
-    
-    DESTRUCTURING ASSIGNMENT:
-    - useState returns an array with exactly 2 elements
-    - [0]: Current state value
-    - [1]: Function to update the state
-    - We use array destructuring to assign meaningful names
-    
-    TYPESCRIPT GENERICS:
-    - <PredictionResult[]> tells TypeScript what type this state holds
-    - Provides compile-time type checking and IDE autocomplete
-    - Prevents bugs by catching type mismatches early
-    
-    STATE ORGANIZATION STRATEGY:
-    This component uses multiple useState calls instead of one large object because:
-    1. Each piece of state has different update patterns
-    2. React can optimize re-renders when only specific state changes
-    3. Code is more readable with descriptive variable names
-    4. TypeScript types are simpler and more specific
-  */
-  const [predictions, setPredictions] = useState<PredictionResult[]>([]);        // Array of stock predictions from API
-  const [selectedStock, setSelectedStock] = useState<string>('');               // Currently selected stock symbol for detailed view
-  const [analysis, setAnalysis] = useState<TechnicalAnalysisResult | null>(null); // Detailed technical analysis data (null when none selected)
-  const [priceData, setPriceData] = useState<PriceData[]>([]);                  // Historical price data for chart visualization
-  const [loading, setLoading] = useState(true);                                // Global loading state for initial page load
-  const [searchLoading, setSearchLoading] = useState(false);                  // Separate loading state for individual stock searches
-  const [customSymbol, setCustomSymbol] = useState('');                        // User input for custom stock symbol search
-  const [selectedIndex, setSelectedIndex] = useState<string | null>(null);     // Selected market index for detailed analysis
 
-  /*
-    COMPONENT LIFECYCLE WITH useEffect:
-    This hook runs side effects when the component mounts.
-    Empty dependency array [] means it only runs once on mount.
-  */
-  useEffect(() => {
-    /*
-      CLEANUP PATTERN FOR ASYNC OPERATIONS:
-      isMounted prevents state updates if component unmounts before async operation completes.
-      This prevents memory leaks and "Can't perform a React state update on an unmounted component" warnings.
-    */
-    let isMounted = true;
-    
-    const loadPredictions = async () => {
-      // Only update state if component is still mounted
-      if (isMounted) {
-        /*
-          INITIAL LOAD BEHAVIOR:
-          Called without parameters, so:
-          - symbols = undefined (loads default popular stocks)
-          - isNewSearch = false (uses replacement behavior, not merge)
-          This ensures clean initial state with popular stocks only
-        */
-        await fetchPredictions();
-      }
-    };
-    
-    loadPredictions();
-    
-    // CLEANUP FUNCTION: Runs when component unmounts
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Empty dependency array = run once on mount
+  // Use the stock analysis hook for analysis-related state and operations
+  const {
+    selectedStock,
+    analysis,
+    priceData,
+    selectedIndex,
+    fetchDetailedAnalysis,
+    handleIndexClick,
+    closeIndexAnalysis,
+    clearAnalysis,
+  } = useStockAnalysis();
 
-  /*
-    ASYNC FUNCTION WITH ERROR HANDLING:
-    This function demonstrates several important patterns:
-    1. Optional parameters with TypeScript (symbols?: string)
-    2. Default parameter values (isNewSearch = false)
-    3. Conditional URL building using ternary operator
-    4. Proper error handling with try-catch-finally
-    5. State management during async operations
-    
-    PARAMETER EXPLANATION:
-    - symbols?: Optional string of stock symbols to fetch
-    - isNewSearch = false: Boolean flag with default value indicating if this is a new search
-      The default value means if not provided, it defaults to false (existing behavior)
-  */
-  const fetchPredictions = async (symbols?: string, isNewSearch = false) => {
-    try {
-      /*
-        IMPROVED LOADING STATE PATTERN:
-        This conditional loading patttes a better user experience by distinguishing
-        between differf data fetching o
-      
-      // CONDITIONAL URL BNG SPINNER:
-        - Initial page load (isNewSearch = false): Show full loading spinner
-          Users expect to wait when first visiting the page
-          The entire interface is empty, so a loading state makes sense
-        
-        WHEN NOT TO SHOW LOADING SPINNER:
-        - Individual stock searches (isNewSearch = true): No loading spinner
-          Users are adding to existing content, not waiting for everything to load
-          Existing stock tiles remain interactive and visible
-          New tiles appear smoothly without jarring UI changes
-        
-        UX BENEFITS:
-        1. Perceived Performance: App feels faster for searches
-        2. Continuous Interaction: Users can interact with existing tiles during searches
-        3. Progressive Enhancement: Content builds up incrementally
-        4. Reduced Cognitive Load: No disruptive loading states for minor actions
-        
-        TECHNICAL IMPLEMENTATION:
-        - Uses the isNewSearch parameter to determine loading behavior
-        - Default value (false) maintains backward compatibility
-        - Loading state is managed at the component level for fine-grained control
-      */
-      if (!isNewSearch) {
-        setLoading(true);
-      }
-      
-      /*
-        CONDITIONAL URL BUILDING WITH TERNARY OPERATOR:
-        This demonstrates the ternary operator pattern: condition ? valueIfTrue : valueIfFalse
-        
-        BREAKDOWN:
-        - symbols: The condition we're checking (truthy/falsy)
-        - ? : The ternary operator (shorthand for if/else)
-        - First value: Used if symbols exists and is not empty
-        - Second value: Used if symbols is null, undefined, or empty string
-        
-        TEMPLATE LITERALS:
-        - Backticks (`) allow string interpolation with ${variable}
-        - This is more readable than string concatenation with +
-        - Example: `Hello ${name}` instead of "Hello " + name
-        
-        API DESIGN PATTERN:
-        - Single endpoint handles both specific requests and default data
-        - Query parameters (?symbols=...) pass data to the server
-        - Default symbols represent popular/trending stocks for initial load
-        - This reduces the number of API endpoints needed
-      */
-      const url = symbols 
-        ? `/api/predictions?symbols=${symbols}`
-        : '/api/predictions?symbols=AAPL,GOOGL,MSFT,TSLA,NVDA';
-      
-      /*
-        FETCH API WITH ASYNC/AWAIT PATTERN:
-        Modern JavaScript way to make HTTP requests, replacing older XMLHttpRequest.
-        
-        ASYNC/AWAIT EXPLAINED:
-        - await pauses function execution until the Promise resolves
-        - Makes asynchronous code look and behave like synchronous code
-        - Much more readable than .then().catch() chains
-        - Can only be used inside functions marked with 'async'
-        
-        ERROR HANDLING STRATEGY:
-        - fetch() only rejects for network errors, not HTTP error status codes
-        - We must manually check response.ok (true for status 200-299)
-        - Throwing an error here will be caught by the try-catch block
-        - This ensures consistent error handling for all failure types
-      */
-      const response = await fetch(url);
-      
-      /*
-        HTTP STATUS CODE VALIDATION:
-        response.ok is a boolean that's true for successful HTTP status codes (200-299).
-        Common status codes:
-        - 200: OK (success)
-        - 404: Not Found
-        - 500: Internal Server Error
-        - 401: Unauthorized
-        
-        WHY WE CHECK THIS:
-        - fetch() considers the request successful even for 404 or 500 errors
-        - Only network failures (no internet, server down) cause fetch() to reject
-        - Manual checking ensures we handle all types of failures consistently
-      */
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      /*
-        JSON PARSING WITH ERROR HANDLING:
-        response.json() is also async and can fail if:
-        - Response body is not valid JSON
-        - Response is empty
-        - Server returns HTML error page instead of JSON
-        
-        AWAIT PATTERN:
-        - This is the second await in our function
-        - First await gets the response object
-        - Second await extracts and parses the JSON body
-        - Both operations can fail and will be caught by try-catch
-      */
-      const data = await response.json();
-      
-      // API RESPONSE VALIDATION: Check if our API returned success flag
-      if (data.success) {
-        /*
-          CONDITIONAL STATE UPDATE PATTERN:
-          This demonstrates two different ways to update state based on user intent:
-          1. New search: Merge new data with existing data (additive behavior)
-          2. Default load: Replace all data (replacement behavior)
-          
-          This pattern is common in search interfaces where users expect:
-          - Initial load: Show default/popular items
-          - Search results: Add searched items to the top, keep others for context
-        */
-        if (isNewSearch && symbols) {
-          /*
-            ARRAY MANIPULATION FOR SEARCH RESULTS:
-            This code implements a "search and merge" pattern:
-            
-            Step 1: Get new predictions from API response
-            Step 2: Filter existing predictions to remove duplicates
-            Step 3: Combine arrays with new items first
-            
-            DUPLICATE REMOVAL LOGIC:
-            - filter() creates a new array with items that pass the test
-            - some() returns true if ANY item in the array matches the condition
-            - The condition checks if the symbol already exists in new predictions
-            - !some() means "keep items that DON'T have matching symbols"
-            
-            ARRAY SPREAD OPERATOR:
-            [...newPredictions, ...existingPredictions] creates a new array by:
-            - Spreading all items from newPredictions first (top of list)
-            - Then spreading all items from existingPredictions (bottom of list)
-            This maintains order: new search results appear at the top
-          */
-          const newPredictions = data.data;
-          const existingPredictions = predictions.filter(p => 
-            !newPredictions.some((np: PredictionResult) => np.symbol === p.symbol)
-          );
-          setPredictions([...newPredictions, ...existingPredictions]);
-        } else {
-          /*
-            DEFAULT BEHAVIOR: Complete replacement
-            When not a new search (initial load, refresh, etc.):
-            - Replace entire predictions array with API response
-            - This is simpler and appropriate for non-search scenarios
-            - Maintains existing behavior for backward compatibility
-          */
-          setPredictions(data.data);
-        }
-      } else {
-        console.error('Predictions API error:', data.error);
-        setPredictions([]); // Reset to empty array on error
-      }
-    } catch (error) {
-      // CATCH BLOCK: Handle any errors that occurred during the try block
-      console.error('Failed to fetch predictions:', error);
-      setPredictions([]); // Ensure UI shows empty state on error
-    } finally {
-      // FINALLY BLOCK: Only hide loading if it was set (not for individual searches)
-      if (!isNewSearch) {
-        setLoading(false);
-      }
-    }
-  };
+  // Use the predictions hook with fetchDetailedAnalysis as the callback
+  const {
+    predictions,
+    loading,
+    searchLoading,
+    handleStockSearch,
+    removeTile: baseRemoveTile,
+  } = usePredictions(fetchDetailedAnalysis);
 
-  /*
-    DETAILED ANALYSIS FETCHER:
-    This function demonstrates advanced data processing patterns:
-    1. Template literals for dynamic URL construction
-    2. Data transformation with Array.map()
-    3. Type safety with Array.isArray() validation
-    4. Multiple state updates in sequence
-  */
-  const fetchDetailedAnalysis = async (symbol: string) => {
-    try {
-      // TEMPLATE LITERALS: Use backticks for string interpolation
-      const response = await fetch(`/api/analysis?symbol=${symbol}&period=1year`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // MULTIPLE STATE UPDATES: Update related state variables together
-        setAnalysis(data.data);
-        setSelectedStock(symbol);
-        
-        // DATA VALIDATION AND TRANSFORMATION:
-        // Always validate data structure before processing
-        if (data.priceData && Array.isArray(data.priceData)) {
-          /*
-            ARRAY TRANSFORMATION PATTERN:
-            map() creates a new array by transforming each element.
-            Here we convert date strings to Date objects for chart compatibility.
-            The spread operator (...item) copies all existing properties,
-            then we override the date property with a Date object.
-          */
-          const processedPriceData = data.priceData.map((item: any) => ({
-            ...item,                    // Spread operator: copy all existing properties
-            date: new Date(item.date),  // Override: convert string to Date object
-          }));
-          setPriceData(processedPriceData);
-        }
-      } else {
-        console.error('Analysis failed:', data.error);
-        // RESET STATE ON ERROR: Clear related data to prevent stale UI
-        setAnalysis(null);
-        setPriceData([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch analysis:', error);
-      setAnalysis(null);
-      setPriceData([]);
-    }
-  };
-
-  /*
-    NEW SEARCH HANDLER FUNCTION:
-    This function demonstrates the "composite operation" pattern where multiple
-    related actions are performed together to create a cohesive user experience.
-    
-    FUNCTION FLOW:
-    1. Fetch predictions for the searched symbol with isNewSearch=true
-    2. Immediately open detailed analysis for the same symbol
-    
-    PARAMETER USAGE EXPLANATION:
-    - fetchPredictions(symbol, true): The 'true' parameter indicates this is a new search
-      This triggers the "merge" behavior instead of "replace" behavior
-      Result: New stock appears at top of list, existing stocks remain visible
-    
-    LOADING STATE UX IMPROVEMENT:
-    The isNewSearch=true parameter also prevents the full-page loading spinner from showing.
-    This creates a better user experience because:
-    - Initial page load: Shows loading spinner (user expects to wait)
-    - Individual searches: No loading spinner (feels more responsive)
-    - The new stock tile appears smoothly without jarring UI changes
-    - Users can continue interacting with existing tiles while search completes
-    
-    ASYNC OPERATION SEQUENCING:
-    - await ensures fetchPredictions completes before fetchDetailedAnalysis starts
-    - This prevents race conditions and ensures data is available for analysis
-    - Sequential execution provides predictable user experience
-    
-    USER EXPERIENCE DESIGN:
-    - User searches for a stock → stock appears at top of list (no loading spinner)
-    - Detailed analysis opens automatically → immediate insights
-    - Previous stocks remain visible → context is preserved
-    - This creates a smooth, intuitive search-to-analysis workflow
-  */
-  const handleStockSearch = async (symbol: string) => {
-    try {
-      setSearchLoading(true);
-      await fetchPredictions(symbol, true);  // Merge new stock with existing predictions
-      await fetchDetailedAnalysis(symbol);   // Open detailed analysis immediately
-    } catch (error) {
-      /*
-        ERROR HANDLING IN ASYNC FUNCTIONS:
-        This catch block demonstrates proper error handling for composite async operations.
-        
-        WHY THIS CATCH BLOCK IS IMPORTANT:
-        1. GRACEFUL DEGRADATION: If either API call fails, the app doesn't crash
-        2. USER FEEDBACK: Errors are logged for debugging without breaking the UI
-        3. STATE CONSISTENCY: The finally block ensures loading state is always cleared
-        
-        WHAT HAPPENS WITHOUT THIS CATCH:
-        - Unhandled promise rejections could crash the component
-        - Loading spinner might stay visible forever if an error occurs
-        - Users would see no feedback when searches fail
-        
-        ERROR LOGGING STRATEGY:
-        - console.error() preserves the full error object with stack trace
-        - In production, this could be replaced with error monitoring service
-        - The error parameter contains details about what went wrong (network, API, etc.)
-        
-        COMPOSITE OPERATION ERROR HANDLING:
-        Since this function calls two async operations sequentially:
-        - If fetchPredictions fails, fetchDetailedAnalysis won't run
-        - If fetchDetailedAnalysis fails, the prediction data is still added
-        - This provides partial success behavior rather than all-or-nothing
-      */
-      console.error('Error in handleStockSearch:', error);
-    } finally {
-      /*
-        FINALLY BLOCK GUARANTEE:
-        The finally block ALWAYS executes, regardless of success or failure.
-        This is crucial for cleanup operations like resetting loading states.
-        
-        WHY FINALLY IS ESSENTIAL HERE:
-        - Ensures loading spinner disappears even if API calls fail
-        - Prevents UI from getting stuck in loading state
-        - Maintains consistent user experience across all scenarios
-        
-        EXECUTION ORDER:
-        1. try block executes (API calls)
-        2. If error occurs, catch block executes
-        3. finally block ALWAYS executes last
-        4. Loading state is guaranteed to be reset
-        
-        ALTERNATIVE APPROACHES:
-        Without finally, you'd need to call setSearchLoading(false) in both
-        the try and catch blocks, leading to code duplication and potential bugs.
-      */
-      setSearchLoading(false);
-    }
-  };
-
-  // REMOVE TILE HANDLER: Remove individual stock from predictions
+  /**
+   * Wrapper for removeTile that also clears analysis if the removed stock was selected.
+   */
   const removeTile = (symbolToRemove: string) => {
-    try {
-      setPredictions(predictions.filter(p => p.symbol !== symbolToRemove));
-      // Close detailed analysis if it's for the removed stock
-      if (selectedStock === symbolToRemove) {
-        setAnalysis(null);
-        setPriceData([]);
-        setSelectedStock('');
-      }
-    } catch (error) {
-      console.error('Error in removeTile:', error);
+    baseRemoveTile(symbolToRemove);
+    // Close detailed analysis if it's for the removed stock
+    if (selectedStock === symbolToRemove) {
+      clearAnalysis();
     }
   };
-
-  /*
-    MARKET INDEX CLICK HANDLER - TECHNICAL SYMBOL PROCESSING WITH DEBUGGING
-    
-    🔧 PARAMETER EXPLANATION:
-    The 'indexSymbol' parameter now receives the technical ticker symbol (e.g., "^GSPC")
-    rather than the display symbol (e.g., "S&P 500") due to the dual symbol architecture.
-    
-    🎯 WHY TECHNICAL SYMBOLS ARE PASSED:
-    - Chart APIs require exact ticker symbols for accurate data fetching
-    - Analysis components need technical symbols for API calls
-    - Display formatting is handled within the analysis components
-    
-    📊 DATA FLOW:
-    1. User clicks on market index in sidebar
-    2. Sidebar passes technical symbol (e.g., "^GSPC") to this handler
-    3. Handler stores technical symbol in selectedIndex state
-    4. MarketIndexAnalysis component receives technical symbol
-    5. Analysis component uses technical symbol for API calls
-    6. Analysis component handles display formatting internally
-    
-    This ensures accurate data fetching while maintaining clean component separation.
-  */
-  const handleIndexClick = (indexSymbol: string) => {
-    /*
-      DEBUGGING PATTERN - COMPONENT INTERACTION TRACING
-      
-      These console.log statements demonstrate essential debugging practices for
-      React component interactions, especially when data flows between components.
-      
-      🔍 WHY DEBUGGING IS CRITICAL IN COMPONENT COMMUNICATION:
-      - Props and callbacks create complex data flows between components
-      - State updates are asynchronous and may not happen immediately
-      - Component re-renders can cause unexpected behavior
-      - User interactions trigger cascading effects across multiple components
-      - Integration bugs often occur at component boundaries
-      
-      📊 STRUCTURED DEBUGGING APPROACH:
-      
-      1. **DESCRIPTIVE PREFIXES**: "StockDashboard -" helps identify the source
-         component when multiple components are logging simultaneously
-      
-      2. **INPUT VALIDATION**: Log the received parameter to verify:
-         - The correct data is being passed from the parent component
-         - Data format matches expectations (technical symbol vs display name)
-         - No corruption or transformation occurred during prop passing
-      
-      3. **STATE CHANGE CONFIRMATION**: Log after setState to verify:
-         - The state update function was called successfully
-         - The correct value is being stored in component state
-         - No race conditions or timing issues are occurring
-      
-      🛡️ PRODUCTION DEBUGGING BENEFITS:
-      - COMPONENT INTEGRATION: Verify data flows correctly between components
-      - USER INTERACTION TRACKING: Trace user actions through the component tree
-      - STATE MANAGEMENT: Confirm state updates happen as expected
-      - PROP VALIDATION: Ensure parent components pass correct data
-      
-      💡 DEBUGGING WORKFLOW:
-      When issues occur with market index selection, developers can:
-      1. Check browser console for these logs
-      2. Verify the sidebar is passing the correct technical symbol
-      3. Confirm the dashboard receives and stores the symbol correctly
-      4. Trace the data flow to the MarketIndexAnalysis component
-      5. Identify where in the chain the issue occurs
-      
-      🔧 CONSOLE.LOG BEST PRACTICES DEMONSTRATED:
-      - Use consistent prefixes for easy filtering in browser DevTools
-      - Log both input parameters and resulting state changes
-      - Include context about what the log represents
-      - Place logs at key decision points in the data flow
-      
-      🚀 PRODUCTION CONSIDERATIONS:
-      In production builds, consider:
-      - Wrapping in development-only conditions: if (process.env.NODE_ENV === 'development')
-      - Replacing with proper error tracking (Sentry, LogRocket, etc.)
-      - Using structured logging libraries for better searchability
-      - Removing or minimizing console output to avoid performance impact
-      
-      📈 COMPONENT ARCHITECTURE CONTEXT:
-      This debugging pattern is especially valuable in complex React applications where:
-      - Multiple components share state through props and callbacks
-      - User interactions trigger state changes across component boundaries
-      - Data transformation occurs at different levels of the component tree
-      - Integration between different UI sections needs to work seamlessly
-      
-      The dual symbol architecture (display vs technical symbols) makes this debugging
-      even more important because it's easy for components to pass the wrong symbol type,
-      leading to API failures or incorrect data display.
-    */
-    console.log('StockDashboard - Index clicked:', indexSymbol);
-    setSelectedIndex(indexSymbol);
-    console.log('StockDashboard - selectedIndex set to:', indexSymbol);
-  };
-
-  // CLOSE INDEX ANALYSIS HANDLER: Close market index analysis modal
-  const closeIndexAnalysis = () => {
-    setSelectedIndex(null);
-  };
-
-
 
   /*
     UTILITY FUNCTIONS FOR DYNAMIC STYLING:
@@ -702,7 +221,11 @@ export default function StockDashboard() {
               analysis={analysis}
               priceData={priceData}
             />
-          ) : undefined
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-sm p-4">
+              Select a stock to view additional insights
+            </p>
+          )
         }
         centerColumn={
           <div className="space-y-8">
@@ -953,11 +476,7 @@ export default function StockDashboard() {
               This prevents stale data from showing if user opens different stock.
             */}
             <button
-              onClick={() => {
-                setAnalysis(null);      // Clear analysis data
-                setPriceData([]);       // Clear chart data
-                setSelectedStock('');   // Clear selection
-              }}
+              onClick={clearAnalysis}
               className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-lg"
             >
               ✕
