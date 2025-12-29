@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Improve error handling and debugging
   reactStrictMode: true,
+  
+  // Fix Turbopack workspace root detection
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   
   // Better error reporting
   experimental: {

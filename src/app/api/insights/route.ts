@@ -27,20 +27,25 @@ export async function GET(request: NextRequest) {
     const engine = new TechnicalAnalysisEngine();
     const analysis = engine.analyze(priceData, symbol.toUpperCase());
     
-    // Generate AI insights
+    // Generate AI insights with delay between requests to avoid rate limits
     const insightService = getLLMInsightService();
     const insights: any = {};
     
-    for (const type of types) {
+    for (let i = 0; i < types.length; i++) {
+      const type = types[i];
       if (['technical', 'portfolio', 'sentiment'].includes(type)) {
         try {
+          // Add delay between requests to avoid rate limiting (except for first request)
+          if (i > 0) {
+            await new Promise(r => setTimeout(r, 1500)); // 1.5s delay between requests
+          }
           insights[type] = await insightService.generateInsight(
             type as 'technical' | 'portfolio' | 'sentiment',
             analysis,
             symbol.toUpperCase()
           );
         } catch (error) {
-          console.error(`Failed to generate ${type} insight:`, error);
+          console.error(`Provider failed for ${type}:`, error);
           // Continue with other insights
         }
       }
@@ -113,16 +118,25 @@ export async function POST(request: NextRequest) {
     const insightService = getLLMInsightService();
     const insights: any = {};
     
-    for (const type of insightTypes) {
+    // Generate AI insights with delay between requests to avoid rate limits
+    const insightService = getLLMInsightService();
+    const insights: any = {};
+    
+    for (let i = 0; i < insightTypes.length; i++) {
+      const type = insightTypes[i];
       if (['technical', 'portfolio', 'sentiment'].includes(type)) {
         try {
+          // Add delay between requests to avoid rate limiting (except for first request)
+          if (i > 0) {
+            await new Promise(r => setTimeout(r, 1500)); // 1.5s delay between requests
+          }
           insights[type] = await insightService.generateInsight(
             type as 'technical' | 'portfolio' | 'sentiment',
             analysis,
             symbol.toUpperCase()
           );
         } catch (error) {
-          console.error(`Failed to generate ${type} insight:`, error);
+          console.error(`Provider failed for ${type}:`, error);
           // Continue with other insights
         }
       }

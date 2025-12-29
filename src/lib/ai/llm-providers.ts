@@ -299,18 +299,22 @@ export class OpenAIProvider implements LLMProvider {
     url: string,
     init: RequestInit,
     attempts = 3,
-    baseDelayMs = 250
+    baseDelayMs = 1000  // Increased from 250ms for better rate limit handling
   ) {
     for (let i = 0; i < attempts; i++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12_000); // 12s cap
+      const timeout = setTimeout(() => controller.abort(), 30_000); // 30s cap (increased from 12s)
       try {
         const res = await fetch(url, { ...init, signal: controller.signal });
-        // Retry on transient conditions
+        // Retry on transient conditions including rate limits
         if (res.status >= 500 || res.status === 429) {
           if (i < attempts - 1) {
-            const jitter = Math.random() * baseDelayMs;
-            await new Promise(r => setTimeout(r, Math.pow(2, i) * baseDelayMs + jitter));
+            // For 429, use longer delay with exponential backoff
+            const delay = res.status === 429 
+              ? Math.pow(2, i + 1) * 2000 + Math.random() * 1000  // 4s, 8s, 16s for rate limits
+              : Math.pow(2, i) * baseDelayMs + Math.random() * baseDelayMs;
+            console.log(`Rate limited or server error (${res.status}), retrying in ${Math.round(delay)}ms...`);
+            await new Promise(r => setTimeout(r, delay));
             continue;
           }
         }
