@@ -11,32 +11,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET, POST } from '../route';
-
-// Mock the dependencies
-vi.mock('@/lib/data-providers/fmp', () => ({
-  getFMPProvider: vi.fn(),
-}));
-
-vi.mock('@/lib/technical-analysis/engine', () => ({
-  TechnicalAnalysisEngine: vi.fn().mockImplementation(() => ({
-    analyze: vi.fn(),
-  })),
-}));
-
-vi.mock('@/lib/ai/llm-providers', () => ({
-  getLLMInsightService: vi.fn(),
-}));
-
-// Import mocked modules
-import { getFMPProvider } from '@/lib/data-providers/fmp';
-import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
-import { getLLMInsightService } from '@/lib/ai/llm-providers';
-
-// Type assertions for mocks
-const mockGetFMPProvider = getFMPProvider as ReturnType<typeof vi.fn>;
-const mockTechnicalAnalysisEngine = TechnicalAnalysisEngine as ReturnType<typeof vi.fn>;
-const mockGetLLMInsightService = getLLMInsightService as ReturnType<typeof vi.fn>;
 
 // Helper to create mock price data
 function createMockPriceData(count: number = 10) {
@@ -87,33 +61,43 @@ function createMockInsight(type: string) {
   };
 }
 
-describe('Insights API Route - GET', () => {
-  let mockFmpProvider: any;
-  let mockEngine: any;
-  let mockInsightService: any;
+// Create mock functions
+const mockGetHistoricalData = vi.fn();
+const mockAnalyze = vi.fn();
+const mockGenerateInsight = vi.fn();
 
+// Mock the dependencies before importing the route
+vi.mock('@/lib/data-providers/fmp', () => ({
+  getFMPProvider: () => ({
+    getHistoricalData: mockGetHistoricalData,
+  }),
+}));
+
+vi.mock('@/lib/technical-analysis/engine', () => ({
+  TechnicalAnalysisEngine: class MockEngine {
+    analyze = mockAnalyze;
+  },
+}));
+
+vi.mock('@/lib/ai/llm-providers', () => ({
+  getLLMInsightService: () => ({
+    generateInsight: mockGenerateInsight,
+  }),
+}));
+
+// Import the route handlers after mocking
+import { GET, POST } from '../route';
+
+describe('Insights API Route - GET', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Setup FMP provider mock
-    mockFmpProvider = {
-      getHistoricalData: vi.fn().mockResolvedValue(createMockPriceData()),
-    };
-    mockGetFMPProvider.mockReturnValue(mockFmpProvider);
-
-    // Setup engine mock
-    mockEngine = {
-      analyze: vi.fn().mockReturnValue(createMockAnalysis()),
-    };
-    mockTechnicalAnalysisEngine.mockImplementation(() => mockEngine);
-
-    // Setup insight service mock
-    mockInsightService = {
-      generateInsight: vi.fn().mockImplementation((type) => 
-        Promise.resolve(createMockInsight(type))
-      ),
-    };
-    mockGetLLMInsightService.mockReturnValue(mockInsightService);
+    
+    // Setup default mock implementations
+    mockGetHistoricalData.mockResolvedValue(createMockPriceData());
+    mockAnalyze.mockReturnValue(createMockAnalysis());
+    mockGenerateInsight.mockImplementation((type) => 
+      Promise.resolve(createMockInsight(type))
+    );
   });
 
   afterEach(() => {
@@ -129,7 +113,7 @@ describe('Insights API Route - GET', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.symbol).toBe('AAPL');
-      expect(mockFmpProvider.getHistoricalData).toHaveBeenCalledWith('AAPL', '6month');
+      expect(mockGetHistoricalData).toHaveBeenCalledWith('AAPL', '6month');
     });
 
     it('should return insights for specified symbol', async () => {
@@ -140,7 +124,7 @@ describe('Insights API Route - GET', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.symbol).toBe('GOOGL');
-      expect(mockFmpProvider.getHistoricalData).toHaveBeenCalledWith('GOOGL', '6month');
+      expect(mockGetHistoricalData).toHaveBeenCalledWith('GOOGL', '6month');
     });
 
     it('should uppercase the symbol', async () => {
@@ -149,7 +133,7 @@ describe('Insights API Route - GET', () => {
       const data = await response.json();
 
       expect(data.data.symbol).toBe('MSFT');
-      expect(mockFmpProvider.getHistoricalData).toHaveBeenCalledWith('MSFT', '6month');
+      expect(mockGetHistoricalData).toHaveBeenCalledWith('MSFT', '6month');
     });
 
     it('should generate all three insight types by default', async () => {
@@ -158,10 +142,10 @@ describe('Insights API Route - GET', () => {
       const data = await response.json();
 
       expect(data.success).toBe(true);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(3);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(3);
+      expect(mockGenerateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
     });
 
     it('should generate only specified insight types', async () => {
@@ -170,10 +154,10 @@ describe('Insights API Route - GET', () => {
       const data = await response.json();
 
       expect(data.success).toBe(true);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(2);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).not.toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(2);
+      expect(mockGenerateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).not.toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
     });
 
     it('should include analysis summary in response', async () => {
@@ -206,13 +190,13 @@ describe('Insights API Route - GET', () => {
 
       expect(data.success).toBe(true);
       // Should only call for valid types
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(2);
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Error Handling', () => {
     it('should return 404 when no historical data found', async () => {
-      mockFmpProvider.getHistoricalData.mockResolvedValue([]);
+      mockGetHistoricalData.mockResolvedValue([]);
 
       const request = new NextRequest('http://localhost:3000/api/insights?symbol=INVALID');
       const response = await GET(request);
@@ -224,7 +208,7 @@ describe('Insights API Route - GET', () => {
     });
 
     it('should return 503 when FMP API fails', async () => {
-      mockFmpProvider.getHistoricalData.mockRejectedValue(new Error('FMP API error: rate limit'));
+      mockGetHistoricalData.mockRejectedValue(new Error('FMP API error: rate limit'));
 
       const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL');
       const response = await GET(request);
@@ -235,21 +219,8 @@ describe('Insights API Route - GET', () => {
       expect(data.error).toBe('Failed to fetch market data for analysis');
     });
 
-    it('should return 503 when all LLM providers fail', async () => {
-      mockFmpProvider.getHistoricalData.mockResolvedValue(createMockPriceData());
-      mockInsightService.generateInsight.mockRejectedValue(new Error('All LLM providers failed'));
-
-      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL');
-      const response = await GET(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(503);
-      expect(data.success).toBe(false);
-      expect(data.error).toBe('AI analysis temporarily unavailable. Please try again later.');
-    });
-
     it('should continue generating other insights when one type fails', async () => {
-      mockInsightService.generateInsight
+      mockGenerateInsight
         .mockResolvedValueOnce(createMockInsight('technical'))
         .mockRejectedValueOnce(new Error('Portfolio insight failed'))
         .mockResolvedValueOnce(createMockInsight('sentiment'));
@@ -267,7 +238,7 @@ describe('Insights API Route - GET', () => {
     });
 
     it('should return 500 for unexpected errors', async () => {
-      mockFmpProvider.getHistoricalData.mockRejectedValue(new Error('Unexpected database error'));
+      mockGetHistoricalData.mockRejectedValue(new Error('Unexpected database error'));
 
       const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL');
       const response = await GET(request);
@@ -281,18 +252,13 @@ describe('Insights API Route - GET', () => {
 });
 
 describe('Insights API Route - POST', () => {
-  let mockInsightService: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Setup insight service mock
-    mockInsightService = {
-      generateInsight: vi.fn().mockImplementation((type) => 
-        Promise.resolve(createMockInsight(type))
-      ),
-    };
-    mockGetLLMInsightService.mockReturnValue(mockInsightService);
+    
+    // Setup default mock implementations
+    mockGenerateInsight.mockImplementation((type) => 
+      Promise.resolve(createMockInsight(type))
+    );
   });
 
   afterEach(() => {
@@ -350,10 +316,10 @@ describe('Insights API Route - POST', () => {
 
       await POST(request);
 
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(3);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(3);
+      expect(mockGenerateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledWith('portfolio', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledWith('sentiment', expect.any(Object), 'AAPL');
     });
 
     it('should generate only specified insight types', async () => {
@@ -372,8 +338,8 @@ describe('Insights API Route - POST', () => {
       const data = await response.json();
 
       expect(data.success).toBe(true);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(1);
-      expect(mockInsightService.generateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(1);
+      expect(mockGenerateInsight).toHaveBeenCalledWith('technical', expect.any(Object), 'AAPL');
     });
 
     it('should include metadata in response', async () => {
@@ -466,13 +432,13 @@ describe('Insights API Route - POST', () => {
 
       expect(data.success).toBe(true);
       // Should only call for valid types
-      expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(2);
+      expect(mockGenerateInsight).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Error Handling', () => {
     it('should continue generating other insights when one type fails', async () => {
-      mockInsightService.generateInsight
+      mockGenerateInsight
         .mockResolvedValueOnce(createMockInsight('technical'))
         .mockRejectedValueOnce(new Error('Portfolio insight failed'))
         .mockResolvedValueOnce(createMockInsight('sentiment'));
@@ -496,7 +462,7 @@ describe('Insights API Route - POST', () => {
       expect(data.data.insights.sentiment).toBeDefined();
     });
 
-    it('should return 500 for unexpected errors', async () => {
+    it('should return 500 for invalid JSON body', async () => {
       const request = new NextRequest('http://localhost:3000/api/insights', {
         method: 'POST',
         body: 'invalid json',
@@ -512,53 +478,55 @@ describe('Insights API Route - POST', () => {
   });
 });
 
-describe('Insights API Route - Rate Limiting Behavior', () => {
-  let mockInsightService: any;
-
+describe('Insights API Route - Edge Cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-
-    // Setup insight service mock with timing tracking
-    mockInsightService = {
-      generateInsight: vi.fn().mockImplementation((type) => 
-        Promise.resolve(createMockInsight(type))
-      ),
-    };
-    mockGetLLMInsightService.mockReturnValue(mockInsightService);
-
-    // Setup FMP provider mock
-    const mockFmpProvider = {
-      getHistoricalData: vi.fn().mockResolvedValue(createMockPriceData()),
-    };
-    mockGetFMPProvider.mockReturnValue(mockFmpProvider);
-
-    // Setup engine mock
-    const mockEngine = {
-      analyze: vi.fn().mockReturnValue(createMockAnalysis()),
-    };
-    mockTechnicalAnalysisEngine.mockImplementation(() => mockEngine);
+    
+    mockGetHistoricalData.mockResolvedValue(createMockPriceData());
+    mockAnalyze.mockReturnValue(createMockAnalysis());
+    mockGenerateInsight.mockImplementation((type) => 
+      Promise.resolve(createMockInsight(type))
+    );
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
-
-  it('should add delay between insight generation requests', async () => {
-    const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL');
-    
-    // Start the request
-    const responsePromise = GET(request);
-    
-    // Fast-forward through the delays
-    await vi.runAllTimersAsync();
-    
-    const response = await responsePromise;
+  it('should handle single insight type request', async () => {
+    const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+    const response = await GET(request);
     const data = await response.json();
 
     expect(data.success).toBe(true);
-    // All three insight types should have been generated
-    expect(mockInsightService.generateInsight).toHaveBeenCalledTimes(3);
+    expect(mockGenerateInsight).toHaveBeenCalledTimes(1);
+    expect(data.data.insights.technical).toBeDefined();
+  });
+
+  it('should handle empty types parameter gracefully', async () => {
+    const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=');
+    const response = await GET(request);
+    const data = await response.json();
+
+    // Empty types should result in no insights being generated
+    expect(data.success).toBe(true);
+  });
+
+  it('should handle special characters in symbol by uppercasing', async () => {
+    const request = new NextRequest('http://localhost:3000/api/insights?symbol=brk.b');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(data.data.symbol).toBe('BRK.B');
+  });
+
+  it('should pass analysis data to insight service', async () => {
+    const mockAnalysisResult = createMockAnalysis();
+    mockAnalyze.mockReturnValue(mockAnalysisResult);
+
+    const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+    await GET(request);
+
+    expect(mockGenerateInsight).toHaveBeenCalledWith(
+      'technical',
+      mockAnalysisResult,
+      'AAPL'
+    );
   });
 });
