@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Automatically updates README.md and documentation when TypeScript, JavaScript, configuration, or other source files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.mjs",
+      "*.json",
+      "*.sql",
+      "*.css",
+      "*.md",
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "infrastructure/**/*.ts",
+      "*.config.*",
+      "package.json",
+      "tsconfig.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file has been modified. Please review the changes and update the documentation accordingly. Focus on:\n\n1. Update README.md if the changes affect:\n   - Installation or setup instructions\n   - Usage examples or API changes\n   - New features or functionality\n   - Configuration changes\n   - Dependencies or requirements\n\n2. Update any relevant documentation files if they exist:\n   - Technical documentation for new features\n   - API documentation for endpoint changes\n   - Architecture documentation for structural changes\n   - Development guides for workflow changes\n\n3. Ensure documentation stays accurate and helpful for users and developers.\n\nPlease analyze the file changes and determine what documentation updates are needed, then make those updates."
+  }
+}
