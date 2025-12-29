@@ -107,6 +107,39 @@ describe('SimpleStockChart - Unit Tests', () => {
       expect(screen.getByText('Vol: 2.5M')).toBeInTheDocument();
     });
   });
+
+  describe('Price Change Display Format', () => {
+    it('should display positive price change with + prefix', () => {
+      const mockData = [
+        createMockPriceData({ close: 100 }),
+        createMockPriceData({ close: 110 }),
+      ];
+      render(<SimpleStockChart symbol="TEST" priceData={mockData} />);
+      expect(screen.getByText(/\+\$10\.00/)).toBeInTheDocument();
+      expect(screen.getByText(/\+10\.00%/)).toBeInTheDocument();
+    });
+
+    it('should display negative price change with $ followed by negative number', () => {
+      const mockData = [
+        createMockPriceData({ close: 100 }),
+        createMockPriceData({ close: 90 }),
+      ];
+      render(<SimpleStockChart symbol="TEST" priceData={mockData} />);
+      // Component outputs: $-10.00 (-10.00%)
+      expect(screen.getByText(/\$-10\.00/)).toBeInTheDocument();
+      expect(screen.getByText(/-10\.00%/)).toBeInTheDocument();
+    });
+
+    it('should display zero change with + prefix', () => {
+      const mockData = [
+        createMockPriceData({ close: 100 }),
+        createMockPriceData({ close: 100 }),
+      ];
+      render(<SimpleStockChart symbol="TEST" priceData={mockData} />);
+      expect(screen.getByText(/\+\$0\.00/)).toBeInTheDocument();
+      expect(screen.getByText(/\+0\.00%/)).toBeInTheDocument();
+    });
+  });
 });
 
 describe('SimpleStockChart - Property-Based Tests', () => {
