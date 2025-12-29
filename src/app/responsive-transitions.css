@@ -114,19 +114,9 @@ main {
 /**
  * Smooth card resizing during grid reflow
  * Prevents jarring layout shifts when columns change
- * 
- * Performance optimization: Use specific properties instead of 'all'
- * and use GPU-accelerated properties (transform, opacity)
  */
-[class*="rounded-lg"],
-[class*="card"],
-.border {
-  /* Only transition layout-related properties during reflow */
+.transition-card {
   transition: width 0.3s ease-in-out;
-  /* Enable GPU acceleration for smoother animations */
-  will-change: transform;
-  /* Use transform3d to force GPU acceleration */
-  transform: translate3d(0, 0, 0);
 }
 
 /* ============================================
@@ -149,16 +139,43 @@ main {
 
 /**
  * Prevent images from causing horizontal overflow
+ * Note: SVG is excluded here because Recharts charts require explicit height
+ * to render properly. The height: auto rule was causing chart SVGs to collapse.
  */
 img,
 video,
-canvas,
-svg {
+canvas {
   max-width: 100%;
   height: auto;
   /* Smooth size transitions */
   transition: width 0.3s ease-in-out,
               height 0.3s ease-in-out;
+}
+
+/**
+ * SVG elements - only apply max-width, not height: auto
+ * Recharts and other charting libraries set explicit heights on SVGs
+ * that must be preserved for proper rendering
+ */
+svg:not(.recharts-surface) {
+  max-width: 100%;
+}
+
+/**
+ * Recharts specific overrides
+ * Ensure charting library elements are not affected by global styles
+ */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-wrapper svg,
+.recharts-wrapper * {
+  max-width: none !important;
+  contain: none !important;
+  transform: none !important;
+}
+
+.recharts-responsive-container {
+  width: 100% !important;
 }
 
 /* ============================================
@@ -291,11 +308,9 @@ svg {
    ============================================ */
 
 /**
- * Ensure all containers prevent horizontal overflow
+ * Ensure containers prevent horizontal overflow
  */
-* {
-  /* Prevent any element from exceeding viewport width */
-  max-width: 100%;
+html, body, main, section, article, aside, header, footer, nav {
   box-sizing: border-box;
 }
 
@@ -385,7 +400,6 @@ h6 {
 .grid > * {
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* ============================================
@@ -586,18 +600,11 @@ h6 {
 /**
  * Use CSS containment for better performance
  * Helps browser optimize layout calculations
+ * Note: Excluded from chart containers to prevent rendering issues
  */
 [data-testid="responsive-grid"],
 [class*="ResponsiveGrid"] {
   contain: layout style;
-}
-
-/**
- * Optimize paint performance for cards
- */
-[class*="card"],
-[class*="rounded-lg"] {
-  contain: layout paint;
 }
 
 /**

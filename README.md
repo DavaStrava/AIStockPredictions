@@ -34,16 +34,25 @@ npm install
 
 2. **Set up environment variables**:
 ```bash
-cp .env.example .env.local
-# Edit .env.local with your database and API credentials
+# Copy the environment template
+cp .env.local.example .env.local
 ```
 
-3. **Initialize database**:
+3. **Get a Financial Modeling Prep API key**:
+   - Visit [Financial Modeling Prep](https://financialmodelingprep.com/developer/docs)
+   - Sign up for a free account (500 requests/day)
+   - Copy your API key from the dashboard
+   - Add it to `.env.local`:
+   ```bash
+   FMP_API_KEY=your_actual_api_key_here
+   ```
+
+4. **Initialize database** (optional for basic functionality):
 ```bash
 npm run db:setup
 ```
 
-4. **Start development server**:
+5. **Start development server**:
 ```bash
 npm run dev
 ```

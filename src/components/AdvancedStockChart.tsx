@@ -207,7 +207,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     */
     const [historicalData, setHistoricalData] = useState<PriceData[]>(priceData || []);   // Cached historical price data with null safety
     const [loading, setLoading] = useState(false);                                  // Loading state for data fetching
-    const [showTechnicalIndicators, setShowTechnicalIndicators] = useState(true);   // Toggle for technical indicator overlays
+    const [showTechnicalIndicators, setShowTechnicalIndicators] = useState(false);   // Toggle for technical indicator overlays
 
     // Map UI time ranges to API periods
     const getApiPeriod = (timeRange: TimeRange): string => {
@@ -431,9 +431,9 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                             interval="preserveStartEnd"
                         />
                         <YAxis
-                            domain={['dataMin - 5', 'dataMax + 5']}
+                            domain={['auto', 'auto']}
                             tick={{ fontSize: 12 }}
-                            tickFormatter={(value) => `$${value.toFixed(2)}`}
+                            tickFormatter={(value) => typeof value === 'number' ? `$${value.toFixed(0)}` : String(value)}
                         />
                         <Tooltip
                             formatter={(value: number, name: string) => [
@@ -449,6 +449,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                             strokeWidth={2}
                             dot={false}
                             name="Price"
+                            isAnimationActive={false}
                         />
                         {showTechnicalIndicators && analysis?.indicators.bollingerBands && (
                             <>
@@ -485,9 +486,9 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                             interval="preserveStartEnd"
                         />
                         <YAxis
-                            domain={['dataMin - 5', 'dataMax + 5']}
+                            domain={['auto', 'auto']}
                             tick={{ fontSize: 12 }}
-                            tickFormatter={(value) => `$${value.toFixed(2)}`}
+                            tickFormatter={(value) => typeof value === 'number' ? `$${value.toFixed(0)}` : String(value)}
                         />
                         <Tooltip
                             formatter={(value: number) => [`$${value.toFixed(2)}`, 'Price']}
@@ -499,6 +500,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                             stroke="#3B82F6"
                             fill="#3B82F6"
                             fillOpacity={0.3}
+                            isAnimationActive={false}
                         />
                     </AreaChart>
                 );
@@ -524,6 +526,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                             dataKey="volume"
                             fill="#8B5CF6"
                             opacity={0.7}
+                            isAnimationActive={false}
                         />
                     </BarChart>
                 );
@@ -633,7 +636,13 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                     </div>
                 ) : (
                     <div style={{ width: '100%', height: '400px' }}>
-                        {renderChart()}
+                        <ResponsiveContainer width="100%" height={400}>
+                            {renderChart() || (
+                                <LineChart data={[]} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                </LineChart>
+                            )}
+                        </ResponsiveContainer>
                     </div>
                 )}
             </div>
