@@ -102,28 +102,28 @@ This implementation plan breaks down the codebase cleanup into discrete, increme
 - [x] 7. Checkpoint - Verify watchlist consolidation
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Reduce comment verbosity in FMP provider
-  - [ ] 8.1 Trim excessive comments in fmp.ts
+- [x] 8. Reduce comment verbosity in FMP provider
+  - [x] 8.1 Trim excessive comments in fmp.ts
     - Remove educational/tutorial comments
     - Preserve essential JSDoc for public APIs
     - Keep interface documentation
     - Target: ~300-400 lines
     - _Requirements: 4.1, 4.3_
 
-- [ ] 9. Reduce comment verbosity in Database connection
-  - [ ] 9.1 Trim excessive comments in connection.ts
+- [x] 9. Reduce comment verbosity in Database connection
+  - [x] 9.1 Trim excessive comments in connection.ts
     - Remove educational/tutorial comments
     - Preserve essential JSDoc for public APIs
     - Keep interface documentation
     - Target: ~300-400 lines
     - _Requirements: 4.2, 4.3_
 
-- [ ] 9.2 Write property test for JSDoc preservation
+- [x] 9.2 Write property test for JSDoc preservation
   - **Property 5: JSDoc Preservation for Public APIs**
   - Verify exported functions have JSDoc comments
   - **Validates: Requirements 4.3**
 
-- [ ] 10. Final checkpoint
+- [x] 10. Final checkpoint
   - Ensure all tests pass, ask the user if questions arise.
   - Verify all cleanup objectives are met
   - Update CLEANUP_RECOMMENDATIONS.md to mark Phase 2 complete

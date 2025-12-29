@@ -94,13 +94,20 @@ npm run test:ui      # Open Vitest UI
 ai-stock-prediction/
 ├── src/
 │   ├── app/                    # Next.js App Router
+│   │   └── api/               # API routes
 │   ├── components/             # React components
+│   │   ├── dashboard/         # Dashboard-specific
+│   │   │   └── hooks/         # Custom hooks (usePredictions, useStockAnalysis)
+│   │   └── __tests__/         # Component tests
+│   ├── hooks/                  # Shared custom hooks
 │   ├── lib/
 │   │   ├── technical-analysis/ # Technical indicators engine
 │   │   ├── database/          # Database connection & migrations
+│   │   ├── data-providers/    # FMP API integration
 │   │   ├── ai/                # LLM integration
 │   │   └── portfolio/         # Portfolio theory calculations
 │   └── types/                 # TypeScript definitions
+│       └── predictions.ts     # Centralized prediction types
 ├── infrastructure/            # AWS CDK infrastructure code
 └── public/                   # Static assets
 ```

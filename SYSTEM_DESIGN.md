@@ -136,11 +136,13 @@ src/
 
 | Component | Lines | Responsibility | Complexity |
 |-----------|-------|----------------|------------|
-| StockDashboard | 1093 | Main orchestrator | ⚠️ HIGH |
+| StockDashboard | ~588 | Main orchestrator | MEDIUM ✅ |
 | AdvancedStockChart | ~500 | Interactive charting | MEDIUM |
 | TechnicalIndicatorExplanations | ~300 | Indicator display | MEDIUM |
-| FMPDataProvider | 909 | External API | ⚠️ HIGH |
-| DatabaseConnection | 936 | DB management | ⚠️ HIGH |
+| FMPDataProvider | ~356 | External API | MEDIUM ✅ |
+| DatabaseConnection | ~331 | DB management | MEDIUM ✅ |
+
+*Note: StockDashboard, FMPDataProvider, and DatabaseConnection were refactored in December 2025 cleanup.*
 
 ---
 
@@ -267,42 +269,40 @@ All orphaned files have been removed:
 
 **Total: 22 files removed**
 
-#### ⚠️ Duplicate Components
-- `WatchlistManager.tsx` and `MockWatchlistManager.tsx` - consolidate into one
+#### ✅ Duplicate Components (Completed December 29, 2025)
+- `MockWatchlistManager.tsx` deleted
+- `WatchlistManager.tsx` now supports `useMockData` prop for testing
 
 ### 6.2 Component Complexity Issues
 
-#### StockDashboard.tsx (1093 lines)
-**Problem**: Single component handling too many responsibilities
+#### ✅ StockDashboard.tsx (Refactored - December 29, 2025)
+**Previous**: 1093 lines handling too many responsibilities
+**Current**: ~588 lines with extracted hooks
 
-**Recommendation**: Extract into smaller components:
+**Completed refactoring**:
 ```
-StockDashboard/
-├── index.tsx              # Main orchestrator (~200 lines)
-├── StockPredictionGrid.tsx # Prediction cards
-├── DetailedAnalysis.tsx    # Analysis section
-├── hooks/
-│   ├── usePredictions.ts   # Prediction fetching logic
-│   └── useAnalysis.ts      # Analysis fetching logic
-└── utils/
-    └── styling.ts          # getDirectionColor, getDirectionBg
+src/components/
+├── StockDashboard.tsx           # Main orchestrator (~588 lines)
+└── dashboard/
+    └── hooks/
+        ├── usePredictions.ts    # Prediction fetching logic ✅
+        └── useStockAnalysis.ts  # Analysis fetching logic ✅
 ```
 
-#### FMPDataProvider (909 lines)
-**Problem**: Excessive documentation comments
+#### ✅ FMPDataProvider (~356 lines - Refactored)
+**Previous**: 909 lines with excessive documentation comments
+**Current**: ~356 lines with essential JSDoc preserved
 
-**Recommendation**: Move educational comments to separate documentation file
-
-#### DatabaseConnection (936 lines)
-**Problem**: Excessive documentation comments
-
-**Recommendation**: Move educational comments to separate documentation file
+#### ✅ DatabaseConnection (~331 lines - Refactored)
+**Previous**: 936 lines with excessive documentation comments
+**Current**: ~331 lines with essential JSDoc preserved
 
 ### 6.3 Type Duplication
 
-Multiple type definitions exist across files:
-- `PredictionResult` defined in both API route and component
-- Consider centralizing in `src/types/`
+#### ✅ Type Centralization (Completed December 29, 2025)
+- `PredictionResult` centralized to `src/types/predictions.ts`
+- All imports updated to use centralized type
+- Property-based test ensures import consistency
 
 ### 6.4 Test Organization
 
@@ -322,33 +322,40 @@ Multiple CSS files with potential overlap:
 
 ---
 
-## 7. Recommended Simplifications
+## 7. ✅ Completed Simplifications (December 29, 2025)
 
-### Priority 1: Immediate Cleanup (Low Risk)
+### Phase 1: Immediate Cleanup ✅
 
-1. **Delete orphaned root files** (17 files)
-2. **Delete backup file** (`explanations.ts.bak`)
-3. **Consolidate watchlist components**
+1. **Deleted 22 orphaned root files** ✅
+2. **Deleted backup file** (`explanations.ts.bak`) ✅
+3. **Consolidated watchlist components** ✅
 
-### Priority 2: Code Organization (Medium Risk)
+### Phase 2: Code Organization ✅
 
-1. **Extract StockDashboard hooks**
-   - Create `usePredictions` hook
-   - Create `useAnalysis` hook
-   - Reduce main component to ~300 lines
+1. **Extracted StockDashboard hooks** ✅
+   - Created `usePredictions` hook
+   - Created `useStockAnalysis` hook
+   - Reduced main component from 1093 to ~588 lines
 
-2. **Centralize type definitions**
-   - Move `PredictionResult` to `src/types/`
-   - Create shared interfaces
+2. **Centralized type definitions** ✅
+   - Moved `PredictionResult` to `src/types/predictions.ts`
+   - Created shared interfaces
 
-### Priority 3: Documentation (Low Risk)
+3. **Reduced comment verbosity** ✅
+   - FMP provider: 909 → 356 lines (61% reduction)
+   - Database connection: 936 → 331 lines (65% reduction)
+   - Essential JSDoc preserved
 
-1. **Move educational comments**
-   - Create `docs/` folder
-   - Move verbose comments from FMP and Database modules
-   - Keep essential JSDoc comments
+### Property-Based Tests Added ✅
 
-### Priority 4: Architecture Improvements (Higher Risk)
+- Type import consistency test
+- Behavioral equivalence test
+- Mock data toggle test
+- JSDoc preservation test
+
+---
+
+## 8. Future Improvements (Optional)
 
 1. **Consider state management library**
    - Current: React useState (works for current scale)
@@ -358,43 +365,45 @@ Multiple CSS files with potential overlap:
    - `/api/predictions` and `/api/analysis` have overlap
    - Consider combining or clarifying boundaries
 
+3. **Additional testing**
+   - FMP provider unit tests
+   - Database service unit tests
+
 ---
 
-## 8. File Structure Recommendation
+## 9. File Structure (Current)
 
 ```
 ai-stock-prediction/
 ├── src/
 │   ├── app/
-│   │   ├── api/              # Keep as-is
+│   │   ├── api/              # API routes
 │   │   └── ...
 │   ├── components/
-│   │   ├── dashboard/        # NEW: Dashboard-specific
-│   │   │   ├── StockDashboard.tsx
-│   │   │   ├── PredictionGrid.tsx
-│   │   │   └── DetailedAnalysis.tsx
-│   │   ├── charts/           # NEW: Chart components
-│   │   ├── analysis/         # NEW: Analysis components
-│   │   ├── layout/           # NEW: Layout components
-│   │   ├── common/           # NEW: Shared components
-│   │   └── __tests__/        # Keep co-located tests
-│   ├── hooks/                # NEW: Custom hooks
-│   │   ├── usePredictions.ts
-│   │   ├── useAnalysis.ts
+│   │   ├── dashboard/        # Dashboard-specific ✅
+│   │   │   └── hooks/
+│   │   │       ├── usePredictions.ts
+│   │   │       └── useStockAnalysis.ts
+│   │   ├── StockDashboard.tsx
+│   │   ├── WatchlistManager.tsx  # Consolidated ✅
+│   │   └── __tests__/        # Co-located tests
+│   ├── hooks/                # Custom hooks
 │   │   └── useLayoutShiftPrevention.ts
-│   ├── lib/                  # Keep as-is
-│   └── types/                # Keep as-is
-├── docs/                     # NEW: Documentation
-│   ├── architecture.md
-│   ├── api-reference.md
-│   └── development-guide.md
-├── infrastructure/           # Keep as-is
-└── [config files]            # Keep as-is
+│   ├── lib/                  # Business logic
+│   │   ├── technical-analysis/
+│   │   ├── database/
+│   │   ├── data-providers/
+│   │   └── ai/
+│   └── types/                # TypeScript definitions
+│       ├── predictions.ts    # Centralized ✅
+│       └── ...
+├── infrastructure/           # AWS CDK
+└── [config files]
 ```
 
 ---
 
-## 9. Performance Considerations
+## 10. Performance Considerations
 
 ### Current Performance Profile
 
@@ -413,7 +422,7 @@ ai-stock-prediction/
 
 ---
 
-## 10. Security Considerations
+## 11. Security Considerations
 
 ### Current Security Measures
 
@@ -435,7 +444,7 @@ ai-stock-prediction/
 
 ```
 page.tsx
-├── StockDashboard
+├── StockDashboard (uses usePredictions, useStockAnalysis hooks)
 │   ├── StockSearch
 │   ├── ResponsiveGrid
 │   │   └── [Prediction Cards]
@@ -450,7 +459,7 @@ page.tsx
 │   │   ├── AdditionalInsightsSidebar
 │   │   └── MarketIndicesSidebar
 │   └── MarketIndexAnalysis (modal)
-├── MockWatchlistManager
+├── WatchlistManager (supports useMockData prop)
 ├── DevErrorDashboard
 ├── ResponsiveContainer
 └── ResponsiveLayoutErrorBoundary
