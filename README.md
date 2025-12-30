@@ -10,6 +10,10 @@ An AI-powered stock prediction web application that combines technical analysis,
 - **Watchlist Management**: Personal stock tracking with real-time predictions and alerts
 - **Responsive Web Interface**: Mobile-optimized Next.js application with real-time data updates
 
+### Planned Features
+
+- **Trading Journal & P&L Tracker**: Log trades (paper or real), track profit/loss, and analyze trading performance based on platform predictions (see `.kiro/specs/trading-journal/`)
+
 ## Tech Stack
 
 - **Frontend**: Next.js 15.4.6 with React 19, Tailwind CSS v4, TypeScript
