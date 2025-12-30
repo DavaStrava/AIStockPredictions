@@ -64,6 +64,7 @@ export class DatabaseMigrator {
     // In a real application, you might scan the directory
     const migrationFiles = [
       '001_initial_schema.sql',
+      '002_trades_schema.sql',
     ];
 
     for (const filename of migrationFiles) {
@@ -179,6 +180,7 @@ export class DatabaseMigrator {
     
     const sql = `
       -- Drop all tables
+      DROP TABLE IF EXISTS trades CASCADE;
       DROP TABLE IF EXISTS insights CASCADE;
       DROP TABLE IF EXISTS backtest_results CASCADE;
       DROP TABLE IF EXISTS predictions CASCADE;
@@ -192,6 +194,10 @@ export class DatabaseMigrator {
       DROP EXTENSION IF EXISTS vector CASCADE;
       DROP EXTENSION IF EXISTS pgcrypto CASCADE;
       DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE;
+      
+      -- Drop types
+      DROP TYPE IF EXISTS trade_side CASCADE;
+      DROP TYPE IF EXISTS trade_status CASCADE;
       
       -- Drop functions
       DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;

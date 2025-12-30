@@ -83,8 +83,8 @@ This implementation plan breaks down the Trading Journal feature into discrete c
 - [x] 3. Checkpoint - Ensure all service tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. API routes implementation
-  - [ ] 4.1 Create GET/POST /api/trades route
+- [x] 4. API routes implementation
+  - [x] 4.1 Create GET/POST /api/trades route
     - Create `src/app/api/trades/route.ts`
     - Implement GET handler to fetch user trades with filters
     - Implement POST handler to create new trade
@@ -92,27 +92,27 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Return appropriate HTTP status codes
     - _Requirements: 10.1, 10.2, 10.5_
 
-  - [ ] 4.2 Create PATCH /api/trades/[id] route
+  - [x] 4.2 Create PATCH /api/trades/[id] route
     - Create `src/app/api/trades/[id]/route.ts`
     - Implement PATCH handler for closing/updating trades
     - Handle trade not found with 404
     - Handle validation errors with 400
     - _Requirements: 10.3, 10.5, 10.6_
 
-  - [ ] 4.3 Create GET /api/trades/stats route
+  - [x] 4.3 Create GET /api/trades/stats route
     - Create `src/app/api/trades/stats/route.ts`
     - Implement GET handler to return portfolio statistics
     - _Requirements: 10.4_
 
-  - [ ] 4.4 Write property test for API validation
+  - [x] 4.4 Write property test for API validation
     - **Property 9: API Validation Returns Appropriate Error Codes**
     - **Validates: Requirements 10.5, 10.6**
 
-- [ ] 5. Checkpoint - Ensure all API tests pass
+- [x] 5. Checkpoint - Ensure all API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Frontend hooks and components
-  - [ ] 6.1 Create usePortfolioStats hook
+- [x] 6. Frontend hooks and components
+  - [x] 6.1 Create usePortfolioStats hook
     - Create `src/components/trading-journal/hooks/usePortfolioStats.ts`
     - Implement trade fetching with filters
     - Implement createTrade and closeTrade functions
@@ -120,14 +120,14 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Handle loading and error states
     - _Requirements: 6.1, 7.1, 7.2, 7.3_
 
-  - [ ] 6.2 Create TradeEntryModal component
+  - [x] 6.2 Create TradeEntryModal component
     - Create `src/components/trading-journal/TradeEntryModal.tsx`
     - Implement form with symbol, side, entryPrice, quantity, fees, notes fields
     - Support prefilled symbol and predictionId props
     - Add form validation
     - _Requirements: 2.2, 2.3, 9.2, 9.3_
 
-  - [ ] 6.3 Create TradeLogTable component
+  - [x] 6.3 Create TradeLogTable component
     - Create `src/components/trading-journal/TradeLogTable.tsx`
     - Display trades with all required columns
     - Implement column sorting
@@ -135,22 +135,22 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Add close trade action button for open trades
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ] 6.4 Write property test for trade display
+  - [x] 6.4 Write property test for trade display
     - **Property 8: Trade Display Shows Correct P&L Type**
     - **Validates: Requirements 8.1, 8.3, 8.4**
 
-- [ ] 7. Integration with StockDashboard
-  - [ ] 7.1 Add "Log Trade" button to prediction cards
+- [x] 7. Integration with StockDashboard
+  - [x] 7.1 Add "Log Trade" button to prediction cards
     - Modify StockDashboard to include "Log Trade" button on prediction cards
     - Pass symbol and prediction ID to TradeEntryModal
     - _Requirements: 9.1, 9.2, 9.3_
 
-  - [ ] 7.2 Write unit test for Log Trade button integration
+  - [x] 7.2 Write unit test for Log Trade button integration
     - Test button presence on prediction cards
     - Test modal opens with correct prefilled data
     - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 8. Final checkpoint - Ensure all tests pass
+- [x] 8. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

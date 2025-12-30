@@ -7,6 +7,15 @@ import { seedDatabase } from './seeds/development';
 
 const program = new Command();
 
+// Helper to get default values from environment
+const getEnvDefaults = () => ({
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || '5432',
+  database: process.env.DB_NAME || 'ai_stock_prediction',
+  username: process.env.DB_USER || process.env.USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+});
+
 program
   .name('db-cli')
   .description('Database management CLI for AI Stock Prediction')
@@ -17,23 +26,24 @@ program
   .command('migrate')
   .description('Run database migrations')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .action(async (options) => {
     try {
       console.log('Running database migrations...');
+      const defaults = getEnvDefaults();
       
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       await runMigrations(db);
@@ -50,21 +60,22 @@ program
   .command('migrate:status')
   .description('Check migration status')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .action(async (options) => {
     try {
+      const defaults = getEnvDefaults();
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       const status = await getMigrationStatus(db);
@@ -98,11 +109,11 @@ program
   .command('migrate:reset')
   .description('Reset database (WARNING: This will drop all tables)')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .option('--confirm', 'Confirm the reset operation')
   .action(async (options) => {
     if (!options.confirm) {
@@ -113,15 +124,16 @@ program
     
     try {
       console.log('WARNING: Resetting database - all data will be lost!');
+      const defaults = getEnvDefaults();
       
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       const migrator = new DatabaseMigrator(db);
@@ -140,24 +152,25 @@ program
   .command('seed')
   .description('Seed database with development data')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .option('--no-clear', 'Do not clear existing data before seeding')
   .action(async (options) => {
     try {
       console.log('Seeding database with development data...');
+      const defaults = getEnvDefaults();
       
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       await seedDatabase(db, !options.noClear);
@@ -175,21 +188,22 @@ program
   .command('health')
   .description('Check database connection health')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .action(async (options) => {
     try {
+      const defaults = getEnvDefaults();
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       const isHealthy = await db.healthCheck();
@@ -212,23 +226,24 @@ program
   .command('setup')
   .description('Setup database (migrate + seed)')
   .option('--secret-arn <arn>', 'AWS Secrets Manager ARN for database credentials')
-  .option('--host <host>', 'Database host (for local development)', 'localhost')
-  .option('--port <port>', 'Database port', '5432')
-  .option('--database <database>', 'Database name', 'ai_stock_prediction')
-  .option('--username <username>', 'Database username', 'postgres')
-  .option('--password <password>', 'Database password', '')
+  .option('--host <host>', 'Database host (for local development)')
+  .option('--port <port>', 'Database port')
+  .option('--database <database>', 'Database name')
+  .option('--username <username>', 'Database username')
+  .option('--password <password>', 'Database password')
   .action(async (options) => {
     try {
       console.log('Setting up database (migrate + seed)...');
+      const defaults = getEnvDefaults();
       
       const db = options.secretArn
         ? initializeDatabaseFromSecret(options.secretArn)
         : initializeDatabaseLocal({
-            host: options.host,
-            port: parseInt(options.port),
-            database: options.database,
-            username: options.username,
-            password: options.password,
+            host: options.host || defaults.host,
+            port: parseInt(options.port || defaults.port),
+            database: options.database || defaults.database,
+            username: options.username || defaults.username,
+            password: options.password || defaults.password,
           });
 
       // Run migrations first

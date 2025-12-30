@@ -5,11 +5,14 @@
 */
 'use client';
 
+import { useState } from 'react';
 // TYPE IMPORTS: Import TypeScript interfaces for type safety
 import { TechnicalSignal } from '@/lib/technical-analysis/types';
+import { CreateTradeRequest } from '@/types/models';
 // HOOK IMPORTS: Import custom hooks for state management
 import { usePredictions } from './dashboard/hooks/usePredictions';
 import { useStockAnalysis } from './dashboard/hooks/useStockAnalysis';
+import { usePortfolioStats } from './trading-journal/hooks/usePortfolioStats';
 // COMPONENT IMPORTS: Import child components using path aliases (@/ = src/)
 import SimpleStockChart from './SimpleStockChart';
 import AdvancedStockChart from './AdvancedStockChart';
@@ -25,6 +28,7 @@ import TechnicalIndicatorExplanations from './TechnicalIndicatorExplanations';
 import MultiColumnLayout from './MultiColumnLayout';
 import ResponsiveContainer from './ResponsiveContainer';
 import AdditionalInsightsSidebar from './AdditionalInsightsSidebar';
+import { TradeEntryModal } from './trading-journal/TradeEntryModal';
 import { inferMarketContext } from '@/lib/technical-analysis/explanations';
 
 /*
@@ -42,6 +46,14 @@ import { inferMarketContext } from '@/lib/technical-analysis/explanations';
 */
 export default function StockDashboard() {
   console.log('StockDashboard - Component loaded');
+
+  // Trade entry modal state
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [tradeModalSymbol, setTradeModalSymbol] = useState<string | undefined>();
+  const [tradeModalPredictionId, setTradeModalPredictionId] = useState<string | undefined>();
+
+  // Use the portfolio stats hook for trade management
+  const { createTrade } = usePortfolioStats();
 
   // Use the stock analysis hook for analysis-related state and operations
   const {
@@ -73,6 +85,32 @@ export default function StockDashboard() {
     if (selectedStock === symbolToRemove) {
       clearAnalysis();
     }
+  };
+
+  /**
+   * Opens the trade entry modal with prefilled symbol and prediction ID.
+   * Requirements: 9.1, 9.2, 9.3
+   */
+  const handleLogTrade = (symbol: string, predictionId?: string) => {
+    setTradeModalSymbol(symbol);
+    setTradeModalPredictionId(predictionId);
+    setIsTradeModalOpen(true);
+  };
+
+  /**
+   * Handles trade submission from the modal.
+   */
+  const handleTradeSubmit = async (data: Omit<CreateTradeRequest, 'userId'>) => {
+    await createTrade(data);
+  };
+
+  /**
+   * Closes the trade entry modal and clears prefilled data.
+   */
+  const handleCloseTradeModal = () => {
+    setIsTradeModalOpen(false);
+    setTradeModalSymbol(undefined);
+    setTradeModalPredictionId(undefined);
   };
 
   /*
@@ -450,6 +488,22 @@ export default function StockDashboard() {
               </div>
             </div>
 
+            {/* 
+              LOG TRADE BUTTON:
+              Allows users to quickly log a trade based on this prediction.
+              Requirements: 9.1, 9.2, 9.3
+            */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent tile click when clicking Log Trade
+                handleLogTrade(prediction.symbol);
+              }}
+              className="w-full px-3 py-2 text-responsive-body-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              title={`Log a trade for ${prediction.symbol}`}
+            >
+              Log Trade
+            </button>
+
 
           </div>
         ))}
@@ -584,6 +638,15 @@ export default function StockDashboard() {
           onClose={closeIndexAnalysis}
         />
       )}
+
+      {/* Trade Entry Modal */}
+      <TradeEntryModal
+        isOpen={isTradeModalOpen}
+        onClose={handleCloseTradeModal}
+        onSubmit={handleTradeSubmit}
+        prefillSymbol={tradeModalSymbol}
+        prefillPredictionId={tradeModalPredictionId}
+      />
     </ResponsiveContainer>
   );
 }

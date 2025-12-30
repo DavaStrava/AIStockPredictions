@@ -371,33 +371,59 @@ Multiple CSS files with potential overlap:
 
 ---
 
-## 9. Planned Features
+## 9. ✅ Trading Journal Feature (Completed December 29, 2025)
 
-### Trading Journal & P&L Tracker
+### Implementation Status
 
-A comprehensive trading journal extension is planned to allow users to log trades and track performance. Full specification available in `.kiro/specs/trading-journal/`.
+The Trading Journal & P&L Tracker feature is fully implemented:
 
-**Key Capabilities:**
-- Log paper or real trades linked to platform predictions
-- Track realized P&L (closed trades) and unrealized P&L (open positions)
-- Portfolio statistics: win rate, average win/loss, total P&L
-- "Log Trade" button on prediction cards for quick entry
-- Sortable/filterable trade log table
+| Component | Status | Location |
+|-----------|--------|----------|
+| Database Schema | ✅ Complete | `src/lib/database/migrations/002_trades_schema.sql` |
+| Type Definitions | ✅ Complete | `src/types/models.ts` |
+| TradeService | ✅ Complete | `src/lib/portfolio/TradeService.ts` |
+| API Routes | ✅ Complete | `src/app/api/trades/` |
+| usePortfolioStats Hook | ✅ Complete | `src/components/trading-journal/hooks/` |
+| TradeEntryModal | ✅ Complete | `src/components/trading-journal/` |
+| TradeLogTable | ✅ Complete | `src/components/trading-journal/` |
+| Property Tests | ✅ Complete | Various `__tests__/` directories |
+| StockDashboard Integration | ✅ Complete | `src/components/StockDashboard.tsx` |
 
-**New Components (Planned):**
-- `TradeService` - Backend service for trade management and P&L calculations
-- `TradeLogTable` - Sortable table displaying trade history
-- `TradeEntryModal` - Form for creating new trade entries
-- `usePortfolioStats` - React hook for trade data fetching
+### Implemented Capabilities
 
-**New API Endpoints (Planned):**
-- `GET /api/trades` - List user trades with filtering
-- `POST /api/trades` - Create new trade
-- `PATCH /api/trades/[id]` - Update/close trade
-- `GET /api/trades/stats` - Portfolio statistics
+- **Trade Logging**: Create trades with symbol, side (LONG/SHORT), entry price, quantity, fees, notes
+- **Trade Closure**: Close open trades with exit price, automatic P&L calculation
+- **P&L Calculations**: 
+  - Realized P&L: `(exitPrice - entryPrice) × quantity - fees` (LONG)
+  - Unrealized P&L: Uses current market price from FMP API
+- **Portfolio Statistics**: Win rate, average win/loss, total P&L, best/worst trade
+- **Trade Filtering**: By status, symbol, date range
+- **Dashboard Integration**: "Log Trade" button on prediction cards for quick trade entry
 
-**Database Schema (Planned):**
-- New `trades` table with fields: id, userId, symbol, side (LONG/SHORT), status (OPEN/CLOSED), entryPrice, quantity, entryDate, exitPrice, exitDate, fees, realizedPnl, notes, predictionId
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/trades` | GET | List user trades with filters |
+| `/api/trades` | POST | Create new trade |
+| `/api/trades/[id]` | GET | Get single trade |
+| `/api/trades/[id]` | PATCH | Close/update trade |
+| `/api/trades/stats` | GET | Portfolio statistics |
+
+### Error Handling
+
+The trading journal API endpoints include comprehensive error handling:
+
+| HTTP Status | Condition | Resolution |
+|-------------|-----------|------------|
+| 400 | Invalid input data | Check request body for validation errors |
+| 404 | Trade not found | Verify trade ID exists |
+| 503 | Database unavailable | Run `npm run db:setup` |
+| 503 | Missing tables | Run `npm run db:migrate` |
+| 503 | Auth service unavailable | Check database configuration |
+| 500 | Unexpected error | Check server logs |
+
+Full specification available in `.kiro/specs/trading-journal/`.
 
 ---
 

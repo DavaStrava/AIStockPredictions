@@ -62,11 +62,15 @@ class DatabaseConnection {
    * @param config - Optional configuration overrides
    */
   constructor(config: ConnectionConfig = {}) {
+    // Auto-detect local development: disable SSL for localhost connections
+    const isLocalhost = (config.host || process.env.DB_HOST || 'localhost') === 'localhost';
+    const defaultSsl = config.ssl !== undefined ? config.ssl : !isLocalhost;
+    
     this.config = {
       maxConnections: 10,
       idleTimeoutMs: 30000,
       connectionTimeoutMs: 10000,
-      ssl: true,
+      ssl: defaultSsl,
       ...config,
     };
 

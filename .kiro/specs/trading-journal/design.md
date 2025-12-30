@@ -370,6 +370,10 @@ export class TradeStateError extends Error {
 | Trade not found | TradeNotFoundError | 404 | "Trade not found" |
 | Closing closed trade | TradeStateError | 400 | "Trade is already closed" |
 | FMP API failure | Error | 200 (partial) | Trade returned without unrealized P&L |
+| Database unavailable | Error | 503 | "Database connection unavailable" |
+| Database connection failed | Error | 503 | "Database connection failed" |
+| Missing database tables | Error | 503 | "Database tables not found. Please run migrations: npm run db:migrate" |
+| Auth service unavailable | Error | 503 | "User authentication failed. Database may not be properly configured." |
 
 ## Testing Strategy
 

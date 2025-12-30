@@ -10,9 +10,14 @@ An AI-powered stock prediction web application that combines technical analysis,
 - **Watchlist Management**: Personal stock tracking with real-time predictions and alerts
 - **Responsive Web Interface**: Mobile-optimized Next.js application with real-time data updates
 
-### Planned Features
+### Trading Journal & P&L Tracker (In Progress)
 
-- **Trading Journal & P&L Tracker**: Log trades (paper or real), track profit/loss, and analyze trading performance based on platform predictions (see `.kiro/specs/trading-journal/`)
+- **Trade Logging**: Log paper or real trades with symbol, side (LONG/SHORT), entry price, quantity, and fees
+- **P&L Tracking**: Automatic calculation of realized P&L (closed trades) and unrealized P&L (open positions)
+- **Portfolio Statistics**: Win rate, average win/loss, total P&L, best/worst trade metrics
+- **Trade Management**: View, filter, sort, and close trades through a dedicated interface
+
+*Note: StockDashboard integration pending - see `.kiro/specs/trading-journal/` for full specification*
 
 ## Tech Stack
 
@@ -65,6 +70,40 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Troubleshooting
+
+### Database Connection Issues
+
+If you see errors like "Database connection unavailable" or "Database tables not found":
+
+1. **Ensure PostgreSQL is running**:
+   ```bash
+   # Check if PostgreSQL is running
+   pg_isready
+   ```
+
+2. **Run database setup**:
+   ```bash
+   npm run db:setup
+   ```
+
+3. **Check database health**:
+   ```bash
+   npm run db:health
+   ```
+
+4. **Run migrations if tables are missing**:
+   ```bash
+   npm run db:migrate
+   ```
+
+### Trading Journal API Errors
+
+The `/api/trades/stats` endpoint returns specific error codes:
+- **503**: Database unavailable - run `npm run db:setup`
+- **503**: Missing tables - run `npm run db:migrate`
+- **500**: Unexpected server error - check logs for details
+
 ## Available Scripts
 
 ### Development
@@ -99,9 +138,12 @@ ai-stock-prediction/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   └── api/               # API routes
+│   │       └── trades/        # Trading journal endpoints
 │   ├── components/             # React components
 │   │   ├── dashboard/         # Dashboard-specific
 │   │   │   └── hooks/         # Custom hooks (usePredictions, useStockAnalysis)
+│   │   ├── trading-journal/   # Trading journal components
+│   │   │   └── hooks/         # usePortfolioStats hook
 │   │   └── __tests__/         # Component tests
 │   ├── hooks/                  # Shared custom hooks
 │   ├── lib/
@@ -109,7 +151,7 @@ ai-stock-prediction/
 │   │   ├── database/          # Database connection & migrations
 │   │   ├── data-providers/    # FMP API integration
 │   │   ├── ai/                # LLM integration
-│   │   └── portfolio/         # Portfolio theory calculations
+│   │   └── portfolio/         # Portfolio theory & TradeService
 │   └── types/                 # TypeScript definitions
 │       └── predictions.ts     # Centralized prediction types
 ├── infrastructure/            # AWS CDK infrastructure code
@@ -127,6 +169,7 @@ ai-stock-prediction/
 ### Database Schema
 - Stock price data with OHLCV format
 - User watchlists and preferences
+- Trade records with P&L tracking
 - Analysis results caching
 - Migration system for schema updates
 

@@ -83,6 +83,51 @@ vi.mock('../CollapsibleSection', () => ({
   )
 }));
 
+// Mock the TradeEntryModal component
+vi.mock('../trading-journal/TradeEntryModal', () => ({
+  TradeEntryModal: ({ isOpen, onClose, prefillSymbol }: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onSubmit: (data: any) => Promise<void>;
+    prefillSymbol?: string;
+    prefillPredictionId?: string;
+  }) => {
+    if (!isOpen) return null;
+    return (
+      <div role="dialog" aria-modal="true" onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()}>
+          <h2>Log New Trade</h2>
+          <label>
+            Symbol *
+            <input 
+              type="text" 
+              value={prefillSymbol || ''} 
+              readOnly 
+              aria-label="Symbol"
+            />
+          </label>
+          <button onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+}));
+
+// Mock the usePortfolioStats hook
+vi.mock('../trading-journal/hooks/usePortfolioStats', () => ({
+  usePortfolioStats: () => ({
+    trades: [],
+    stats: null,
+    loading: false,
+    statsLoading: false,
+    error: null,
+    fetchTrades: vi.fn(),
+    createTrade: vi.fn().mockResolvedValue({}),
+    closeTrade: vi.fn().mockResolvedValue({}),
+    refreshStats: vi.fn(),
+  })
+}));
+
 describe('StockDashboard', () => {
   let consoleSpy: any;
 
@@ -843,6 +888,173 @@ describe('StockDashboard', () => {
       // Component should render successfully with correct symbol (not undefined)
       await waitFor(() => {
         expect(screen.getByTestId('technical-indicator-explanations')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Trading Journal Integration', () => {
+    /**
+     * Tests for the Log Trade button integration with prediction cards.
+     * Requirements: 9.1, 9.2, 9.3
+     */
+
+    it('should display Log Trade button on each prediction card', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      await screen.findByText('$2800');
+      await screen.findByText('$250');
+      
+      // Find all Log Trade buttons
+      const logTradeButtons = screen.getAllByRole('button', { name: /log trade/i });
+      
+      // Should have one Log Trade button per prediction card
+      expect(logTradeButtons).toHaveLength(3);
+    });
+
+    it('should have Log Trade button with correct title attribute for each stock', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Verify Log Trade buttons have correct title attributes
+      expect(screen.getByTitle('Log a trade for AAPL')).toBeInTheDocument();
+      expect(screen.getByTitle('Log a trade for GOOGL')).toBeInTheDocument();
+      expect(screen.getByTitle('Log a trade for TSLA')).toBeInTheDocument();
+    });
+
+    it('should open trade entry modal when Log Trade button is clicked', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Click Log Trade button for AAPL
+      const logTradeButton = screen.getByTitle('Log a trade for AAPL');
+      fireEvent.click(logTradeButton);
+      
+      // Verify modal is opened
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByText('Log New Trade')).toBeInTheDocument();
+      });
+    });
+
+    it('should prefill symbol in modal when opened from prediction card', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Click Log Trade button for AAPL
+      const logTradeButton = screen.getByTitle('Log a trade for AAPL');
+      fireEvent.click(logTradeButton);
+      
+      // Verify modal has prefilled symbol
+      await waitFor(() => {
+        const symbolInput = screen.getByLabelText(/symbol/i);
+        expect(symbolInput).toHaveValue('AAPL');
+      });
+    });
+
+    it('should prefill correct symbol for different stocks', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$2800');
+      
+      // Click Log Trade button for GOOGL
+      const logTradeButton = screen.getByTitle('Log a trade for GOOGL');
+      fireEvent.click(logTradeButton);
+      
+      // Verify modal has prefilled symbol for GOOGL
+      await waitFor(() => {
+        const symbolInput = screen.getByLabelText(/symbol/i);
+        expect(symbolInput).toHaveValue('GOOGL');
+      });
+    });
+
+    it('should not trigger card click when clicking Log Trade button', async () => {
+      // Mock analysis API to track if it's called
+      const analysisMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, data: mockAnalysisData, priceData: mockAnalysisData.priceData })
+      });
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: mockPredictionData })
+        })
+        .mockImplementation(analysisMock);
+
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Click Log Trade button (should not trigger analysis)
+      const logTradeButton = screen.getByTitle('Log a trade for AAPL');
+      fireEvent.click(logTradeButton);
+      
+      // Verify analysis API was not called (only predictions API was called)
+      expect(analysisMock).not.toHaveBeenCalled();
+      
+      // But modal should be open
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+    });
+
+    it('should close modal when cancel is clicked', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Open modal
+      const logTradeButton = screen.getByTitle('Log a trade for AAPL');
+      fireEvent.click(logTradeButton);
+      
+      // Wait for modal to open
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+      
+      // Click cancel button
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      fireEvent.click(cancelButton);
+      
+      // Verify modal is closed
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should close modal when clicking outside', async () => {
+      render(<StockDashboard />);
+      
+      // Wait for stock cards to load
+      await screen.findByText('$150');
+      
+      // Open modal
+      const logTradeButton = screen.getByTitle('Log a trade for AAPL');
+      fireEvent.click(logTradeButton);
+      
+      // Wait for modal to open
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+      
+      // Click on the backdrop (the dialog element itself)
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(dialog);
+      
+      // Verify modal is closed
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });
     });
   });
