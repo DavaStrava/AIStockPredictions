@@ -371,7 +371,37 @@ Multiple CSS files with potential overlap:
 
 ---
 
-## 9. File Structure (Current)
+## 9. Planned Features
+
+### Trading Journal & P&L Tracker
+
+A comprehensive trading journal extension is planned to allow users to log trades and track performance. Full specification available in `.kiro/specs/trading-journal/`.
+
+**Key Capabilities:**
+- Log paper or real trades linked to platform predictions
+- Track realized P&L (closed trades) and unrealized P&L (open positions)
+- Portfolio statistics: win rate, average win/loss, total P&L
+- "Log Trade" button on prediction cards for quick entry
+- Sortable/filterable trade log table
+
+**New Components (Planned):**
+- `TradeService` - Backend service for trade management and P&L calculations
+- `TradeLogTable` - Sortable table displaying trade history
+- `TradeEntryModal` - Form for creating new trade entries
+- `usePortfolioStats` - React hook for trade data fetching
+
+**New API Endpoints (Planned):**
+- `GET /api/trades` - List user trades with filtering
+- `POST /api/trades` - Create new trade
+- `PATCH /api/trades/[id]` - Update/close trade
+- `GET /api/trades/stats` - Portfolio statistics
+
+**Database Schema (Planned):**
+- New `trades` table with fields: id, userId, symbol, side (LONG/SHORT), status (OPEN/CLOSED), entryPrice, quantity, entryDate, exitPrice, exitDate, fees, realizedPnl, notes, predictionId
+
+---
+
+## 10. File Structure (Current)
 
 ```
 ai-stock-prediction/
@@ -403,7 +433,7 @@ ai-stock-prediction/
 
 ---
 
-## 10. Performance Considerations
+## 11. Performance Considerations
 
 ### Current Performance Profile
 
@@ -422,7 +452,7 @@ ai-stock-prediction/
 
 ---
 
-## 11. Security Considerations
+## 12. Security Considerations
 
 ### Current Security Measures
 

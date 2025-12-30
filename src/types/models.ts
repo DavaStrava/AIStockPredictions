@@ -254,3 +254,71 @@ export interface InsightMetadata {
   actionable: boolean;
   tags: string[];
 }
+
+
+// Trading Journal Types
+
+export type TradeSide = 'LONG' | 'SHORT';
+export type TradeStatus = 'OPEN' | 'CLOSED';
+
+export interface JournalTrade {
+  id: string;
+  userId: string;
+  symbol: string;
+  side: TradeSide;
+  status: TradeStatus;
+  entryPrice: number;
+  quantity: number;
+  entryDate: Date;
+  exitPrice: number | null;
+  exitDate: Date | null;
+  fees: number;
+  realizedPnl: number | null;
+  notes: string | null;
+  predictionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TradeWithPnL extends JournalTrade {
+  unrealizedPnl?: number;
+  currentPrice?: number;
+  pnlError?: string;
+}
+
+export interface CreateTradeRequest {
+  userId: string;
+  symbol: string;
+  side: TradeSide;
+  entryPrice: number;
+  quantity: number;
+  fees?: number;
+  notes?: string;
+  predictionId?: string;
+}
+
+export interface UpdateTradeRequest {
+  exitPrice?: number;
+  fees?: number;
+  notes?: string;
+}
+
+export interface TradeFilters {
+  status?: TradeStatus;
+  symbol?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export interface PortfolioStats {
+  totalRealizedPnl: number;
+  totalUnrealizedPnl: number;
+  totalTrades: number;
+  openTrades: number;
+  closedTrades: number;
+  winRate: number | null;
+  avgWin: number | null;
+  avgLoss: number | null;
+  bestTrade: number | null;
+  worstTrade: number | null;
+}

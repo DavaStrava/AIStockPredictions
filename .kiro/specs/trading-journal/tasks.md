@@ -6,8 +6,8 @@ This implementation plan breaks down the Trading Journal feature into discrete c
 
 ## Tasks
 
-- [ ] 1. Database schema and type definitions
-  - [ ] 1.1 Create database migration for trades table
+- [x] 1. Database schema and type definitions
+  - [x] 1.1 Create database migration for trades table
     - Create `src/lib/database/migrations/002_trades_schema.sql`
     - Define trade_side and trade_status enums
     - Create trades table with all columns and constraints
@@ -15,37 +15,37 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Add trigger for updated_at
     - _Requirements: 1.1, 1.4, 1.5, 1.6_
 
-  - [ ] 1.2 Add Trade types to models.ts
+  - [x] 1.2 Add Trade types to models.ts
     - Add TradeSide and TradeStatus type aliases
     - Add Trade, TradeWithPnL, CreateTradeRequest, UpdateTradeRequest interfaces
     - Add TradeFilters and PortfolioStats interfaces
     - _Requirements: 1.1_
 
-- [ ] 2. TradeService implementation
-  - [ ] 2.1 Create TradeService class with createTrade method
+- [x] 2. TradeService implementation
+  - [x] 2.1 Create TradeService class with createTrade method
     - Create `src/lib/portfolio/TradeService.ts`
     - Implement constructor with DatabaseConnection and FMPDataProvider injection
     - Implement createTrade with validation and database insert
     - Implement input validation for required fields, positive values, valid enums
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.4, 2.5_
 
-  - [ ] 2.2 Write property test for trade creation
+  - [x] 2.2 Write property test for trade creation
     - **Property 1: Trade Creation Preserves All Required Fields**
     - **Property 2: Input Validation Rejects Invalid Trades**
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.4, 2.5**
 
-  - [ ] 2.3 Implement P&L calculation methods
+  - [x] 2.3 Implement P&L calculation methods
     - Implement calculateRealizedPnL for LONG and SHORT trades
     - Implement calculateUnrealizedPnL using current price
     - Handle fees in calculations
     - _Requirements: 4.1, 4.2, 4.3, 5.1, 5.2_
 
-  - [ ] 2.4 Write property test for P&L calculations
+  - [x] 2.4 Write property test for P&L calculations
     - **Property 4: Realized P&L Calculation Correctness**
     - **Property 5: Unrealized P&L Calculation Correctness**
     - **Validates: Requirements 4.1, 4.2, 4.3, 5.1, 5.2**
 
-  - [ ] 2.5 Implement closeTrade method
+  - [x] 2.5 Implement closeTrade method
     - Update trade status to CLOSED
     - Set exitPrice and exitDate
     - Calculate and store realizedPnl
@@ -53,11 +53,11 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Validate exitPrice is positive
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 2.6 Write property test for trade closure
+  - [x] 2.6 Write property test for trade closure
     - **Property 3: Trade Closure Updates Status and Records Exit Data**
     - **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
-  - [ ] 2.7 Implement getUserTrades with filtering
+  - [x] 2.7 Implement getUserTrades with filtering
     - Implement getUserTrades with optional filters
     - Support filtering by status, symbol, date range
     - Order results by entryDate descending
@@ -65,22 +65,22 @@ This implementation plan breaks down the Trading Journal feature into discrete c
     - Handle FMP API failures gracefully
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 5.3, 5.4_
 
-  - [ ] 2.8 Write property test for trade filtering
+  - [x] 2.8 Write property test for trade filtering
     - **Property 6: Trade Filtering Returns Correct Subset**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
 
-  - [ ] 2.9 Implement getPortfolioStats
+  - [x] 2.9 Implement getPortfolioStats
     - Calculate totalRealizedPnl from closed trades
     - Calculate totalUnrealizedPnl from open trades
     - Calculate winRate, avgWin, avgLoss
     - Handle edge case of no closed trades (return null for winRate)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-  - [ ] 2.10 Write property test for portfolio statistics
+  - [x] 2.10 Write property test for portfolio statistics
     - **Property 7: Portfolio Statistics Calculation Correctness**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6**
 
-- [ ] 3. Checkpoint - Ensure all service tests pass
+- [x] 3. Checkpoint - Ensure all service tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. API routes implementation
