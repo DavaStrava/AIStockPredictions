@@ -18,6 +18,9 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │   │
 │  │  │ StockDashboard│  │ WatchlistMgr │  │ MarketIndicesSidebar    │  │   │
 │  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │   │
+│  │  ┌──────────────┐  ┌──────────────┐                                │   │
+│  │  │ TradeTracker │  │PortfolioMgr │                                 │   │
+│  │  └──────────────┘  └──────────────┘                                │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -28,6 +31,7 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 │  │                    Next.js API Routes                                │   │
 │  │  /api/predictions  /api/analysis  /api/insights  /api/watchlists    │   │
 │  │  /api/search       /api/market-indices  /api/market-index-analysis  │   │
+│  │  /api/trades       /api/portfolios (+ sub-routes)                   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -104,8 +108,22 @@ src/
 │   │   └── AdditionalInsightsSidebar.tsx
 │   │
 │   ├── Watchlists
-│   │   ├── WatchlistManager.tsx
-│   │   └── MockWatchlistManager.tsx # ⚠️ DUPLICATE
+│   │   └── WatchlistManager.tsx
+│   │
+│   ├── Trading Journal
+│   │   ├── TradeTracker.tsx         # Main trade tracking interface
+│   │   ├── TradeEntryModal.tsx      # Trade entry form
+│   │   ├── TradeLogTable.tsx        # Trade history table
+│   │   └── hooks/usePortfolioStats.ts
+│   │
+│   ├── Portfolio Investment Tracker   # ✅ NEW
+│   │   ├── PortfolioManager.tsx     # Main portfolio interface
+│   │   ├── PortfolioSummaryCard.tsx # Equity, cash, day change stats
+│   │   ├── HoldingsDataGrid.tsx     # Holdings table with market data
+│   │   ├── TransactionModal.tsx     # Add transactions form
+│   │   ├── PortfolioTreeMap.tsx     # Sector allocation visualization
+│   │   ├── PerformanceChart.tsx     # Equity curve + benchmarks
+│   │   └── hooks/usePortfolio.ts    # Client-side state management
 │   │
 │   ├── Error Handling
 │   │   ├── ErrorBoundary.tsx
@@ -211,6 +229,8 @@ selectedIndex: string | null         // Market index selection
 
 ## 4. API Endpoints
 
+### 4.1 Core Endpoints
+
 | Endpoint | Method | Purpose | Data Source |
 |----------|--------|---------|-------------|
 | `/api/predictions` | GET | Stock predictions | FMP + Analysis Engine |
@@ -221,6 +241,27 @@ selectedIndex: string | null         // Market index selection
 | `/api/watchlists/[id]` | GET/PUT/DELETE | Single watchlist | PostgreSQL |
 | `/api/market-indices` | GET | Market index data | FMP |
 | `/api/market-index-analysis` | GET | Index analysis | FMP + Analysis |
+
+### 4.2 Trading Journal Endpoints
+
+| Endpoint | Method | Purpose | Data Source |
+|----------|--------|---------|-------------|
+| `/api/trades` | GET/POST | List/create trades | PostgreSQL |
+| `/api/trades/[id]` | GET/PATCH | Get/close trade | PostgreSQL |
+| `/api/trades/stats` | GET | Portfolio statistics | PostgreSQL + FMP |
+
+### 4.3 Portfolio Investment Tracker Endpoints ✅ NEW
+
+| Endpoint | Method | Purpose | Data Source |
+|----------|--------|---------|-------------|
+| `/api/portfolios` | GET/POST | List/create portfolios | PostgreSQL |
+| `/api/portfolios/[id]` | GET/PUT/DELETE | Single portfolio CRUD | PostgreSQL |
+| `/api/portfolios/[id]/summary` | GET | Equity, cash, day change stats | PostgreSQL + FMP |
+| `/api/portfolios/[id]/holdings` | GET/PATCH | Holdings with market data | PostgreSQL + FMP |
+| `/api/portfolios/[id]/transactions` | GET/POST | Transaction history | PostgreSQL |
+| `/api/portfolios/[id]/allocation` | GET | Sector allocation (tree map) | PostgreSQL + FMP |
+| `/api/portfolios/[id]/history` | GET/POST | Performance snapshots | PostgreSQL + FMP |
+| `/api/portfolios/[id]/rebalance` | GET | Rebalancing suggestions | PostgreSQL + FMP |
 
 ---
 
@@ -427,39 +468,138 @@ Full specification available in `.kiro/specs/trading-journal/`.
 
 ---
 
-## 10. File Structure (Current)
+## 10. ✅ Portfolio Investment Tracker (Completed January 2026)
+
+### Purpose
+
+The Portfolio Investment Tracker is a **long-term investment management** feature distinct from the Trading Journal (which focuses on short-term trades). It tracks:
+
+- Multiple portfolios with holdings, transactions, and performance history
+- Real-time market data integration for accurate valuations
+- Target allocations and rebalancing suggestions
+- Benchmark comparisons (S&P 500, Nasdaq)
+
+### Implementation Status
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| Database Schema | ✅ Complete | `src/lib/database/migrations/003_portfolio_schema.sql` |
+| Type Definitions | ✅ Complete | `src/types/portfolio.ts` |
+| PortfolioService | ✅ Complete | `src/lib/portfolio/PortfolioService.ts` |
+| API Routes (8 endpoints) | ✅ Complete | `src/app/api/portfolios/` |
+| usePortfolio Hook | ✅ Complete | `src/components/portfolio/hooks/usePortfolio.ts` |
+| PortfolioManager | ✅ Complete | `src/components/portfolio/PortfolioManager.tsx` |
+| PortfolioSummaryCard | ✅ Complete | `src/components/portfolio/PortfolioSummaryCard.tsx` |
+| HoldingsDataGrid | ✅ Complete | `src/components/portfolio/HoldingsDataGrid.tsx` |
+| TransactionModal | ✅ Complete | `src/components/portfolio/TransactionModal.tsx` |
+| PortfolioTreeMap | ✅ Complete | `src/components/portfolio/PortfolioTreeMap.tsx` |
+| PerformanceChart | ✅ Complete | `src/components/portfolio/PerformanceChart.tsx` |
+| Unit/Property Tests | ✅ Complete | Various `__tests__/` directories (79 tests) |
+
+### Database Schema
+
+```sql
+-- 4 new tables for portfolio tracking
+portfolios              -- Portfolio metadata (name, currency, user)
+portfolio_transactions  -- Source of truth (BUY, SELL, DEPOSIT, WITHDRAW, DIVIDEND)
+portfolio_holdings      -- Cached holdings with cost basis
+portfolio_daily_performance -- Historical snapshots for equity curve
+```
+
+### Key Features
+
+- **Portfolio Management**: Create, rename, switch between multiple portfolios
+- **Transaction Types**: BUY, SELL, DEPOSIT, WITHDRAW, DIVIDEND with validation
+- **Holdings Tracking**: Quantity, average cost basis, current price, day change, total return
+- **Target Allocations**: Set target % per holding, calculate drift, rebalancing suggestions
+- **Sector Allocation**: Tree map visualization with day change color coding
+- **Performance History**: Equity curve with S&P 500 benchmark overlay
+- **Real-time Data**: Live quotes from FMP API for accurate valuations
+
+### Metrics Calculated
+
+| Metric | Formula |
+|--------|---------|
+| Total Equity | Holdings Market Value + Cash Balance |
+| Day Change | Sum of (Current Price - Previous Close) × Quantity |
+| Total Return | (Total Equity - Net Deposits) / Net Deposits × 100 |
+| Daily Alpha | Portfolio Day Change % - S&P 500 Day Change % |
+| Portfolio Weight | Holding Market Value / Total Equity × 100 |
+| Drift | Current Weight - Target Weight |
+
+### Error Handling
+
+| HTTP Status | Condition | Resolution |
+|-------------|-----------|------------|
+| 400 | Invalid transaction data | Check required fields and values |
+| 400 | Insufficient funds/shares | Verify cash balance or share quantity |
+| 404 | Portfolio/holding not found | Verify portfolio ID exists |
+| 500 | Unexpected error | Check server logs |
+
+---
+
+## 11. File Structure (Current)
 
 ```
 ai-stock-prediction/
 ├── src/
 │   ├── app/
-│   │   ├── api/              # API routes
+│   │   ├── api/
+│   │   │   ├── predictions/       # Stock predictions
+│   │   │   ├── analysis/          # Technical analysis
+│   │   │   ├── trades/            # Trading journal ✅
+│   │   │   └── portfolios/        # Portfolio tracker ✅ NEW
+│   │   │       ├── route.ts
+│   │   │       └── [id]/
+│   │   │           ├── route.ts
+│   │   │           ├── summary/
+│   │   │           ├── holdings/
+│   │   │           ├── transactions/
+│   │   │           ├── allocation/
+│   │   │           ├── history/
+│   │   │           └── rebalance/
 │   │   └── ...
 │   ├── components/
-│   │   ├── dashboard/        # Dashboard-specific ✅
+│   │   ├── dashboard/             # Dashboard-specific ✅
 │   │   │   └── hooks/
-│   │   │       ├── usePredictions.ts
-│   │   │       └── useStockAnalysis.ts
+│   │   ├── trading-journal/       # Trade tracking ✅
+│   │   │   └── hooks/
+│   │   ├── portfolio/             # Portfolio tracker ✅ NEW
+│   │   │   ├── PortfolioManager.tsx
+│   │   │   ├── PortfolioSummaryCard.tsx
+│   │   │   ├── HoldingsDataGrid.tsx
+│   │   │   ├── TransactionModal.tsx
+│   │   │   ├── PortfolioTreeMap.tsx
+│   │   │   ├── PerformanceChart.tsx
+│   │   │   ├── hooks/usePortfolio.ts
+│   │   │   └── __tests__/
 │   │   ├── StockDashboard.tsx
-│   │   ├── WatchlistManager.tsx  # Consolidated ✅
-│   │   └── __tests__/        # Co-located tests
-│   ├── hooks/                # Custom hooks
-│   │   └── useLayoutShiftPrevention.ts
-│   ├── lib/                  # Business logic
+│   │   ├── WatchlistManager.tsx
+│   │   └── __tests__/
+│   ├── hooks/
+│   ├── lib/
 │   │   ├── technical-analysis/
 │   │   ├── database/
+│   │   │   └── migrations/
+│   │   │       ├── 001_initial_schema.sql
+│   │   │       ├── 002_trades_schema.sql
+│   │   │       └── 003_portfolio_schema.sql  # ✅ NEW
 │   │   ├── data-providers/
-│   │   └── ai/
-│   └── types/                # TypeScript definitions
-│       ├── predictions.ts    # Centralized ✅
-│       └── ...
-├── infrastructure/           # AWS CDK
+│   │   ├── ai/
+│   │   └── portfolio/
+│   │       ├── TradeService.ts    # Trading journal
+│   │       └── PortfolioService.ts # Portfolio tracker ✅ NEW
+│   └── types/
+│       ├── predictions.ts
+│       ├── models.ts
+│       └── portfolio.ts           # ✅ NEW
+├── infrastructure/
 └── [config files]
 ```
 
 ---
 
-## 11. Performance Considerations
+## 12. Performance Considerations
 
 ### Current Performance Profile
 
@@ -478,7 +618,7 @@ ai-stock-prediction/
 
 ---
 
-## 12. Security Considerations
+## 13. Security Considerations
 
 ### Current Security Measures
 
@@ -516,6 +656,16 @@ page.tsx
 │   │   └── MarketIndicesSidebar
 │   └── MarketIndexAnalysis (modal)
 ├── WatchlistManager (supports useMockData prop)
+├── TradeTracker                          # Trading Journal
+│   ├── TradeEntryModal
+│   ├── TradeLogTable
+│   └── usePortfolioStats hook
+├── PortfolioManager (uses usePortfolio hook)  # ✅ NEW
+│   ├── PortfolioSummaryCard
+│   ├── HoldingsDataGrid
+│   ├── TransactionModal
+│   ├── PortfolioTreeMap
+│   └── PerformanceChart
 ├── DevErrorDashboard
 ├── ResponsiveContainer
 └── ResponsiveLayoutErrorBoundary
@@ -559,6 +709,6 @@ page.tsx
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: December 29, 2025*
+*Document Version: 1.1*
+*Last Updated: January 2, 2026*
 *Author: System Architecture Review*

@@ -10,14 +10,26 @@ An AI-powered stock prediction web application that combines technical analysis,
 - **Watchlist Management**: Personal stock tracking with real-time predictions and alerts
 - **Responsive Web Interface**: Mobile-optimized Next.js application with real-time data updates
 
-### Trading Journal & P&L Tracker (In Progress)
+### Trading Journal & P&L Tracker ✅
 
 - **Trade Logging**: Log paper or real trades with symbol, side (LONG/SHORT), entry price, quantity, and fees
 - **P&L Tracking**: Automatic calculation of realized P&L (closed trades) and unrealized P&L (open positions)
 - **Portfolio Statistics**: Win rate, average win/loss, total P&L, best/worst trade metrics
 - **Trade Management**: View, filter, sort, and close trades through a dedicated interface
+- **Dashboard Integration**: "Log Trade" button on prediction cards for quick trade entry
 
-*Note: StockDashboard integration pending - see `.kiro/specs/trading-journal/` for full specification*
+### Portfolio Investment Tracker ✅ NEW
+
+A comprehensive long-term investment tracking system, distinct from the Trading Journal:
+
+- **Multi-Portfolio Support**: Create and manage multiple investment portfolios
+- **Transaction Logging**: BUY, SELL, DEPOSIT, WITHDRAW, DIVIDEND transactions with validation
+- **Real-time Holdings**: Live market data integration showing current prices, day change, total return
+- **Target Allocations**: Set target percentages per holding with drift calculations
+- **Rebalancing Suggestions**: Automated recommendations when holdings drift from targets
+- **Sector Allocation**: Interactive tree map visualization of portfolio breakdown
+- **Performance History**: Equity curve chart with S&P 500 benchmark comparison
+- **Key Metrics**: Total equity, cash balance, day change, daily alpha (vs S&P 500)
 
 ## Tech Stack
 
@@ -104,6 +116,16 @@ The `/api/trades/stats` endpoint returns specific error codes:
 - **503**: Missing tables - run `npm run db:migrate`
 - **500**: Unexpected server error - check logs for details
 
+### Portfolio Investment Tracker API Errors
+
+The `/api/portfolios` endpoints return specific error codes:
+- **400**: Invalid input data (empty name, invalid transaction type, negative amounts)
+- **400**: Insufficient funds for BUY or insufficient shares for SELL
+- **404**: Portfolio or holding not found
+- **503**: Database unavailable - run `npm run db:setup`
+- **503**: Missing tables - run `npm run db:migrate`
+- **500**: Unexpected server error - check logs for details
+
 ## Available Scripts
 
 ### Development
@@ -138,12 +160,15 @@ ai-stock-prediction/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   └── api/               # API routes
-│   │       └── trades/        # Trading journal endpoints
+│   │       ├── trades/        # Trading journal endpoints
+│   │       └── portfolios/    # Portfolio tracker endpoints ✅ NEW
 │   ├── components/             # React components
 │   │   ├── dashboard/         # Dashboard-specific
 │   │   │   └── hooks/         # Custom hooks (usePredictions, useStockAnalysis)
 │   │   ├── trading-journal/   # Trading journal components
 │   │   │   └── hooks/         # usePortfolioStats hook
+│   │   ├── portfolio/         # Portfolio investment tracker ✅ NEW
+│   │   │   └── hooks/         # usePortfolio hook
 │   │   └── __tests__/         # Component tests
 │   ├── hooks/                  # Shared custom hooks
 │   ├── lib/
@@ -151,9 +176,10 @@ ai-stock-prediction/
 │   │   ├── database/          # Database connection & migrations
 │   │   ├── data-providers/    # FMP API integration
 │   │   ├── ai/                # LLM integration
-│   │   └── portfolio/         # Portfolio theory & TradeService
+│   │   └── portfolio/         # TradeService & PortfolioService
 │   └── types/                 # TypeScript definitions
-│       └── predictions.ts     # Centralized prediction types
+│       ├── predictions.ts     # Centralized prediction types
+│       └── portfolio.ts       # Portfolio tracker types ✅ NEW
 ├── infrastructure/            # AWS CDK infrastructure code
 └── public/                   # Static assets
 ```
@@ -170,8 +196,9 @@ ai-stock-prediction/
 - Stock price data with OHLCV format
 - User watchlists and preferences
 - Trade records with P&L tracking
+- Portfolio investment tracking (portfolios, transactions, holdings, daily snapshots)
 - Analysis results caching
-- Migration system for schema updates
+- Migration system for schema updates (3 migration files)
 
 ### AI Integration
 - Pattern recognition explanations
