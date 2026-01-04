@@ -478,3 +478,4 @@ describe('Portfolio API Property Tests', () => {
   });
 });
 
+
