@@ -78,30 +78,35 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (price == null) return '0.00';
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price);
   };
 
-  const formatChange = (change: number) => {
+  const formatChange = (change: number | undefined | null) => {
+    if (change == null) return '+0.00';
     const sign = change >= 0 ? '+' : '';
     return `${sign}${formatPrice(change)}`;
   };
 
-  const formatChangePercent = (changePercent: number) => {
+  const formatChangePercent = (changePercent: number | undefined | null) => {
+    if (changePercent == null) return '0.00%';
     const sign = changePercent >= 0 ? '+' : '';
     return `${sign}${changePercent.toFixed(2)}%`;
   };
 
-  const getChangeColor = (change: number) => {
+  const getChangeColor = (change: number | undefined | null) => {
+    if (change == null) return 'text-gray-600 dark:text-gray-400';
     if (change > 0) return 'text-green-600 dark:text-green-400';
     if (change < 0) return 'text-red-600 dark:text-red-400';
     return 'text-gray-600 dark:text-gray-400';
   };
 
-  const getChangeBg = (change: number) => {
+  const getChangeBg = (change: number | undefined | null) => {
+    if (change == null) return 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800';
     if (change > 0) return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
     if (change < 0) return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
     return 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800';

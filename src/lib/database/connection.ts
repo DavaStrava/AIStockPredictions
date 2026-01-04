@@ -3,6 +3,7 @@
  * 
  * Provides production-ready database connectivity with:
  * - Connection pooling for performance
+ * - DATABASE_URL support for Supabase/cloud deployments
  * - AWS Secrets Manager integration for secure credentials
  * - Transaction support with automatic rollback
  * - Health check capabilities for monitoring
@@ -26,6 +27,8 @@ interface DatabaseCredentials {
  * Configuration options for database connections.
  */
 interface ConnectionConfig {
+  /** Full connection string (e.g., from Supabase DATABASE_URL) */
+  connectionString?: string;
   /** AWS Secrets Manager ARN for production deployments */
   secretArn?: string;
   /** Database host (for local development) */
@@ -117,34 +120,60 @@ class DatabaseConnection {
 
   /**
    * Initializes the connection pool with configured settings.
+   * Supports DATABASE_URL for cloud deployments (Supabase, Railway, etc.)
    * @returns Configured PostgreSQL connection pool
    */
   private async initializePool(): Promise<Pool> {
-    let credentials: DatabaseCredentials;
+    // Check for DATABASE_URL first (Supabase/cloud deployment)
+    const connectionString = this.config.connectionString || process.env.DATABASE_URL;
+    
+    let poolConfig: PoolConfig;
 
-    if (this.config.secretArn) {
-      credentials = await this.getCredentialsFromSecret();
+    if (connectionString) {
+      // Use connection string for cloud deployments
+      poolConfig = {
+        connectionString,
+        max: this.config.maxConnections,
+        idleTimeoutMillis: this.config.idleTimeoutMs,
+        connectionTimeoutMillis: this.config.connectionTimeoutMs,
+        ssl: { rejectUnauthorized: false },
+      };
+    } else if (this.config.secretArn) {
+      // Use AWS Secrets Manager
+      const credentials = await this.getCredentialsFromSecret();
+      poolConfig = {
+        user: credentials.username,
+        password: credentials.password,
+        host: credentials.host,
+        port: credentials.port,
+        database: credentials.dbname,
+        max: this.config.maxConnections,
+        idleTimeoutMillis: this.config.idleTimeoutMs,
+        connectionTimeoutMillis: this.config.connectionTimeoutMs,
+        ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
+      };
     } else {
-      credentials = {
+      // Use individual credentials for local development
+      const credentials = {
         username: this.config.username || process.env.DB_USER || 'postgres',
         password: this.config.password || process.env.DB_PASSWORD || '',
         host: this.config.host || process.env.DB_HOST || 'localhost',
         port: this.config.port || parseInt(process.env.DB_PORT || '5432'),
         dbname: this.config.database || process.env.DB_NAME || 'ai_stock_prediction',
       };
+      
+      poolConfig = {
+        user: credentials.username,
+        password: credentials.password,
+        host: credentials.host,
+        port: credentials.port,
+        database: credentials.dbname,
+        max: this.config.maxConnections,
+        idleTimeoutMillis: this.config.idleTimeoutMs,
+        connectionTimeoutMillis: this.config.connectionTimeoutMs,
+        ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
+      };
     }
-
-    const poolConfig: PoolConfig = {
-      user: credentials.username,
-      password: credentials.password,
-      host: credentials.host,
-      port: credentials.port,
-      database: credentials.dbname,
-      max: this.config.maxConnections,
-      idleTimeoutMillis: this.config.idleTimeoutMs,
-      connectionTimeoutMillis: this.config.connectionTimeoutMs,
-      ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
-    };
 
     const pool = new Pool(poolConfig);
 

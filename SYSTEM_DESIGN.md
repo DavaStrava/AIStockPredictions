@@ -62,11 +62,58 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 | UI Framework | React | 19.1.0 | Component library |
 | Styling | Tailwind CSS | v4 | Utility-first CSS |
 | Language | TypeScript | 5.x | Type safety |
-| Database | PostgreSQL | 8.x | Data persistence |
-| Cloud | AWS CDK | v2 | Infrastructure as Code |
+| Authentication | Supabase Auth | Latest | OAuth (Google, GitHub) |
+| Database | PostgreSQL/Supabase | 8.x | Data persistence |
+| Hosting | Vercel | - | Production deployment |
+| Cloud | AWS CDK | v2 | Infrastructure as Code (optional) |
 | Testing | Vitest | 4.x | Unit/Integration tests |
 | Charts | Recharts | 3.x | Data visualization |
 | Analysis | technicalindicators | 3.x | Technical indicators |
+
+### 1.3 Authentication Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         AUTHENTICATION FLOW                                  │
+│                                                                              │
+│  ┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌────────────┐ │
+│  │  Client  │ --> │  /login page │ --> │ Supabase    │ --> │ OAuth      │ │
+│  │ (Browser)│     │              │     │ Auth        │     │ Provider   │ │
+│  └──────────┘     └──────────────┘     └─────────────┘     │ (Google/   │ │
+│       │                                       │             │  GitHub)   │ │
+│       │          ┌───────────────────────────┐│             └────────────┘ │
+│       │          │                           ▼│                             │
+│       │          │  ┌─────────────────────────┐                            │
+│       │          │  │   /auth/callback        │                            │
+│       │          │  │   Exchange code for     │                            │
+│       │          │  │   session               │                            │
+│       │          │  └─────────────────────────┘                            │
+│       │          │               │                                          │
+│       ▼          │               ▼                                          │
+│  ┌──────────────────────────────────────┐                                   │
+│  │     Next.js Middleware               │                                   │
+│  │     (src/middleware.ts)              │                                   │
+│  │     - Validates session on every     │                                   │
+│  │       request                        │                                   │
+│  │     - Redirects to /login if         │                                   │
+│  │       unauthenticated                │                                   │
+│  └──────────────────────────────────────┘                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Authentication Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/middleware.ts` | Route protection, session refresh |
+| `src/lib/auth/supabase-client.ts` | Browser-side Supabase client |
+| `src/lib/auth/supabase-server.ts` | Server-side Supabase client |
+| `src/lib/auth/supabase-middleware.ts` | Middleware session utilities |
+| `src/lib/auth/demo-user.ts` | User ID resolution (auth or demo) |
+| `src/app/login/page.tsx` | Login page with OAuth buttons |
+| `src/app/auth/callback/route.ts` | OAuth callback handler |
+| `src/app/auth/signout/route.ts` | Logout handler |
+| `src/components/UserMenu.tsx` | User dropdown with logout |
 
 ---
 

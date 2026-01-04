@@ -246,7 +246,15 @@ src/
 3. ~~Centralize type definitions~~ ✅
 4. ~~Trim excessive comments~~ ✅
 
-### Phase 3: Future Improvements (Optional)
+### Phase 3: Code Quality Fixes - IN PROGRESS (January 2026)
+1. ✅ Fix MarketIndicesSidebar null safety issue (formatChangePercent, formatPrice, formatChange)
+2. ✅ Add ESLint ignore for `.next/` build output
+3. ✅ Update AdvancedStockChart test mock data to use recent dates
+4. ⏳ Fix remaining AdvancedStockChart tests (30 failing - stale test expectations)
+5. ⏳ Centralize remaining interface definitions from components to `src/types/`
+6. ⏳ Review large components for hook extraction (StockChart 792L, MarketIndexAnalysis 548L)
+
+### Phase 4: Future Improvements (Optional)
 1. Add FMP provider unit tests
 2. Add Database service unit tests
 3. Create `docs/` folder for educational content if needed
@@ -263,13 +271,18 @@ src/
 | Property tests | Low | 1 hr | ✅ Done |
 | Consolidate watchlists | Medium | 1 hr | ✅ Done |
 | Trim comments | Low | 1 hr | ✅ Done |
+| Fix null safety issues | Low | 15 min | ✅ Done |
+| ESLint ignore .next | Low | 5 min | ✅ Done |
+| Fix stale test dates | Medium | 30 min | ✅ Done |
+| Fix remaining test failures | Medium | 2 hrs | ⏳ In Progress |
 
 ---
 
 ## Summary
 
-**Phase 1 & 2 Complete!** The codebase cleanup has been successfully completed:
+**Phase 1 & 2 Complete! Phase 3 In Progress**
 
+Previous achievements:
 - 22 orphaned files deleted
 - StockDashboard reduced from 1093 to 588 lines
 - FMP provider reduced from 909 to 356 lines
@@ -277,8 +290,19 @@ src/
 - MockWatchlistManager consolidated and deleted
 - PredictionResult type centralized
 - 5 property-based tests added for correctness validation
-- All 49 cleanup-related tests passing
+
+January 2026 fixes:
+- ✅ MarketIndicesSidebar null safety (formatChangePercent, getChangeColor, etc.)
+- ✅ ESLint config updated to ignore `.next/` build directory
+- ✅ AdvancedStockChart null safety for priceData
+- ✅ Test mock data updated to use relative dates (not stale 2024 dates)
+- Test pass rate improved from 91.5% (87 failed) to 94.2% (60 failed)
+- 969 tests passing out of 1029
+
+Remaining test failures (60) are mostly in:
+- AdvancedStockChart.test.tsx (30 failures - technical indicator wrapper expectations)
+- Other integration tests with stale expectations
 
 ---
 
-*Last Updated: December 29, 2025*
+*Last Updated: January 3, 2026*

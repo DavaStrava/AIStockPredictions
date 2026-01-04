@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database/connection';
 import { WatchlistService } from '@/lib/database/services/watchlist';
-
-// For demo purposes, we'll use a hardcoded user ID
-// In production, this would come from authentication
-const DEMO_USER_ID = 'demo-user-123';
+import { getDemoUserId } from '@/lib/auth/demo-user';
 
 export async function GET(request: NextRequest) {
   try {
     const db = getDatabase();
     const watchlistService = new WatchlistService(db);
     
-    const watchlists = await watchlistService.getUserWatchlists(DEMO_USER_ID);
+    const userId = await getDemoUserId();
+    const watchlists = await watchlistService.getUserWatchlists(userId);
     
     return NextResponse.json({
       success: true,
@@ -48,8 +46,9 @@ export async function POST(request: NextRequest) {
     const db = getDatabase();
     const watchlistService = new WatchlistService(db);
     
+    const userId = await getDemoUserId();
     const watchlist = await watchlistService.createWatchlist({
-      userId: DEMO_USER_ID,
+      userId,
       name: name.trim(),
       description: description?.trim(),
     });

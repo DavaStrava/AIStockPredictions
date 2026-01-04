@@ -8,6 +8,7 @@ import { PortfolioManager } from '@/components/portfolio';
 import DevErrorDashboard from '@/components/DevErrorDashboard';
 import ResponsiveContainer from '@/components/ResponsiveContainer';
 import ResponsiveLayoutErrorBoundary from '@/components/ResponsiveLayoutErrorBoundary';
+import UserMenu from '@/components/UserMenu';
 import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitoring';
 
 type ActiveTab = 'dashboard' | 'watchlists' | 'trades' | 'portfolio';
@@ -40,8 +41,11 @@ export default function Home() {
                 MVP
               </span>
             </div>
-            <div className="text-responsive-caption text-gray-500">
-              Technical Analysis Engine
+            <div className="flex items-center gap-4">
+              <div className="text-responsive-caption text-gray-500 hidden sm:block">
+                Technical Analysis Engine
+              </div>
+              <UserMenu />
             </div>
           </div>
           

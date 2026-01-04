@@ -227,7 +227,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     useEffect(() => {
         const fetchHistoricalData = async () => {
             // Use existing data if it's 1Y and we already have it
-            if (selectedTimeRange === '1Y' && priceData.length > 0) {
+            if (selectedTimeRange === '1Y' && priceData && priceData.length > 0) {
                 setHistoricalData(priceData);
                 return;
             }
@@ -249,7 +249,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
             } catch (error) {
                 console.error('Failed to fetch historical data:', error);
                 // Fallback to existing data if fetch fails
-                setHistoricalData(priceData);
+                setHistoricalData(priceData || []);
             } finally {
                 setLoading(false);
             }

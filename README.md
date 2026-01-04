@@ -35,7 +35,10 @@ A comprehensive long-term investment tracking system, distinct from the Trading 
 
 - **Frontend**: Next.js 15.4.6 with React 19, Tailwind CSS v4, TypeScript
 - **Backend**: PostgreSQL with custom connection pooling, AWS Secrets Manager
+- **Authentication**: Supabase Auth with Google/GitHub OAuth
+- **Database**: Supabase PostgreSQL (production) / Local PostgreSQL (development)
 - **Infrastructure**: AWS CDK v2, Aurora Serverless v2, Lambda, S3
+- **Hosting**: Vercel (production) with auto-deployment from GitHub
 - **Analysis**: Custom TypeScript engine with `technicalindicators` and `simple-statistics`
 - **Testing**: Vitest with UI support
 
@@ -206,9 +209,53 @@ ai-stock-prediction/
 - Strategy recommendations
 - Backtesting insights
 
-## Infrastructure Deployment
+## Cloud Deployment (Free Tier)
 
-The application uses AWS CDK for infrastructure as code:
+### Prerequisites
+1. Create a [Supabase](https://supabase.com) account (free tier)
+2. Create a [Vercel](https://vercel.com) account (free tier)
+
+### Supabase Setup
+
+1. **Create a new Supabase project**
+2. **Enable Google OAuth**:
+   - Go to Authentication > Providers > Google
+   - Add your Google OAuth credentials (from [Google Cloud Console](https://console.cloud.google.com))
+3. **Get your credentials**:
+   - Project URL: `https://your-project.supabase.co`
+   - Anon Key: Settings > API > Project API keys > anon
+   - Database URL: Settings > Database > Connection string (URI)
+4. **Run database migrations**:
+   - Connect to the SQL Editor and run the contents of:
+     - `src/lib/database/migrations/001_initial_schema.sql`
+     - `src/lib/database/migrations/002_trades_schema.sql`
+     - `src/lib/database/migrations/003_portfolio_schema.sql`
+
+### Vercel Deployment
+
+1. **Connect your GitHub repository to Vercel**
+2. **Configure environment variables**:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   DATABASE_URL=postgresql://...@db.your-project.supabase.co:5432/postgres
+   FMP_API_KEY=your-fmp-api-key
+   NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+   ```
+3. **Deploy**: Push to main branch or trigger manual deploy
+
+### Cost Estimate
+
+| Service | Tier | Monthly Cost |
+|---------|------|--------------|
+| Vercel | Hobby | $0 |
+| Supabase | Free | $0 |
+| FMP API | Free | $0 |
+| **Total** | - | **$0/month** |
+
+## Infrastructure Deployment (AWS - Optional)
+
+The application includes AWS CDK for enterprise infrastructure:
 
 ```bash
 cd infrastructure
