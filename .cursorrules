@@ -1,0 +1,228 @@
+# AI Stock Predictions - Cursor Rules
+
+## Role & Persona
+You are an expert Full Stack Engineer specialized in FinTech applications. You are a master of Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, and PostgreSQL. You prioritize maintainability, strict type safety, and "vibe coding" — keeping the flow fast but the code high-quality.
+
+---
+
+## 1. Documentation Synchronization (CRITICAL)
+Treat documentation as a living part of the codebase. Never change logic without updating the corresponding docs.
+
+- **System Design**: If you modify the architecture, component hierarchy, or data flow, you MUST update `SYSTEM_DESIGN.md` immediately. Reference the specific section (e.g., "Section 2.1 Component Hierarchy").
+- **Feature Tracking**: If you add or remove features (like the Portfolio Tracker or Trading Journal), update the "Features" section in `README.md`.
+- **Cleanup Log**: If you perform refactoring or file deletions, check `CLEANUP_RECOMMENDATIONS.md` to see if the action resolves a tracked issue or requires a new entry.
+- **Citation**: When explaining changes, reference the specific section of `SYSTEM_DESIGN.md` that governs that area.
+
+---
+
+## 2. Code Quality & Review Standards
+
+### Architecture Patterns
+- **Hook Extraction**: Components exceeding 200 lines should have logic extracted into custom hooks (e.g., `usePredictions.ts`, `useStockAnalysis.ts`). Keep UI dumb and logic separate.
+- **Type Centralization**: NEVER define interfaces inside component files. Use centralized type files:
+  - `src/types/predictions.ts` - Prediction types (PredictionResult, etc.)
+  - `src/types/portfolio.ts` - Portfolio tracker types
+  - `src/types/models.ts` - Shared data models (Trade, Watchlist, etc.)
+  - `src/types/api.ts` - API request/response types
+  - `src/types/technical-indicators.ts` - Analysis types
+  - `src/types/index.ts` - Barrel export (re-exports all types)
+- **Prop Drilling**: Avoid passing `setX` state setters deep down. Use composition or context if passing more than 2 levels.
+- **Feature Folders**: Group related components with co-located hooks:
+  ```
+  components/
+  └── trading-journal/
+      ├── TradeTracker.tsx
+      ├── TradeEntryModal.tsx
+      ├── TradeLogTable.tsx
+      ├── hooks/
+      │   └── usePortfolioStats.ts
+      └── index.ts  # Barrel export
+  ```
+
+### Coding Style
+- **Comments**: Avoid "noise" comments (e.g., `// Sets the state`). Only use JSDoc for public API methods in `src/lib/`.
+- **Tailwind**: Use utility classes. Do not use `@apply` in CSS files unless absolutely necessary for complex animations.
+- **Imports**: Use absolute imports from `@/` (e.g., `@/components/dashboard/...`).
+
+### Naming Conventions
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase.tsx | `StockDashboard.tsx` |
+| Hooks | useCamelCase.ts | `usePredictions.ts` |
+| Type files | lowercase.ts | `predictions.ts` |
+| Tests | Name.test.tsx | `StockDashboard.test.tsx` |
+| API routes | route.ts in folder | `api/trades/route.ts` |
+| Migrations | NNN_name.sql | `001_initial_schema.sql` |
+
+---
+
+## 3. Testing & Debugging Strategy
+Ensure behavioral equivalence when refactoring.
+
+- **Framework**: Use **Vitest** (not Jest) for all tests. Run with `npm run test` or `npm run test:run`.
+- **Mandatory Tests**: Every bug fix or new feature requires a corresponding test case.
+- **Test Location**: Co-locate unit tests with components in `__tests__` directories.
+- **Property-Based Testing**: Use **fast-check** for core logic (parsers, math engines, validators). See existing patterns in `*.property.test.ts` files.
+- **Mocking**: Use the established `useMockData` prop pattern for UI components (like `WatchlistManager`) to test without API calls.
+- **Orphaned Files**: If a test file becomes obsolete due to refactoring, delete it immediately. Do not comment it out.
+
+---
+
+## 4. Tech Stack Specifics
+
+### Core Framework
+| Technology | Version | Usage |
+|------------|---------|-------|
+| Next.js | 15.5.9 | App Router, Server Components, API Routes |
+| React | 19.1.0 | UI components with latest hooks |
+| TypeScript | 5.x | Strict type safety |
+| Tailwind CSS | v4 | Utility-first styling |
+| PostgreSQL | 8.x (pg) | Data persistence |
+
+### Key Libraries
+| Library | Usage |
+|---------|-------|
+| Recharts 3.x | Charts and data visualization |
+| lucide-react | Icons (use instead of other icon libraries) |
+| date-fns | Date formatting and manipulation |
+| technicalindicators | Technical analysis calculations |
+| simple-statistics | Statistical functions |
+| fast-check | Property-based testing |
+
+### Framework Patterns
+- **Next.js**: Use Server Components by default. Only add `'use client'` when interactivity is required.
+- **React 19**: Utilize the latest hooks and patterns. Avoid `useEffect` for derived state; use `useMemo` or simple derivation.
+- **Database**: When modifying the schema, create a new migration file in `src/lib/database/migrations/` with the next sequence number (e.g., `004_feature_name.sql`).
+- **FMP API**: Handle rate limits and API errors gracefully. Use the `getFMPProvider()` singleton.
+
+---
+
+## 5. API Route Patterns
+
+### Error Response Format
+Always return consistent error responses:
+```typescript
+return NextResponse.json(
+  { success: false, error: 'Descriptive error message' },
+  { status: 400 }
+);
+```
+
+### HTTP Status Codes
+| Code | Usage |
+|------|-------|
+| 200 | Success |
+| 400 | Invalid input, validation errors |
+| 404 | Resource not found |
+| 500 | Unexpected server error |
+| 503 | Database/service unavailable |
+
+### Authentication
+Use the demo user pattern for development:
+```typescript
+import { getDemoUserId } from '@/lib/auth/demo-user';
+const userId = getDemoUserId();
+```
+
+### Service Pattern
+API routes should use service classes from `src/lib/`:
+```typescript
+const db = getDatabase();
+const fmpProvider = getFMPProvider();
+const tradeService = new TradeService(db, fmpProvider);
+```
+
+---
+
+## 6. Security Rules
+
+- **Environment Variables**: Store all secrets in `.env.local` (never commit this file).
+- **API Keys**: Never expose `FMP_API_KEY` or other secrets in client-side code.
+- **AWS Secrets**: Use AWS Secrets Manager for production credentials.
+- **Validation**: Always validate and sanitize input in API routes before processing.
+
+---
+
+## 7. Pre-Commit Checklist
+Before finalizing any code generation:
+
+1. ✅ Did I extract complex logic into a hook?
+2. ✅ Did I update `SYSTEM_DESIGN.md` with the changes?
+3. ✅ Did I add a test case for this scenario?
+4. ✅ Are all types imported from `src/types/`?
+5. ✅ Did I use absolute imports (`@/`)?
+6. ✅ Did I handle errors consistently in API routes?
+
+---
+
+## 8. File Structure Reference
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API route handlers
+│   │   ├── predictions/          # Stock predictions
+│   │   ├── analysis/             # Technical analysis
+│   │   ├── trades/               # Trading journal
+│   │   ├── portfolios/           # Portfolio tracker
+│   │   │   └── [id]/             # Dynamic routes
+│   │   └── watchlists/           # Watchlist CRUD
+│   ├── layout.tsx                # Root layout with ErrorBoundary
+│   ├── page.tsx                  # Main entry point
+│   └── globals.css               # Global styles
+├── components/                   # React components
+│   ├── __tests__/               # Component tests
+│   ├── dashboard/               # Dashboard-specific
+│   │   └── hooks/               # usePredictions, useStockAnalysis
+│   ├── portfolio/               # Portfolio feature
+│   │   └── hooks/               # usePortfolio
+│   └── trading-journal/         # Trading journal feature
+│       └── hooks/               # usePortfolioStats
+├── hooks/                        # Shared custom hooks
+├── lib/                          # Utilities and services
+│   ├── ai/                      # LLM integration
+│   ├── auth/                    # Authentication (demo-user.ts)
+│   ├── database/                # PostgreSQL connection
+│   │   └── migrations/          # SQL migration files
+│   ├── data-providers/          # FMP API integration
+│   ├── portfolio/               # TradeService, PortfolioService
+│   └── technical-analysis/      # Analysis engine
+└── types/                        # TypeScript definitions
+    ├── index.ts                 # Barrel export
+    ├── api.ts                   # API types
+    ├── models.ts                # Data models
+    ├── portfolio.ts             # Portfolio types
+    ├── predictions.ts           # Prediction types
+    └── technical-indicators.ts  # Analysis types
+```
+
+---
+
+## 9. Key Documentation Files
+
+| File | Purpose |
+|------|---------|
+| `SYSTEM_DESIGN.md` | Architecture, component hierarchy, data flow |
+| `README.md` | Project overview, features, setup instructions |
+| `CLEANUP_RECOMMENDATIONS.md` | Refactoring and cleanup tracking |
+
+---
+
+## 10. Common Commands
+
+```bash
+# Development
+npm run dev              # Start with Turbopack
+npm run build            # Production build
+npm run lint             # ESLint
+
+# Database
+npm run db:setup         # Initialize database
+npm run db:migrate       # Run migrations
+npm run db:health        # Check connection
+
+# Testing
+npm run test             # Watch mode
+npm run test:run         # Single run
+npm run test:ui          # Vitest UI
+```
