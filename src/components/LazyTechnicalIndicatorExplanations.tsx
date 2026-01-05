@@ -3,16 +3,7 @@
 import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
 import { TechnicalSignal } from '@/lib/technical-analysis/types';
 import { MarketContext } from '@/lib/technical-analysis/explanations';
-
-/**
- * Props for LazyTechnicalIndicatorExplanations component
- */
-interface LazyTechnicalIndicatorExplanationsProps {
-  indicators: TechnicalSignal[];
-  symbol: string;
-  currentPrice: number;
-  marketContext?: MarketContext;
-}
+import { LazyTechnicalIndicatorExplanationsProps } from '@/types';
 
 /**
  * Loading skeleton for technical indicator explanations

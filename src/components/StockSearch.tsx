@@ -1,20 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-
-interface SearchResult {
-  symbol: string;
-  name: string;
-  exchange: string;
-  currency: string;
-  type: string;
-}
-
-interface StockSearchProps {
-  onSelectStock: (symbol: string) => void;
-  placeholder?: string;
-  className?: string;
-}
+import { SearchResult, StockSearchProps } from '@/types';
 
 export default function StockSearch({ 
   onSelectStock, 

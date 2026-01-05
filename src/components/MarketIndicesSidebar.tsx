@@ -2,26 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
-
-interface MarketIndex {
-  symbol: string;          // Display symbol (e.g., "NASDAQ", "S&P 500")
-  tickerSymbol: string;    // Original ticker symbol (e.g., "^IXIC", "^GSPC")
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  isOpen: boolean;
-  marketStatus: string;
-  isExtendedHours: boolean;
-  isFuturesTime: boolean;
-  isShowingFutures: boolean;
-  dataSource: string;
-  lastUpdate: string;
-}
-
-interface MarketIndicesProps {
-  onIndexClick: (symbol: string) => void;
-}
+import { MarketIndex, MarketIndicesProps } from '@/types';
 
 export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProps) {
   const [indices, setIndices] = useState<MarketIndex[]>([]);

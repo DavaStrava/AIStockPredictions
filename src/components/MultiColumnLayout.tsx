@@ -1,12 +1,5 @@
 import React from 'react';
-
-interface MultiColumnLayoutProps {
-  leftColumn: React.ReactNode;
-  centerColumn: React.ReactNode;
-  rightColumn?: React.ReactNode;
-  sidebarWidth?: 'narrow' | 'medium' | 'wide';
-  className?: string;
-}
+import { MultiColumnLayoutProps } from '@/types';
 
 /**
  * MultiColumnLayout component provides a flexible three-column layout manager

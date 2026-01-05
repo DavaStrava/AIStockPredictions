@@ -2,12 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { getTermDefinition, TermDefinition } from '@/lib/knowledge/definitions';
-
-interface TermProps {
-  children: string;
-  term?: string; // Optional override for the term to look up
-  className?: string;
-}
+import { TermProps } from '@/types';
 
 export default function Term({ children, term, className = '' }: TermProps) {
   const [showTooltip, setShowTooltip] = useState(false);

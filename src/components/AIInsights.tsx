@@ -1,25 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-interface LLMInsight {
-  type: 'technical' | 'portfolio' | 'sentiment';
-  content: string;
-  confidence: number;
-  provider: 'openai' | 'bedrock' | 'cached';
-  metadata: {
-    indicators_used?: string[];
-    timeframe?: string;
-    data_quality?: 'high' | 'medium' | 'low';
-    market_conditions?: string;
-    [key: string]: any;
-  };
-}
-
-interface AIInsightsProps {
-  symbol: string;
-  analysis?: any;
-}
+import { LLMInsight, AIInsightsProps } from '@/types';
 
 export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
   const [insights, setInsights] = useState<{

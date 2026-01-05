@@ -2,22 +2,7 @@
 
 import React from 'react';
 import { TrendingUp, AlertTriangle, Info, Lightbulb, Target, Clock } from 'lucide-react';
-import { TechnicalAnalysisResult, PriceData } from '@/lib/technical-analysis/types';
-
-interface MarketInsight {
-  id: string;
-  type: 'tip' | 'warning' | 'info' | 'opportunity';
-  title: string;
-  content: string;
-  timestamp?: string;
-}
-
-interface AdditionalInsightsSidebarProps {
-  symbol?: string;
-  analysis?: TechnicalAnalysisResult | null;
-  priceData?: PriceData[];
-  className?: string;
-}
+import { MarketInsight, AdditionalInsightsSidebarProps } from '@/types';
 
 /**
  * AdditionalInsightsSidebar provides supplementary information and insights

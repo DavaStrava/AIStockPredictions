@@ -53,60 +53,22 @@ import { useState, useEffect } from 'react';
 
 /*
   TYPE IMPORTS:
-  TypeScript interfaces imported from our technical analysis library.
+  TypeScript interfaces imported from centralized types and technical analysis library.
   This provides compile-time type checking and better IDE support.
-  The @/ alias maps to the src/ directory, making imports cleaner.
 */
 import { PriceData, TechnicalAnalysisResult } from '@/lib/technical-analysis/types';
+import { AdvancedStockChartProps, ChartTimeRange, AdvancedChartType } from '@/types';
 
 /*
   RECHARTS LIBRARY IMPORT:
   Recharts is a popular React charting library built on D3.js.
   It provides responsive, customizable charts with minimal configuration.
-  
-  COMPONENTS IMPORTED:
-  - LineChart, AreaChart, BarChart: Different chart types
-  - Line, Area, Bar: Data visualization elements
-  - XAxis, YAxis: Chart axes with labels and scales
-  - CartesianGrid: Background grid lines for easier reading
-  - Tooltip: Interactive hover information
-  - ResponsiveContainer: Makes charts responsive to container size
-  
-  NOTE: CandlestickChart is imported but not used (common in development)
 */
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, AreaChart } from 'recharts';
 
-/*
-  COMPONENT PROPS INTERFACE:
-  Defines the shape of data this component expects to receive from its parent.
-  This is a key TypeScript pattern that provides:
-  1. Compile-time type checking
-  2. IDE autocomplete and error detection
-  3. Self-documenting code (props are clearly defined)
-  4. Refactoring safety (changes to props are caught at compile time)
-*/
-interface AdvancedStockChartProps {
-    symbol: string;                           // Stock ticker symbol (e.g., "AAPL", "GOOGL")
-    priceData: PriceData[];                   // Array of historical price data points
-    analysis?: TechnicalAnalysisResult;       // Optional technical analysis results (? means optional)
-}
-
-/*
-  UNION TYPES FOR CONTROLLED VALUES:
-  These types restrict variables to only valid values, preventing bugs.
-  
-  UNION TYPE SYNTAX:
-  'value1' | 'value2' | 'value3' means the variable can ONLY be one of these exact strings.
-  This is much safer than using generic strings, which could contain typos or invalid values.
-  
-  BENEFITS:
-  - TypeScript will error if you try to use an invalid value
-  - IDE provides autocomplete with only valid options
-  - Refactoring is safer (rename a value and TypeScript finds all usages)
-  - Self-documenting (you can see all possible values at a glance)
-*/
-type TimeRange = '1M' | '3M' | '6M' | '1Y' | '2Y' | '5Y' | 'MAX';  // Valid time periods for chart data
-type ChartType = 'line' | 'area' | 'volume';        // Valid chart visualization types
+// Local type aliases for compatibility with existing code
+type TimeRange = ChartTimeRange;
+type ChartType = AdvancedChartType;
 
 /*
   ADVANCED STOCK CHART COMPONENT:

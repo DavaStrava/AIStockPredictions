@@ -42,29 +42,16 @@
  */
 'use client';
 
-import { useState, ReactNode } from 'react';
+import { useState } from 'react';
+
+import { CollapsibleSectionProps } from '@/types';
 
 /**
  * TypeScript Interface Definition - Component Props Contract
  * 
- * This interface defines what data the component expects to receive from its parent.
- * It serves as both documentation and compile-time validation.
- * 
- * Key TypeScript Concepts Demonstrated:
- * - OPTIONAL PROPERTIES: Using ? to make props optional (subtitle?, icon?, etc.)
- * - UNION TYPES: badge can be either string OR number (string | number)
- * - REACT TYPES: ReactNode type for children (can be any valid React content)
- * - DEFAULT VALUES: Some props have defaults defined in the function parameters
+ * This interface is imported from @/types/components.ts
+ * It defines what data the component expects to receive from its parent.
  */
-interface CollapsibleSectionProps {
-  title: string;                    // Required: Main heading text
-  subtitle?: string;                // Optional: Descriptive text below title
-  icon?: string;                    // Optional: Emoji or icon character to display
-  children: ReactNode;              // Required: Content to show when expanded
-  defaultExpanded?: boolean;        // Optional: Whether section starts open (default: true)
-  className?: string;               // Optional: Additional CSS classes from parent
-  badge?: string | number;          // Optional: Small indicator (count, status, etc.)
-}
 
 /**
  * CollapsibleSection Functional Component

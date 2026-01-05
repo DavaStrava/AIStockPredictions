@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { useResponsiveTransition } from '@/hooks/useLayoutShiftPrevention';
-
-interface ResponsiveContainerProps {
-  children: React.ReactNode;
-  variant?: 'narrow' | 'wide' | 'full';
-  className?: string;
-  preventLayoutShift?: boolean;
-}
+import { ResponsiveContainerProps } from '@/types';
 
 /**
  * ResponsiveContainer provides dynamic width allocation based on screen size

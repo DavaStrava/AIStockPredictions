@@ -1,27 +1,7 @@
 'use client';
 
 import { PriceData } from '@/lib/technical-analysis/types';
-
-interface PerformanceMetricsProps {
-  symbol: string;
-  priceData: PriceData[];
-}
-
-interface PerformanceStats {
-  currentPrice: number;
-  dayChange: number;
-  dayChangePercent: number;
-  weekChange: number;
-  weekChangePercent: number;
-  monthChange: number;
-  monthChangePercent: number;
-  volatility: number;
-  averageVolume: number;
-  high52Week: number;
-  low52Week: number;
-  priceToHigh: number;
-  priceToLow: number;
-}
+import { PerformanceMetricsProps, PerformanceStats } from '@/types';
 
 export default function PerformanceMetrics({ symbol, priceData }: PerformanceMetricsProps) {
   const calculateStats = (): PerformanceStats => {

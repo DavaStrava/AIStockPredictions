@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { WatchlistManagerProps } from '@/types';
 
 interface WatchlistStock {
   id: string;
@@ -13,10 +14,6 @@ interface Watchlist {
   name: string;
   description?: string;
   stocks?: WatchlistStock[];
-}
-
-interface WatchlistManagerProps {
-  useMockData?: boolean;
 }
 
 // Mock data for development/testing

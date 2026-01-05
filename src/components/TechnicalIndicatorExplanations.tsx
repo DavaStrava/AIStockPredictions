@@ -6,16 +6,7 @@ import {
   MarketContext,
   IndicatorExplanation
 } from '@/lib/technical-analysis/explanations';
-
-/**
- * Props for TechnicalIndicatorExplanations component
- */
-interface TechnicalIndicatorExplanationsProps {
-  indicators: TechnicalSignal[];
-  symbol: string;
-  currentPrice: number;
-  marketContext?: MarketContext;
-}
+import { TechnicalIndicatorExplanationsProps } from '@/types';
 
 /**
  * Individual indicator card component - Compact version

@@ -1,205 +1,51 @@
 /**
  * StockChart Component - Interactive Technical Analysis Visualization
  * 
- * This component demonstrates several important React and data visualization concepts:
+ * Features:
+ * - Multiple chart types: Price, Volume, RSI, MACD, Bollinger Bands
+ * - Interactive tab navigation
+ * - Responsive design with Recharts
+ * - Technical indicator overlays
  * 
- * 1. CLIENT-SIDE RENDERING: The 'use client' directive tells Next.js this component
- *    needs to run in the browser (not server-side) because it uses interactive features
- *    like state management and event handlers.
- * 
- * 2. CHARTING LIBRARY INTEGRATION: Uses Recharts, a popular React charting library
- *    that provides composable chart components. Recharts is built specifically for React
- *    and follows React patterns (components, props, etc.).
- * 
- * 3. FINANCIAL DATA VISUALIZATION: Displays multiple types of financial charts
- *    commonly used in technical analysis - price charts, volume, RSI, MACD, etc.
- * 
- * 4. STATE MANAGEMENT: Uses React's useState hook to manage which chart type
- *    is currently active, demonstrating controlled components pattern.
- * 
- * 5. DATA TRANSFORMATION: Converts raw financial data into chart-friendly format,
- *    showing how to prepare data for visualization libraries.
+ * Logic extracted to useStockChartData hook for data transformation and utilities.
  */
 'use client';
 
-import { useState } from 'react';
 import {
-  LineChart,        // Simple line chart for trends
-  Line,            // Individual line series within charts
-  XAxis,           // Horizontal axis (typically time/dates)
-  YAxis,           // Vertical axis (typically prices/values)
-  CartesianGrid,   // Background grid lines for easier reading
-  Tooltip,         // Interactive hover information
-  Legend,          // Chart legend explaining what each line represents
-  ResponsiveContainer, // Makes charts responsive to container size
-  ComposedChart,   // Allows combining different chart types (lines + bars)
-  Bar,             // Bar chart elements (used for volume, histograms)
-  Area,            // Filled area charts (used for zones, bands)
-  AreaChart,       // Chart type specifically for area visualizations
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Area,
+  AreaChart,
 } from 'recharts';
-import { format } from 'date-fns'; // Library for formatting dates in a readable way
 import { PriceData, TechnicalAnalysisResult } from '@/lib/technical-analysis/types';
+import { useStockChartData, StockChartType } from './dashboard/hooks/useStockChartData';
 
-/**
- * TYPESCRIPT INTERFACES: Define the "contract" for what data this component expects
- * 
- * Props Interface Pattern:
- * - Clearly defines what data the component needs to function
- * - Makes the component self-documenting and type-safe
- * - Helps catch errors at compile time rather than runtime
- */
 interface StockChartProps {
-  symbol: string;                           // Stock ticker symbol (e.g., "AAPL", "GOOGL")
-  priceData: PriceData[];                  // Array of historical price data (OHLCV format)
-  analysis?: TechnicalAnalysisResult;      // Optional technical analysis results (indicators, signals)
+  symbol: string;
+  priceData: PriceData[];
+  analysis?: TechnicalAnalysisResult;
 }
 
-/**
- * UNION TYPES: Restricts values to specific strings, preventing typos and invalid states
- * 
- * This pattern is better than using plain strings because:
- * - TypeScript will catch typos at compile time
- * - IDE provides autocomplete for valid values
- * - Makes the code more maintainable and self-documenting
- */
-type ChartType = 'price' | 'volume' | 'rsi' | 'macd' | 'bollinger';
-
 export default function StockChart({ symbol, priceData, analysis }: StockChartProps) {
-  /**
-   * STATE MANAGEMENT with React Hooks
-   * 
-   * useState Hook Pattern:
-   * - Manages component's internal state (which chart is currently displayed)
-   * - Returns [currentValue, setterFunction] array (destructured here)
-   * - Type parameter <ChartType> ensures only valid chart types can be set
-   * - Initial state is 'price' - shows price chart by default
-   * 
-   * This is the "controlled component" pattern - the component controls its own state
-   */
-  const [activeChart, setActiveChart] = useState<ChartType>('price');
+  // Use custom hook for data transformation and state management
+  const {
+    activeChart,
+    setActiveChart,
+    chartData,
+    formatPrice,
+    formatVolume,
+    chartTabs,
+  } = useStockChartData({ priceData, analysis });
 
-  /**
-   * DATA TRANSFORMATION for Chart Libraries
-   * 
-   * Problem: Raw financial data isn't in the format that Recharts expects
-   * Solution: Transform the data into a chart-friendly structure
-   * 
-   * Key Concepts:
-   * 1. ARRAY.MAP(): Creates a new array by transforming each element
-   * 2. DATA ALIGNMENT: Matches technical indicators with corresponding price data by index
-   * 3. DATE FORMATTING: Converts Date objects to readable strings for chart labels
-   * 4. OPTIONAL CHAINING (?.): Safely accesses properties that might not exist
-   * 
-   * REACT PATTERN: Data Processing in Components
-   * This transformation happens every time the component re-renders. In a production
-   * app, you might want to memoize this with useMemo() to avoid recalculating
-   * the same data on every render, especially with large datasets.
-   * 
-   * Example: const chartData = useMemo(() => priceData.map(...), [priceData, analysis]);
-   */
-  const chartData = priceData.map((data, index) => {
-    // OPTIONAL CHAINING (?.) - Safely access nested properties that might not exist
-    // If analysis is undefined, or indicators is undefined, or rsi is undefined, 
-    // the expression returns undefined instead of throwing an error
-    const rsi = analysis?.indicators.rsi?.[index];
-    const macd = analysis?.indicators.macd?.[index];
-    const bb = analysis?.indicators.bollingerBands?.[index];
-
-    // ARRAY.FIND() - Search for specific moving averages by period and date
-    // This demonstrates how to match data points across different arrays
-    // getTime() converts Date objects to timestamps for accurate comparison
-    const sma20 = analysis?.indicators.sma?.find(sma => sma.period === 20 && sma.date.getTime() === data.date.getTime());
-    const sma50 = analysis?.indicators.sma?.find(sma => sma.period === 50 && sma.date.getTime() === data.date.getTime());
-
-    /**
-     * OBJECT CREATION for Chart Data
-     * 
-     * Creates a unified data object that Recharts can use to render all chart types.
-     * Each object represents one time period (usually one day) with all available data.
-     * 
-     * Key Patterns:
-     * - CONSISTENT NAMING: Property names match what we'll reference in chart components
-     * - DATE FORMATTING: Human-readable dates for chart labels using date-fns library
-     * - OPTIONAL VALUES: Use optional chaining to handle missing indicator data gracefully
-     * - FLAT STRUCTURE: All data at the same level makes it easy for charts to access
-     */
-    return {
-      // FORMATTED DATE: 'MMM dd' creates labels like "Jan 15", "Feb 03"
-      date: format(data.date, 'MMM dd'),
-      fullDate: data.date,              // Keep original date for tooltips/calculations
-
-      // OHLCV DATA: Core price and volume information
-      open: data.open,                  // Opening price
-      high: data.high,                  // Highest price of the period
-      low: data.low,                    // Lowest price of the period
-      close: data.close,                // Closing price (most important for analysis)
-      volume: data.volume,              // Number of shares traded
-
-      // TECHNICAL INDICATORS: Extract values from analysis results
-      rsi: rsi?.value,                  // RSI oscillator value (0-100)
-      macd: macd?.macd,                 // MACD line value
-      macdSignal: macd?.signal,         // MACD signal line value
-      macdHistogram: macd?.histogram,   // MACD histogram (difference between MACD and signal)
-
-      // BOLLINGER BANDS: Volatility indicator with three lines
-      bbUpper: bb?.upper,               // Upper band (price + 2 standard deviations)
-      bbMiddle: bb?.middle,             // Middle band (simple moving average)
-      bbLower: bb?.lower,               // Lower band (price - 2 standard deviations)
-
-      // MOVING AVERAGES: Trend-following indicators
-      sma20: sma20?.value,              // 20-period simple moving average
-      sma50: sma50?.value,              // 50-period simple moving average
-    };
-  });
-
-  /**
-   * UTILITY FUNCTIONS for Data Formatting
-   * 
-   * These functions demonstrate the "pure function" pattern:
-   * - Take input, return output, no side effects
-   * - Reusable across different parts of the component
-   * - Make the code more readable and maintainable
-   */
-
-  // FORMAT PRICE: Always show 2 decimal places with dollar sign for consistency
-  // Example: 123.456 becomes "$123.46"
-  const formatPrice = (value: number) => `$${value.toFixed(2)}`;
-  // FORMAT VOLUME: Convert large numbers to readable format with suffixes
-  // This is a common pattern in financial applications for displaying large numbers
-  // Example: 1,500,000 becomes "1.5M", 2,500 becomes "2.5K"
-  const formatVolume = (value: number) => {
-    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;  // Millions
-    if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;        // Thousands
-    return value.toString();                                           // Less than 1000, show as-is
-  };
-
-  /**
-   * CHART RENDERING FUNCTIONS
-   * 
-   * These functions demonstrate several important React patterns:
-   * 1. COMPONENT COMPOSITION: Building complex UIs from smaller, reusable pieces
-   * 2. DECLARATIVE RENDERING: Describing what the UI should look like, not how to build it
-   * 3. PROPS CONFIGURATION: Using props to customize component behavior
-   * 4. RESPONSIVE DESIGN: Charts automatically adapt to container size
-   */
-
-  /**
-   * PRICE CHART: Shows stock price movement with moving averages
-   * 
-   * Uses ComposedChart to combine multiple chart types:
-   * - Area charts for high/low ranges
-   * - Line charts for closing prices and moving averages
-   * 
-   * Key Financial Concepts:
-   * - OHLC Data: Open, High, Low, Close prices for each time period
-   * - Moving Averages: Trend-following indicators that smooth price action
-   * - Support/Resistance: High/low areas where price tends to bounce
-   * 
-   * IMPORTANT SYNTAX NOTE: 
-   * This function returns JSX, so we use JavaScript comments (//) outside JSX elements
-   * and JSX comments ({/* */}) inside JSX elements. The comment below demonstrates
-   * the correct syntax for commenting outside of JSX.
-   */
+  // Price Chart: Shows stock price movement with moving averages
   const renderPriceChart = () => (
     // RESPONSIVE CONTAINER: Makes chart automatically resize with its container
     // This is a JavaScript comment because we're outside JSX elements here.
@@ -620,22 +466,23 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     </ResponsiveContainer>
   );
 
-  /**
-   * CHART CONFIGURATION: Array of available chart types
-   * 
-   * This demonstrates the "configuration-driven UI" pattern:
-   * - Each chart type is defined as an object with id, label, and component
-   * - Makes it easy to add/remove chart types without changing the UI logic
-   * - Separates data (chart definitions) from presentation (tab rendering)
-   * - Component references allow dynamic rendering based on user selection
-   */
-  const chartTabs = [
-    { id: 'price', label: 'Price & MA', component: renderPriceChart },      // Main price chart with moving averages
-    { id: 'volume', label: 'Volume', component: renderVolumeChart },        // Volume analysis with price overlay
-    { id: 'rsi', label: 'RSI', component: renderRSIChart },                // RSI momentum oscillator
-    { id: 'macd', label: 'MACD', component: renderMACDChart },             // MACD trend-following indicator
-    { id: 'bollinger', label: 'Bollinger Bands', component: renderBollingerChart }, // Bollinger Bands volatility indicator
-  ];
+  // Render the active chart based on selected type
+  const renderActiveChart = () => {
+    switch (activeChart) {
+      case 'price':
+        return renderPriceChart();
+      case 'volume':
+        return renderVolumeChart();
+      case 'rsi':
+        return renderRSIChart();
+      case 'macd':
+        return renderMACDChart();
+      case 'bollinger':
+        return renderBollingerChart();
+      default:
+        return renderPriceChart();
+    }
+  };
 
   /**
    * MAIN COMPONENT RENDER
@@ -660,65 +507,26 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
         </div>
       </div>
 
-      {/* 
-        TAB NAVIGATION SYSTEM
-        
-        React Patterns Demonstrated:
-        1. ARRAY.MAP(): Render multiple similar elements from data
-        2. KEY PROP: React needs unique keys for efficient re-rendering
-        3. EVENT HANDLERS: onClick functions to handle user interaction
-        4. CONDITIONAL STYLING: Different styles based on active state
-        5. TYPE ASSERTION: 'as ChartType' ensures type safety
-        
-        UX Patterns:
-        - Visual feedback for active tab (different colors/shadow)
-        - Hover states for better interactivity
-        - Consistent spacing and typography
-        
-        STATE MANAGEMENT PATTERN:
-        This demonstrates the "controlled component" pattern where:
-        - Component state (activeChart) controls which tab is active
-        - User interactions (clicks) update the state via setActiveChart
-        - State changes trigger re-renders with updated UI
-        - This creates a predictable, unidirectional data flow
-      */}
+      {/* Tab navigation for chart type selection */}
       <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
         {chartTabs.map((tab) => (
           <button
-            key={tab.id}                    // Unique key for React's reconciliation algorithm
-            onClick={() => setActiveChart(tab.id as ChartType)}  // Arrow function to update state
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeChart === tab.id
-                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'  // Active tab styles
-                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white' // Inactive tab styles
-              }`}
+            key={tab.id}
+            onClick={() => setActiveChart(tab.id)}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeChart === tab.id
+                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+            }`}
           >
-            {tab.label}                     // Display the human-readable label
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* 
-        DYNAMIC CHART RENDERING
-        
-        Advanced React Pattern: Dynamic Component Rendering
-        - ARRAY.FIND(): Locate the chart configuration for the active tab
-        - OPTIONAL CHAINING (?.): Safely call component function if found
-        - FUNCTION INVOCATION: component() calls the render function
-        - FIXED HEIGHT: Ensures consistent layout regardless of chart type
-        
-        This pattern allows us to render different chart types without
-        a large switch statement or multiple conditional renders.
-        
-        ALTERNATIVE APPROACHES:
-        1. Switch statement: switch(activeChart) { case 'price': return renderPriceChart(); ... }
-        2. Object lookup: const charts = { price: renderPriceChart, ... }; charts[activeChart]()
-        3. Conditional rendering: {activeChart === 'price' && renderPriceChart()}
-        
-        The current approach is more scalable because adding new chart types
-        only requires updating the chartTabs array, not the rendering logic.
-      */}
+      {/* Dynamic chart rendering based on active selection */}
       <div className="h-[400px]">
-        {chartTabs.find(tab => tab.id === activeChart)?.component()}
+        {renderActiveChart()}
       </div>
 
       {/* 
@@ -747,47 +555,3 @@ export default function StockChart({ symbol, priceData, analysis }: StockChartPr
     </div>
   );
 }
-
-/**
- * EDUCATIONAL SUMMARY: Key Concepts Demonstrated in StockChart Component
- * 
- * This component serves as an excellent example of several important programming concepts:
- * 
- * 1. REACT PATTERNS:
- *    - Functional components with hooks (useState)
- *    - Props interface design and TypeScript integration
- *    - Conditional rendering and dynamic styling
- *    - Event handling and state management
- *    - Component composition and reusability
- * 
- * 2. DATA VISUALIZATION:
- *    - Chart library integration (Recharts)
- *    - Data transformation for visualization
- *    - Multiple chart types and responsive design
- *    - Interactive elements (tooltips, legends)
- *    - Color coding and visual hierarchy
- * 
- * 3. FINANCIAL CONCEPTS:
- *    - OHLCV data structure (Open, High, Low, Close, Volume)
- *    - Technical indicators (RSI, MACD, Bollinger Bands, Moving Averages)
- *    - Chart reading and interpretation
- *    - Trading signals and market analysis
- * 
- * 4. USER EXPERIENCE:
- *    - Tab-based navigation for different chart types
- *    - Context-sensitive help text
- *    - Responsive design for different screen sizes
- *    - Dark mode support
- *    - Consistent visual design language
- * 
- * 5. SOFTWARE ENGINEERING:
- *    - Separation of concerns (data, presentation, logic)
- *    - Configuration-driven UI design
- *    - Pure functions for data formatting
- *    - Type safety with TypeScript
- *    - Maintainable and extensible code structure
- * 
- * This component demonstrates how to build complex, interactive data visualizations
- * while maintaining clean, readable, and maintainable code. It's an excellent
- * example of combining financial domain knowledge with modern web development practices.
- */

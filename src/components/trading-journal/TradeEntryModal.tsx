@@ -9,23 +9,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { TradeSide, CreateTradeRequest } from '@/types/models';
-
-export interface TradeEntryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: Omit<CreateTradeRequest, 'userId'>) => Promise<void>;
-  prefillSymbol?: string;
-  prefillPredictionId?: string;
-}
-
-interface FormErrors {
-  symbol?: string;
-  side?: string;
-  entryPrice?: string;
-  quantity?: string;
-  fees?: string;
-}
+import { TradeSide } from '@/types/models';
+import { TradeEntryModalProps, TradeFormErrors } from '@/types';
 
 export function TradeEntryModal({
   isOpen,
@@ -40,7 +25,7 @@ export function TradeEntryModal({
   const [quantity, setQuantity] = useState('');
   const [fees, setFees] = useState('');
   const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<TradeFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -59,7 +44,7 @@ export function TradeEntryModal({
   }, [isOpen, prefillSymbol]);
 
   const validateForm = useCallback((): boolean => {
-    const newErrors: FormErrors = {};
+    const newErrors: TradeFormErrors = {};
 
     // Symbol validation
     if (!symbol.trim()) {

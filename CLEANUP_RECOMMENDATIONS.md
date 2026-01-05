@@ -250,9 +250,15 @@ src/
 1. ✅ Fix MarketIndicesSidebar null safety issue (formatChangePercent, formatPrice, formatChange)
 2. ✅ Add ESLint ignore for `.next/` build output
 3. ✅ Update AdvancedStockChart test mock data to use recent dates
-4. ⏳ Fix remaining AdvancedStockChart tests (30 failing - stale test expectations)
-5. ⏳ Centralize remaining interface definitions from components to `src/types/`
-6. ⏳ Review large components for hook extraction (StockChart 792L, MarketIndexAnalysis 548L)
+4. ✅ Centralize interface definitions from components to `src/types/components.ts`
+   - Created `src/types/components.ts` with 60+ centralized interfaces
+   - Updated 15+ component files to import from `@/types`
+   - Includes component props, hook return types, chart types, and internal types
+5. ✅ Extract hooks from large components for cleaner separation of concerns
+   - `StockChart.tsx`: 792 → 556 lines (created `useStockChartData` hook)
+   - `MarketIndexAnalysis.tsx`: 548 → 242 lines (created `useMarketIndexAnalysis` hook)
+   - Hooks handle data fetching, transformation, and formatting utilities
+6. ⏳ Fix remaining AdvancedStockChart tests (30 failing - stale test expectations)
 
 ### Phase 4: Future Improvements (Optional)
 1. Add FMP provider unit tests
@@ -274,6 +280,8 @@ src/
 | Fix null safety issues | Low | 15 min | ✅ Done |
 | ESLint ignore .next | Low | 5 min | ✅ Done |
 | Fix stale test dates | Medium | 30 min | ✅ Done |
+| Centralize component interfaces | Medium | 1 hr | ✅ Done |
+| Extract hooks from large components | Medium | 1 hr | ✅ Done |
 | Fix remaining test failures | Medium | 2 hrs | ⏳ In Progress |
 
 ---

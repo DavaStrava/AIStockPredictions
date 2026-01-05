@@ -2,10 +2,7 @@
 
 import { useState } from 'react';
 import { getAllTerms, getTermsByCategory, searchTerms, TERM_CATEGORIES, TermDefinition } from '@/lib/knowledge/definitions';
-
-interface TermsGlossaryProps {
-  className?: string;
-}
+import { TermsGlossaryProps } from '@/types';
 
 export default function TermsGlossary({ className = '' }: TermsGlossaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);

@@ -2,36 +2,10 @@
 
 import React from 'react';
 import { useContentSizeHints, useResponsiveTransition } from '@/hooks/useLayoutShiftPrevention';
+import { ResponsiveGridConfig, ResponsiveGridProps } from '@/types';
 
-/**
- * Configuration interface for responsive grid behavior
- */
-export interface ResponsiveGridConfig {
-  /** Minimum width for grid items before wrapping */
-  minItemWidth?: string;
-  /** Gap spacing between grid items */
-  gap?: 'gap-2' | 'gap-4' | 'gap-6' | 'gap-8';
-  /** Custom CSS classes to apply */
-  className?: string;
-  /** Column configuration for different breakpoints */
-  columns?: {
-    mobile?: number;    // < 768px
-    tablet?: number;    // 768px - 1024px  
-    desktop?: number;   // 1024px - 1440px
-    large?: number;     // > 1440px
-  };
-}
-
-/**
- * Props for the ResponsiveGrid component
- */
-export interface ResponsiveGridProps extends ResponsiveGridConfig {
-  children: React.ReactNode;
-  /** Enable layout shift prevention during responsive transitions */
-  preventLayoutShift?: boolean;
-  /** Provide minimum height for grid items to prevent layout shift */
-  itemMinHeight?: string;
-}
+// Re-export types for consumers who import directly from this file
+export type { ResponsiveGridConfig, ResponsiveGridProps };
 
 /**
  * ResponsiveGrid component that provides a responsive grid layout
