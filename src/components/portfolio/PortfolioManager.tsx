@@ -31,6 +31,7 @@ import { HoldingsDataGrid } from './HoldingsDataGrid';
 import { TransactionModal } from './TransactionModal';
 import { PortfolioTreeMap } from './PortfolioTreeMap';
 import { PerformanceChart } from './PerformanceChart';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { PortfolioTransactionType } from '@/types/portfolio';
 
 type TabId = 'holdings' | 'transactions' | 'allocation' | 'performance';
@@ -97,6 +98,11 @@ export function PortfolioManager() {
   const [newPortfolioName, setNewPortfolioName] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [portfolioToDelete, setPortfolioToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleCreatePortfolio = async () => {
     if (!newPortfolioName.trim()) return;
 
@@ -109,16 +115,30 @@ export function PortfolioManager() {
     }
   };
 
-  const handleDeletePortfolio = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this portfolio? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeletePortfolioClick = (id: string) => {
+    setPortfolioToDelete(id);
+    setShowDeleteModal(true);
+    setShowPortfolioDropdown(false);
+  };
 
+  const handleDeletePortfolioConfirm = async () => {
+    if (!portfolioToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await deletePortfolio(id);
+      await deletePortfolio(portfolioToDelete);
+      setShowDeleteModal(false);
+      setPortfolioToDelete(null);
     } catch (err) {
       console.error('Failed to delete portfolio:', err);
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    setShowDeleteModal(false);
+    setPortfolioToDelete(null);
   };
 
   const handleRefresh = async () => {
@@ -182,7 +202,7 @@ export function PortfolioManager() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeletePortfolio(portfolio.id);
+                              handleDeletePortfolioClick(portfolio.id);
                             }}
                             className="p-1.5 hover:bg-rose-600/20 rounded-lg transition-colors"
                           >
@@ -432,6 +452,19 @@ export function PortfolioManager() {
           onClose={() => setShowTransactionModal(false)}
           onSubmit={addTransaction}
           defaultType={transactionType}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={handleDeleteModalClose}
+          onConfirm={handleDeletePortfolioConfirm}
+          title="Delete Portfolio"
+          message="Are you sure you want to delete this portfolio? This action cannot be undone and all associated holdings and transactions will be permanently removed."
+          confirmText="Delete Portfolio"
+          cancelText="Cancel"
+          variant="danger"
+          isLoading={isDeleting}
         />
       </div>
 

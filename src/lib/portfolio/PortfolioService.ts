@@ -395,6 +395,7 @@ export class PortfolioService {
 
   /**
    * Gets holdings with real-time market data merged.
+   * Includes price status indicator to show when price data is unavailable.
    */
   async getHoldingsWithMarketData(portfolioId: string): Promise<HoldingWithMarketData[]> {
     const holdings = await this.getHoldings(portfolioId);
@@ -406,11 +407,13 @@ export class PortfolioService {
     // Fetch real-time quotes for all holdings
     const symbols = holdings.map((h) => h.symbol);
     let quotes: FMPQuote[] = [];
+    let fetchError: Error | null = null;
 
     try {
       quotes = await this.fmpProvider.getMultipleQuotes(symbols);
     } catch (error) {
       console.error('Failed to fetch market data for holdings:', error);
+      fetchError = error instanceof Error ? error : new Error('Unknown error');
     }
 
     const quoteMap = new Map(quotes.map((q) => [q.symbol, q]));
@@ -421,9 +424,25 @@ export class PortfolioService {
 
     for (const holding of holdings) {
       const quote = quoteMap.get(holding.symbol);
-      const currentPrice = quote?.price ?? 0;
+      const hasQuoteData = quote !== undefined && quote.price > 0;
+      const currentPrice = hasQuoteData ? quote.price : 0;
       const marketValue = holding.quantity * currentPrice;
       totalMarketValue += marketValue;
+
+      // Determine price status and message
+      let priceStatus: 'live' | 'unavailable';
+      let priceStatusMessage: string | undefined;
+
+      if (hasQuoteData) {
+        priceStatus = 'live';
+      } else {
+        priceStatus = 'unavailable';
+        if (fetchError) {
+          priceStatusMessage = 'Market data temporarily unavailable';
+        } else {
+          priceStatusMessage = `No market data for ${holding.symbol}`;
+        }
+      }
 
       enrichedHoldings.push({
         ...holding,
@@ -440,6 +459,8 @@ export class PortfolioService {
             : 0,
         previousClose: quote?.previousClose ?? currentPrice,
         companyName: quote?.name,
+        priceStatus,
+        priceStatusMessage,
       });
     }
 

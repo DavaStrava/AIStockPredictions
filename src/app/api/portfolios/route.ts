@@ -3,11 +3,24 @@ import { getDatabase } from '@/lib/database/connection';
 import { getFMPProvider } from '@/lib/data-providers/fmp';
 import { PortfolioService, PortfolioValidationError } from '@/lib/portfolio/PortfolioService';
 import { getDemoUserId } from '@/lib/auth/demo-user';
+import {
+  createErrorResponse,
+  checkRateLimit,
+  createRateLimitResponse,
+  getClientIdentifier,
+} from '@/lib/api/utils';
 
 /**
  * GET /api/portfolios - List all portfolios for the authenticated user
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`portfolios:get:${clientId}`);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn);
+  }
+
   try {
     const db = getDatabase();
     const fmpProvider = getFMPProvider();
@@ -26,15 +39,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Portfolios GET error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch portfolios',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, 'Failed to fetch portfolios', 500);
   }
 }
 
@@ -48,6 +53,16 @@ export async function GET() {
  * - isDefault: Set as default portfolio (optional)
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting (stricter for write operations)
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`portfolios:post:${clientId}`, {
+    maxRequests: 20,
+    windowMs: 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn);
+  }
+
   try {
     const body = await request.json();
     const { name, description, currency, isDefault } = body;
@@ -71,8 +86,6 @@ export async function POST(request: NextRequest) {
       data: portfolio,
     });
   } catch (error) {
-    console.error('Portfolios POST error:', error);
-
     if (error instanceof PortfolioValidationError) {
       return NextResponse.json(
         {
@@ -85,18 +98,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create portfolio',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, 'Failed to create portfolio', 500);
   }
 }
-
-
-
-
-

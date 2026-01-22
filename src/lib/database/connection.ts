@@ -41,8 +41,13 @@ interface ConnectionConfig {
   username?: string;
   /** Database password */
   password?: string;
-  /** Enable SSL/TLS encryption (default: true) */
+  /** Enable SSL/TLS encryption (default: true for non-localhost) */
   ssl?: boolean;
+  /**
+   * Verify SSL certificates (default: true in production, false for cloud providers like Supabase).
+   * Set DB_SSL_REJECT_UNAUTHORIZED=false for cloud providers that use self-signed certificates.
+   */
+  sslRejectUnauthorized?: boolean;
   /** Maximum concurrent connections (default: 10) */
   maxConnections?: number;
   /** Idle connection timeout in ms (default: 30000) */
@@ -68,12 +73,22 @@ class DatabaseConnection {
     // Auto-detect local development: disable SSL for localhost connections
     const isLocalhost = (config.host || process.env.DB_HOST || 'localhost') === 'localhost';
     const defaultSsl = config.ssl !== undefined ? config.ssl : !isLocalhost;
-    
+
+    // SSL certificate verification:
+    // - Default to true (secure) in production
+    // - Can be disabled via env var for cloud providers with self-signed certs (e.g., Supabase)
+    // - Explicitly check for 'false' string since env vars are strings
+    const envSslRejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED;
+    const defaultSslRejectUnauthorized = envSslRejectUnauthorized !== undefined
+      ? envSslRejectUnauthorized !== 'false'
+      : true; // Default to secure (verify certificates)
+
     this.config = {
       maxConnections: 10,
       idleTimeoutMs: 30000,
       connectionTimeoutMs: 10000,
       ssl: defaultSsl,
+      sslRejectUnauthorized: config.sslRejectUnauthorized ?? defaultSslRejectUnauthorized,
       ...config,
     };
 
@@ -129,6 +144,13 @@ class DatabaseConnection {
     
     let poolConfig: PoolConfig;
 
+    // Build SSL configuration based on settings
+    // rejectUnauthorized: true (default) validates server certificates for MITM protection
+    // Set DB_SSL_REJECT_UNAUTHORIZED=false for cloud providers with self-signed certs
+    const sslConfig = this.config.ssl
+      ? { rejectUnauthorized: this.config.sslRejectUnauthorized ?? true }
+      : false;
+
     if (connectionString) {
       // Use connection string for cloud deployments
       poolConfig = {
@@ -136,7 +158,7 @@ class DatabaseConnection {
         max: this.config.maxConnections,
         idleTimeoutMillis: this.config.idleTimeoutMs,
         connectionTimeoutMillis: this.config.connectionTimeoutMs,
-        ssl: { rejectUnauthorized: false },
+        ssl: sslConfig,
       };
     } else if (this.config.secretArn) {
       // Use AWS Secrets Manager
@@ -150,7 +172,7 @@ class DatabaseConnection {
         max: this.config.maxConnections,
         idleTimeoutMillis: this.config.idleTimeoutMs,
         connectionTimeoutMillis: this.config.connectionTimeoutMs,
-        ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
+        ssl: sslConfig,
       };
     } else {
       // Use individual credentials for local development
@@ -161,7 +183,7 @@ class DatabaseConnection {
         port: this.config.port || parseInt(process.env.DB_PORT || '5432'),
         dbname: this.config.database || process.env.DB_NAME || 'ai_stock_prediction',
       };
-      
+
       poolConfig = {
         user: credentials.username,
         password: credentials.password,
@@ -171,7 +193,7 @@ class DatabaseConnection {
         max: this.config.maxConnections,
         idleTimeoutMillis: this.config.idleTimeoutMs,
         connectionTimeoutMillis: this.config.connectionTimeoutMs,
-        ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
+        ssl: sslConfig,
       };
     }
 

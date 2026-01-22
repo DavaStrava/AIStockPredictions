@@ -45,7 +45,6 @@ import { inferMarketContext } from '@/lib/technical-analysis/explanations';
   while still providing appropriate feedback during longer operations.
 */
 export default function StockDashboard() {
-  console.log('StockDashboard - Component loaded');
 
   // Trade entry modal state
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);

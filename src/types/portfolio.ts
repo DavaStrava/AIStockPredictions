@@ -66,6 +66,13 @@ export interface PortfolioHolding {
 }
 
 /**
+ * Price data status indicator.
+ * - 'live': Real-time price data successfully fetched
+ * - 'unavailable': Price data could not be fetched (API error or symbol not found)
+ */
+export type PriceStatus = 'live' | 'unavailable';
+
+/**
  * Holding with real-time market data merged.
  */
 export interface HoldingWithMarketData extends PortfolioHolding {
@@ -80,6 +87,10 @@ export interface HoldingWithMarketData extends PortfolioHolding {
   previousClose: number;
   companyName?: string;
   sparklineData?: number[]; // 7-day price history
+  /** Indicates the status of the price data for this holding */
+  priceStatus: PriceStatus;
+  /** Human-readable message if price data is unavailable */
+  priceStatusMessage?: string;
 }
 
 /**

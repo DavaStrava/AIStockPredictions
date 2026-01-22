@@ -1,8 +1,13 @@
 /**
  * User Authentication Utility
- * 
+ *
  * Provides user ID resolution for API routes.
  * Uses Supabase auth in production, falls back to demo user in development.
+ *
+ * SECURITY: Demo mode is only enabled when:
+ * - NODE_ENV is 'development' OR
+ * - ALLOW_DEMO_MODE is explicitly set to 'true'
+ * This prevents accidental demo mode in production if Supabase vars are missing.
  */
 
 import { getDatabase } from '@/lib/database/connection';
@@ -18,11 +23,34 @@ interface UserRow {
 /** Cached demo user ID to avoid repeated database calls */
 let cachedDemoUserId: string | null = null;
 
+/** Track if we've already logged the demo mode warning */
+let demoModeWarningLogged = false;
+
+/**
+ * Checks if demo mode is allowed based on environment.
+ * Demo mode is only allowed in development or when explicitly enabled.
+ */
+function isDemoModeAllowed(): boolean {
+  // Demo mode is allowed in development
+  if (process.env.NODE_ENV === 'development') {
+    return true;
+  }
+
+  // Demo mode can be explicitly enabled via env var (for testing/staging)
+  if (process.env.ALLOW_DEMO_MODE === 'true') {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Gets the user ID from the authenticated session or creates/gets a demo user.
  * In production (with Supabase), returns the authenticated user's ID.
  * In development (without Supabase config), falls back to demo user.
- * 
+ *
+ * SECURITY: Demo mode is blocked in production unless explicitly enabled.
+ *
  * @returns The user's ID
  * @throws Error if authentication is required but not present
  */
@@ -42,6 +70,25 @@ export async function getDemoUserId(): Promise<string> {
     }
     // If Supabase is configured but no user, throw error
     throw new Error('Authentication required');
+  }
+
+  // SECURITY: Block demo mode in production unless explicitly allowed
+  if (!isDemoModeAllowed()) {
+    console.error(
+      'SECURITY ERROR: Demo mode blocked in production. ' +
+      'Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for authentication, ' +
+      'or set ALLOW_DEMO_MODE=true if this is intentional (not recommended for production).'
+    );
+    throw new Error('Authentication service not configured');
+  }
+
+  // Log warning once when demo mode is used
+  if (!demoModeWarningLogged) {
+    console.warn(
+      'WARNING: Running in demo mode with shared demo user. ' +
+      'This should only be used for local development.'
+    );
+    demoModeWarningLogged = true;
   }
 
   // Development mode: use demo user

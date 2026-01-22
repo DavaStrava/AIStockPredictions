@@ -4,6 +4,12 @@ import { getFMPProvider } from '@/lib/data-providers/fmp';
 import { TradeService, TradeValidationError } from '@/lib/portfolio/TradeService';
 import { TradeFilters, TradeStatus } from '@/types/models';
 import { getDemoUserId } from '@/lib/auth/demo-user';
+import {
+  createErrorResponse,
+  checkRateLimit,
+  createRateLimitResponse,
+  getClientIdentifier,
+} from '@/lib/api/utils';
 
 /**
  * GET /api/trades - Fetch all trades for the authenticated user
@@ -17,6 +23,13 @@ import { getDemoUserId } from '@/lib/auth/demo-user';
  * Requirements: 10.1
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`trades:get:${clientId}`);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn);
+  }
+
   try {
     const db = getDatabase();
     const fmpProvider = getFMPProvider();
@@ -83,15 +96,7 @@ export async function GET(request: NextRequest) {
       data: trades,
     });
   } catch (error) {
-    console.error('Trades GET error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch trades',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, 'Failed to fetch trades', 500);
   }
 }
 
@@ -110,6 +115,16 @@ export async function GET(request: NextRequest) {
  * Requirements: 10.2, 10.5
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting (stricter for write operations)
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`trades:post:${clientId}`, {
+    maxRequests: 30,
+    windowMs: 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn);
+  }
+
   try {
     const body = await request.json();
     const { symbol, side, entryPrice, quantity, fees, notes, predictionId } = body;
@@ -136,8 +151,6 @@ export async function POST(request: NextRequest) {
       data: trade,
     });
   } catch (error) {
-    console.error('Trades POST error:', error);
-
     // Handle validation errors with 400 status
     if (error instanceof TradeValidationError) {
       return NextResponse.json(
@@ -151,13 +164,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create trade',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, 'Failed to create trade', 500);
   }
 }

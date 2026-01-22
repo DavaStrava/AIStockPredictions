@@ -75,9 +75,7 @@ export function useStockAnalysis(): UseStockAnalysisReturn {
    * @param indexSymbol - Technical symbol of the market index (e.g., "^GSPC")
    */
   const handleIndexClick = useCallback((indexSymbol: string) => {
-    console.log('useStockAnalysis - Index clicked:', indexSymbol);
     setSelectedIndex(indexSymbol);
-    console.log('useStockAnalysis - selectedIndex set to:', indexSymbol);
   }, []);
 
   /**
