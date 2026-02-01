@@ -1,0 +1,375 @@
+# Documentation Sync Checklist
+
+**Last Updated:** 2026-01-31
+**Purpose:** Ensure all documentation reflects recent code changes and architecture improvements
+
+## ✅ Recently Created/Updated Documentation
+
+- ✅ `docs/API_MIDDLEWARE_GUIDE.md` - Complete API middleware reference
+- ✅ `docs/MIDDLEWARE_REFACTORING_SUMMARY.md` - Impact analysis and metrics
+- ✅ `docs/MIGRATION_EXAMPLE.md` - Step-by-step migration guide
+- ✅ `README_MIDDLEWARE.md` - Quick start for middleware
+- ✅ `REFACTORING_PLAN.md` - Comprehensive refactoring roadmap
+- ✅ `DOC_SYNC_CHECKLIST.md` - This file
+
+## 📋 Documentation That Needs Updates
+
+### High Priority
+
+#### 1. `README.md` ⚠️ NEEDS UPDATE
+
+**Current State:** Last updated before middleware implementation
+
+**Required Updates:**
+- [ ] Add middleware system to Tech Stack section
+  ```markdown
+  - **API Middleware**: Zod validation, rate limiting, error handling
+  - **Validation**: Zod schemas for type-safe request validation
+  ```
+
+- [ ] Update "Features" section to mention API improvements
+  ```markdown
+  - **Type-Safe API**: Zod-validated requests with automatic TypeScript types
+  - **Rate Limiting**: Built-in protection against API abuse
+  - **Structured Errors**: Consistent error responses across all endpoints
+  ```
+
+- [ ] Add link to middleware documentation in Getting Started
+  ```markdown
+  ## API Development
+
+  For API development and middleware usage, see:
+  - [API Middleware Guide](docs/API_MIDDLEWARE_GUIDE.md)
+  - [Migration Example](docs/MIGRATION_EXAMPLE.md)
+  ```
+
+- [ ] Update dependencies list to include Zod
+  ```markdown
+  - **Validation**: Zod for schema-based validation
+  ```
+
+**Location to Update:** Lines 22-28 (Tech Stack)
+
+**Priority:** HIGH
+
+---
+
+#### 2. `SYSTEM_DESIGN.md` ⚠️ NEEDS UPDATE
+
+**Current State:** Shows old API architecture without middleware
+
+**Required Updates:**
+
+- [ ] Add middleware layer to architecture diagram
+  ```
+  ┌─────────────────────────────────────────────────────────────┐
+  │                       API LAYER                              │
+  │  ┌────────────────────────────────────────────────────┐     │
+  │  │           API Middleware (NEW)                      │     │
+  │  │  • Error Handling                                   │     │
+  │  │  • Request Validation (Zod)                         │     │
+  │  │  • Rate Limiting                                    │     │
+  │  │  • Request Logging                                  │     │
+  │  └────────────────────────────────────────────────────┘     │
+  │  ┌────────────────────────────────────────────────────┐     │
+  │  │           Next.js API Routes                        │     │
+  │  │  /api/predictions  /api/analysis  /api/trades      │     │
+  │  └────────────────────────────────────────────────────┘     │
+  └─────────────────────────────────────────────────────────────┘
+  ```
+
+- [ ] Add new section: "2.8 API Middleware Architecture"
+  ```markdown
+  ### 2.8 API Middleware Architecture
+
+  The API layer uses a composable middleware pattern for cross-cutting concerns:
+
+  **Middleware Stack:**
+  1. Error Handling - Catches and formats all errors consistently
+  2. Logging - Structured logging with request tracing
+  3. Rate Limiting - Per-IP rate limits to prevent abuse
+  4. Validation - Zod-based request validation with type safety
+
+  **Benefits:**
+  - Reduced code duplication (70% less boilerplate)
+  - Consistent error responses
+  - Type-safe validation
+  - Easy to add global features
+
+  **Documentation:** See [API Middleware Guide](docs/API_MIDDLEWARE_GUIDE.md)
+  ```
+
+- [ ] Update "Technology Stack" table to include Zod
+
+- [ ] Update file counts and metrics
+  - StockDashboard: 1093 → 651 lines
+  - Add validation schemas file
+  - Add middleware file
+
+**Location to Update:** Lines 1-100+ (Architecture sections)
+
+**Priority:** HIGH
+
+---
+
+#### 3. `.env.local.example` ⚠️ NEEDS UPDATE
+
+**Current State:** May not include all new environment variables
+
+**Required Updates:**
+- [ ] Add comment about rate limiting (future Redis URL)
+  ```bash
+  # API Rate Limiting (optional, uses in-memory by default)
+  # REDIS_URL=redis://localhost:6379
+  # UPSTASH_REDIS_REST_URL=https://...
+  # UPSTASH_REDIS_REST_TOKEN=...
+  ```
+
+**Priority:** MEDIUM
+
+---
+
+### Medium Priority
+
+#### 4. `package.json` ✅ ALREADY UPDATED
+
+**Current State:** Zod added
+
+**Verification:**
+- [x] Zod listed in dependencies
+- [x] Version specified
+
+**Priority:** COMPLETE
+
+---
+
+#### 5. Create API Endpoint Documentation 💡 RECOMMENDED
+
+**Current State:** No centralized API endpoint documentation
+
+**Proposed:** Create `docs/API_ENDPOINTS.md`
+
+**Contents:**
+```markdown
+# API Endpoints Reference
+
+## Authentication
+All endpoints currently use demo user authentication.
+
+## Rate Limits
+- GET endpoints: 120 requests/minute
+- POST/PATCH endpoints: 30 requests/minute
+
+## Trades API
+
+### POST /api/trades
+Create a new trade entry.
+
+**Request Body:**
+```json
+{
+  "symbol": "AAPL",
+  "side": "LONG",
+  "entryPrice": 150.00,
+  "quantity": 10,
+  "fees": 5.00,
+  "notes": "Optional notes"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "symbol": "AAPL",
+    ...
+  }
+}
+```
+
+... (continue for all endpoints)
+```
+
+**Priority:** MEDIUM (nice to have)
+
+---
+
+#### 6. Code Comments - JSDoc ℹ️ ONGOING
+
+**Current State:** Some JSDoc, could be more comprehensive
+
+**Required Updates:**
+- [ ] Add JSDoc to all new middleware functions
+- [ ] Add JSDoc to all validation schemas
+- [ ] Add JSDoc to API route handlers
+
+**Example:**
+```typescript
+/**
+ * Validates request data against a Zod schema
+ *
+ * @param schema - Zod schema to validate against
+ * @param source - Where to extract data from ('body', 'query', 'params')
+ * @returns Middleware function that validates and passes data to handler
+ *
+ * @example
+ * ```typescript
+ * export const POST = withMiddleware(
+ *   withValidation(CreateTradeSchema, 'body'),
+ *   async (req, { validatedData }) => {
+ *     // validatedData is typed and validated
+ *   }
+ * );
+ * ```
+ */
+```
+
+**Priority:** MEDIUM (ongoing improvement)
+
+---
+
+### Low Priority
+
+#### 7. `tsconfig.json` ✅ NO UPDATE NEEDED
+
+**Current State:** Already configured correctly
+
+**Priority:** COMPLETE
+
+---
+
+#### 8. `next.config.ts` ℹ️ FUTURE UPDATE
+
+**Current State:** Basic configuration
+
+**Future Updates (when implementing Phase 4.1):**
+- [ ] Add webpack config for code splitting
+- [ ] Configure chunk optimization
+
+**Priority:** LOW (blocked until Phase 4.1)
+
+---
+
+## 🔄 Documentation Flow
+
+```
+Code Changes
+     ↓
+Update Implementation Docs
+  (API_MIDDLEWARE_GUIDE.md)
+     ↓
+Update Architecture Docs
+  (SYSTEM_DESIGN.md)
+     ↓
+Update Getting Started
+     (README.md)
+     ↓
+Update Reference Docs
+  (API_ENDPOINTS.md)
+```
+
+## 📊 Documentation Coverage Matrix
+
+| Document | Purpose | Status | Last Updated | Needs Update |
+|----------|---------|--------|--------------|--------------|
+| `README.md` | Getting started | ⚠️ Outdated | Pre-middleware | YES |
+| `SYSTEM_DESIGN.md` | Architecture | ⚠️ Outdated | Pre-middleware | YES |
+| `API_MIDDLEWARE_GUIDE.md` | Middleware usage | ✅ Current | 2026-01-31 | NO |
+| `MIDDLEWARE_REFACTORING_SUMMARY.md` | Impact analysis | ✅ Current | 2026-01-31 | NO |
+| `MIGRATION_EXAMPLE.md` | Migration guide | ✅ Current | 2026-01-31 | NO |
+| `REFACTORING_PLAN.md` | Roadmap | ✅ Current | 2026-01-31 | NO |
+| `.env.local.example` | Environment vars | ⚠️ Incomplete | Unknown | YES |
+| `API_ENDPOINTS.md` | API reference | ❌ Missing | N/A | CREATE |
+
+## ✅ Completion Checklist
+
+### Immediate (Do in next session)
+- [ ] Update `README.md` Tech Stack section
+- [ ] Update `README.md` Features section
+- [ ] Add middleware link to `README.md`
+- [ ] Update `SYSTEM_DESIGN.md` architecture diagram
+- [ ] Add middleware section to `SYSTEM_DESIGN.md`
+- [ ] Update `.env.local.example` with Redis options
+
+### Short-term (Do within a week)
+- [ ] Create `docs/API_ENDPOINTS.md`
+- [ ] Add comprehensive JSDoc to middleware
+- [ ] Add JSDoc to validation schemas
+- [ ] Update component documentation (if needed)
+
+### Long-term (Do as features evolve)
+- [ ] Update docs when React Query is added
+- [ ] Update docs when authentication is added
+- [ ] Update docs when Redis rate limiting is added
+- [ ] Keep REFACTORING_PLAN.md updated each session
+
+## 🔍 Verification Steps
+
+After updating documentation:
+
+1. **Read Through Test**
+   - [ ] Can a new developer understand the system from README?
+   - [ ] Is the architecture clear in SYSTEM_DESIGN.md?
+   - [ ] Are code examples accurate and working?
+
+2. **Link Verification**
+   - [ ] All internal links work
+   - [ ] All file paths are correct
+   - [ ] All code examples compile
+
+3. **Consistency Check**
+   - [ ] Tech stack matches package.json
+   - [ ] File paths match actual structure
+   - [ ] Version numbers are current
+   - [ ] Code examples match actual code
+
+4. **Completeness Check**
+   - [ ] All new features documented
+   - [ ] All breaking changes noted
+   - [ ] Migration guides provided
+   - [ ] Examples cover common use cases
+
+## 📝 Quick Update Template
+
+When making future code changes, use this template:
+
+```markdown
+## Documentation Updates Needed
+
+**Code Changes:**
+- [x] Implemented feature X
+
+**Documentation Changes:**
+- [ ] Update README.md: Add feature X to features list
+- [ ] Update SYSTEM_DESIGN.md: Add architecture diagram for X
+- [ ] Create docs/FEATURE_X_GUIDE.md: Usage guide
+- [ ] Update REFACTORING_PLAN.md: Mark task as complete
+
+**Verification:**
+- [ ] All links tested
+- [ ] Code examples run
+- [ ] No broken references
+```
+
+## 🚀 Next Steps
+
+**Immediate Actions:**
+1. Update `README.md` (15 min)
+2. Update `SYSTEM_DESIGN.md` (20 min)
+3. Update `.env.local.example` (5 min)
+
+**Total Time:** ~40 minutes
+
+**When to Sync:**
+- ✅ After major features (like middleware)
+- ✅ After refactoring sessions
+- ✅ Before releasing to others
+- ✅ Monthly review of all docs
+
+---
+
+**Last Sync:** Never (first time running doc-sync)
+**Next Sync:** After updating README, SYSTEM_DESIGN, .env.local.example
+**Sync Frequency:** After each refactoring phase or monthly

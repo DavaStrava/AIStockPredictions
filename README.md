@@ -6,17 +6,20 @@ An AI-powered stock prediction web application that combines technical analysis,
 
 - **Multi-dimensional Analysis**: Technical indicators (RSI, MACD, Bollinger Bands), portfolio theory metrics (beta, alpha, Sharpe ratio), and sentiment analysis
 - **AI-Enhanced Insights**: LLM-powered explanations of technical patterns, market conditions, and strategy recommendations
+- **Type-Safe API**: Zod-validated requests with automatic TypeScript types and consistent error responses
+- **Rate Limiting**: Built-in protection against API abuse with configurable limits per endpoint
 - **Backtesting Engine**: Historical strategy validation with performance metrics and AI-generated analysis
 - **Watchlist Management**: Personal stock tracking with real-time predictions and alerts
 - **Responsive Web Interface**: Mobile-optimized Next.js application with real-time data updates
 
-### Trading Journal & P&L Tracker ✅
+### Trading Journal & P&L Tracker ✅ Complete
 
 - **Trade Logging**: Log paper or real trades with symbol, side (LONG/SHORT), entry price, quantity, and fees
 - **P&L Tracking**: Automatic calculation of realized P&L (closed trades) and unrealized P&L (open positions)
 - **Portfolio Statistics**: Win rate, average win/loss, total P&L, best/worst trade metrics
 - **Trade Management**: View, filter, sort, and close trades through a dedicated interface
 - **Dashboard Integration**: "Log Trade" button on prediction cards for quick trade entry
+- **Full API Integration**: Complete REST API with validation, rate limiting, and error handling
 
 ### Portfolio Investment Tracker ✅ NEW
 
@@ -33,19 +36,21 @@ A comprehensive long-term investment tracking system, distinct from the Trading 
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15.4.6 with React 19, Tailwind CSS v4, TypeScript
+- **Frontend**: Next.js 15.5.9 with React 19, Tailwind CSS v4, TypeScript
 - **Backend**: PostgreSQL with custom connection pooling, AWS Secrets Manager
 - **Authentication**: Supabase Auth with Google/GitHub OAuth
 - **Database**: Supabase PostgreSQL (production) / Local PostgreSQL (development)
+- **API Middleware**: Composable middleware for error handling, validation, rate limiting, logging
+- **Validation**: Zod for type-safe schema validation with automatic TypeScript types
 - **Infrastructure**: AWS CDK v2, Aurora Serverless v2, Lambda, S3
 - **Hosting**: Vercel (production) with auto-deployment from GitHub
 - **Analysis**: Custom TypeScript engine with `technicalindicators` and `simple-statistics`
-- **Testing**: Vitest with UI support
+- **Testing**: Vitest with UI support, property-based testing with fast-check
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL database
 - AWS account (for production deployment)
 
@@ -84,6 +89,13 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## API Development
+
+For API development and middleware usage, see:
+- **[API Middleware Guide](docs/API_MIDDLEWARE_GUIDE.md)** - Complete middleware reference
+- **[Migration Example](docs/MIGRATION_EXAMPLE.md)** - Step-by-step migration guide
+- **[Refactoring Plan](REFACTORING_PLAN.md)** - Comprehensive improvement roadmap
 
 ## Troubleshooting
 
@@ -163,7 +175,7 @@ ai-stock-prediction/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   └── api/               # API routes
-│   │       ├── trades/        # Trading journal endpoints
+│   │       ├── trades/        # Trading journal endpoints (migrated to middleware)
 │   │       └── portfolios/    # Portfolio tracker endpoints ✅ NEW
 │   ├── components/             # React components
 │   │   ├── dashboard/         # Dashboard-specific
@@ -175,6 +187,10 @@ ai-stock-prediction/
 │   │   └── __tests__/         # Component tests
 │   ├── hooks/                  # Shared custom hooks
 │   ├── lib/
+│   │   ├── api/               # API middleware & validation
+│   │   │   ├── middleware.ts  # Composable middleware functions
+│   │   │   └── client.ts      # Typed API client (future)
+│   │   ├── validation/        # Zod schemas for type-safe validation
 │   │   ├── technical-analysis/ # Technical indicators engine
 │   │   ├── database/          # Database connection & migrations
 │   │   ├── data-providers/    # FMP API integration
@@ -183,6 +199,10 @@ ai-stock-prediction/
 │   └── types/                 # TypeScript definitions
 │       ├── predictions.ts     # Centralized prediction types
 │       └── portfolio.ts       # Portfolio tracker types ✅ NEW
+├── docs/                      # Documentation
+│   ├── API_MIDDLEWARE_GUIDE.md       # Complete middleware reference
+│   ├── MIGRATION_EXAMPLE.md          # Step-by-step migration
+│   └── MIDDLEWARE_REFACTORING_SUMMARY.md  # Impact analysis
 ├── infrastructure/            # AWS CDK infrastructure code
 └── public/                   # Static assets
 ```
