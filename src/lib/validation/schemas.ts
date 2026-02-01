@@ -120,7 +120,8 @@ export const TradeFiltersSchema = z.object({
 export const PredictionSymbolsSchema = z.object({
   symbols: z
     .string()
-    .regex(/^[A-Z]+(,[A-Z]+)*$/, 'Symbols must be comma-separated uppercase letters')
+    .regex(/^[A-Za-z]+(,[A-Za-z]+)*$/, 'Symbols must be comma-separated letters')
+    .transform((val) => val.toUpperCase())
     .optional(),
 });
 
