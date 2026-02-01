@@ -17,9 +17,13 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:contracts": "vitest run --reporter=verbose src/__tests__/api/contract-tests",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --reporter=verbose",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.490.0",
@@ -53,6 +57,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "fast-check": "^4.5.2",
+    "husky": "^9.1.7",
     "jsdom": "^27.0.0",
     "tailwindcss": "^4",
     "tsx": "^4.7.0",
