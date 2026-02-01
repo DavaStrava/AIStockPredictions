@@ -28,6 +28,10 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              API LAYER                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              API Middleware (Composable)                             │   │
+│  │  • Error Handling  • Validation (Zod)  • Rate Limiting  • Logging   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                    Next.js API Routes                                │   │
 │  │  /api/predictions  /api/analysis  /api/insights  /api/watchlists    │   │
 │  │  /api/search       /api/market-indices  /api/market-index-analysis  │   │
@@ -62,6 +66,7 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 | UI Framework | React | 19.1.0 | Component library |
 | Styling | Tailwind CSS | v4 | Utility-first CSS |
 | Language | TypeScript | 5.x | Type safety |
+| Validation | Zod | 3.x | Schema validation, type inference |
 | Authentication | Supabase Auth | Latest | OAuth (Google, GitHub) |
 | Database | PostgreSQL/Supabase | 8.x | Data persistence |
 | Hosting | Vercel | - | Production deployment |
@@ -208,6 +213,62 @@ src/
 | DatabaseConnection | ~331 | DB management | MEDIUM ✅ |
 
 *Note: StockDashboard, FMPDataProvider, and DatabaseConnection were refactored in December 2025 cleanup.*
+
+---
+
+### 2.8 API Middleware Architecture
+
+The API layer uses a composable middleware pattern for cross-cutting concerns, providing consistent behavior across all endpoints.
+
+#### Middleware Stack
+
+```
+Request → Error Handling → Rate Limiting → Validation → Logging → Route Handler
+```
+
+**Available Middleware:**
+
+| Middleware | Function | Purpose |
+|------------|----------|---------|
+| `withErrorHandling()` | Error formatting | Catches all errors, returns consistent JSON structure |
+| `withRateLimit()` | Request throttling | IP-based rate limiting (configurable per endpoint) |
+| `withValidation()` | Schema validation | Zod-based request validation with automatic type inference |
+| `withLogging()` | Request logging | Structured logging with request tracing |
+
+#### Benefits
+
+- **70% Less Boilerplate**: Eliminated repetitive try-catch, validation, and error handling code
+- **Type Safety**: Automatic TypeScript type inference from Zod schemas
+- **Consistency**: All endpoints return same error structure and handle validation uniformly
+- **Maintainability**: Change middleware behavior once, affects all routes using it
+- **Composability**: Mix and match middleware per endpoint needs
+
+#### Example Usage
+
+```typescript
+import { withMiddleware, withErrorHandling, withRateLimit, withValidation } from '@/lib/api/middleware';
+import { StockSearchQuerySchema } from '@/lib/validation/schemas';
+
+export const GET = withMiddleware(
+  withErrorHandling(),
+  withRateLimit({ requestsPerMinute: 30 }),
+  withValidation(StockSearchQuerySchema, 'query'),
+  async (req, { validatedData }) => {
+    // validatedData is automatically typed from schema
+    const { q, limit } = validatedData;
+    // ... implementation
+  }
+);
+```
+
+#### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/api/middleware.ts` | Middleware functions and composition |
+| `src/lib/validation/schemas.ts` | Reusable Zod validation schemas |
+
+**Documentation:** See [API Middleware Guide](docs/API_MIDDLEWARE_GUIDE.md) for complete reference.
 
 ---
 
