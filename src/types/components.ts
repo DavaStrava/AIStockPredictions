@@ -319,7 +319,7 @@ export interface MarketIndicesProps {
 }
 
 export interface MarketIndexAnalysisProps {
-  indexSymbol: string;
+  symbol: string;
   onClose: () => void;
 }
 
@@ -551,5 +551,92 @@ export interface StatCardProps {
   change?: string;
   changeType?: 'positive' | 'negative' | 'neutral';
   loading?: boolean;
+}
+
+// ============================================================================
+// Dashboard Component Props
+// ============================================================================
+
+/** Props for DashboardHeader component */
+export interface DashboardHeaderProps {
+  onStockSearch: (symbol: string) => void;
+  onQuickSelect: (symbol: string) => void;
+  searchLoading: boolean;
+}
+
+/** Props for PredictionCard component */
+export interface PredictionCardProps {
+  prediction: PredictionResult;
+  onSelect: (symbol: string) => void;
+  onRemove: (symbol: string) => void;
+  onLogTrade: (symbol: string, predictionId?: string) => void;
+}
+
+/** Props for PredictionsGrid component */
+export interface PredictionsGridProps {
+  predictions: PredictionResult[];
+  onSelectStock: (symbol: string) => void;
+  onRemoveStock: (symbol: string) => void;
+  onLogTrade: (symbol: string, predictionId?: string) => void;
+}
+
+/** Props for DetailedAnalysisPanel component */
+export interface DetailedAnalysisPanelProps {
+  selectedStock: string;
+  analysis: TechnicalAnalysisResult;
+  priceData: PriceData[];
+  onClose: () => void;
+}
+
+// ============================================================================
+// Chart Component Props
+// ============================================================================
+
+/** Props for ChartHeader component */
+export interface ChartHeaderProps {
+  symbol: string;
+  dataPointCount: number;
+}
+
+/** Chart tab definition */
+export interface ChartTab {
+  id: StockChartType;
+  label: string;
+}
+
+/** Props for ChartTabNavigation component */
+export interface ChartTabNavigationProps {
+  tabs: ChartTab[];
+  activeTab: StockChartType;
+  onTabChange: (tab: StockChartType) => void;
+}
+
+/** Common props for individual chart components */
+export interface ChartComponentProps {
+  chartData: Array<{
+    date: string;
+    fullDate?: Date;
+    open?: number;
+    high?: number;
+    low?: number;
+    close: number;
+    volume: number;
+    rsi?: number;
+    macd?: number;
+    macdSignal?: number;
+    macdHistogram?: number;
+    bbUpper?: number;
+    bbMiddle?: number;
+    bbLower?: number;
+    sma20?: number;
+    sma50?: number;
+  }>;
+  formatPrice: (value: number) => string;
+  formatVolume: (value: number) => string;
+}
+
+/** Props for ChartHelpText component */
+export interface ChartHelpTextProps {
+  activeChart: StockChartType;
 }
 

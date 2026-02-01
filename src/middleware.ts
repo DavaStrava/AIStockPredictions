@@ -1,15 +1,45 @@
 /**
- * Next.js Middleware - Authentication Guard
- * 
+ * Next.js Middleware - Authentication Guard & Security Headers
+ *
  * Protects all routes except /login and public assets.
  * Redirects unauthenticated users to the login page.
- * 
+ * Adds security headers to all responses.
+ *
  * In development mode (without Supabase config), allows all requests
  * and uses demo user authentication.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/auth/supabase-middleware';
+
+// Security headers to add to all responses
+const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+} as const;
+
+/**
+ * Adds security headers to a response
+ */
+function addSecurityHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  // Add security headers
+  for (const [key, value] of Object.entries(securityHeaders)) {
+    response.headers.set(key, value);
+  }
+
+  // Add HSTS header for HTTPS connections
+  if (request.nextUrl.protocol === 'https:') {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains'
+    );
+  }
+
+  return response;
+}
 
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/auth/callback'];
@@ -20,14 +50,14 @@ const staticExtensions = ['.ico', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.web
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static files
+  // Skip middleware for static files (still add security headers)
   if (staticExtensions.some(ext => pathname.endsWith(ext))) {
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next(), request);
   }
 
-  // Skip middleware for Next.js internals
+  // Skip middleware for Next.js internals (still add security headers)
   if (pathname.startsWith('/_next')) {
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next(), request);
   }
 
   // Update session and get user
@@ -36,26 +66,28 @@ export async function middleware(request: NextRequest) {
   // In demo mode (no Supabase config), allow all requests
   // The demo-user.ts module will handle creating a demo user for API routes
   if (isDemoMode) {
-    return response;
+    return addSecurityHeaders(response, request);
   }
 
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     // If user is already logged in and trying to access login, redirect to home
     if (user && pathname === '/login') {
-      return NextResponse.redirect(new URL('/', request.url));
+      const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+      return addSecurityHeaders(redirectResponse, request);
     }
-    return response;
+    return addSecurityHeaders(response, request);
   }
 
   // Protect all other routes - redirect to login if not authenticated
   if (!user) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(redirectResponse, request);
   }
 
-  return response;
+  return addSecurityHeaders(response, request);
 }
 
 export const config = {
