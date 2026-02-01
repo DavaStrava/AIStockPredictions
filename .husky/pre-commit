@@ -2,17 +2,13 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 echo "🧪 Running contract tests before commit..."
-npm run test:contracts || {
-  echo ""
-  echo "❌ Contract tests failed!"
-  echo "Your changes may break the frontend."
-  echo ""
-  echo "To fix:"
-  echo "  1. Check test output above"
-  echo "  2. Ensure API response structures are unchanged"
-  echo "  3. Update tests if intentional changes"
-  echo ""
-  exit 1
-}
 
-echo "✅ Contract tests passed - safe to commit!"
+npm run test:contracts
+
+if [ $? -eq 0 ]; then
+  echo "✅ Contract tests passed - safe to commit!"
+else
+  echo "❌ Contract tests failed! Please fix before committing."
+  echo "💡 Run 'npm run test:contracts' to see failures"
+  exit 1
+fi

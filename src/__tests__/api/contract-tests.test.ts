@@ -131,19 +131,47 @@ describe('API Contract Tests', () => {
       const mockResponse = {
         success: true,
         data: {
-          summary: expect.any(Object),
-          indicators: expect.any(Object),
-          signals: expect.any(Array),
+          summary: {
+            overall: 'bullish',
+            strength: 0.7,
+            confidence: 0.75,
+            trendDirection: 'up',
+            momentum: 'positive',
+            volatility: 'medium',
+          },
+          indicators: {
+            rsi: { value: 65, signal: 'neutral' },
+            macd: { value: 1.5, signal: 'buy' },
+          },
+          signals: [
+            { indicator: 'RSI', signal: 'neutral', strength: 0.5 },
+          ],
         },
-        priceData: expect.any(Array),
-        currentQuote: expect.any(Object),
+        priceData: [
+          {
+            date: new Date('2024-01-01'),
+            open: 150,
+            high: 155,
+            low: 148,
+            close: 152,
+            volume: 1000000,
+          },
+        ],
+        currentQuote: {
+          price: 155.5,
+          change: 3.5,
+          changesPercentage: 2.3,
+        },
         metadata: {
           symbol: 'AAPL',
-          dataPoints: expect.any(Number),
-          period: expect.any(String),
-          dataSource: expect.any(String),
-          analysisTimestamp: expect.any(String),
-          dateRange: expect.any(Object),
+          dataPoints: 252,
+          period: '1y',
+          dataSource: 'Financial Modeling Prep',
+          analysisTimestamp: new Date().toISOString(),
+          dateRange: {
+            from: new Date('2023-01-01'),
+            to: new Date('2024-01-01'),
+          },
         },
       };
 
@@ -156,7 +184,10 @@ describe('API Contract Tests', () => {
 
       // Verify structure
       expect(mockResponse.data).toHaveProperty('summary');
+      expect(mockResponse.data).toHaveProperty('indicators');
+      expect(mockResponse.data).toHaveProperty('signals');
       expect(Array.isArray(mockResponse.priceData)).toBe(true);
+      expect(Array.isArray(mockResponse.data.signals)).toBe(true);
     });
   });
 
