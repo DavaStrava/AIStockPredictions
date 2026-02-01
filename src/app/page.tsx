@@ -1,15 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import StockDashboard from '@/components/StockDashboard';
-import WatchlistManager from '@/components/WatchlistManager';
-import TradeTracker from '@/components/trading-journal/TradeTracker';
-import { PortfolioManager } from '@/components/portfolio';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import DevErrorDashboard from '@/components/DevErrorDashboard';
 import ResponsiveContainer from '@/components/ResponsiveContainer';
 import ResponsiveLayoutErrorBoundary from '@/components/ResponsiveLayoutErrorBoundary';
 import UserMenu from '@/components/UserMenu';
 import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitoring';
+import {
+  DashboardSkeleton,
+  WatchlistSkeleton,
+  TradeTrackerSkeleton,
+  PortfolioSkeleton
+} from '@/components/SkeletonLoaders';
+
+// Lazy load heavy tab components for better initial bundle size
+const StockDashboard = lazy(() => import('@/components/StockDashboard'));
+const WatchlistManager = lazy(() => import('@/components/WatchlistManager'));
+const TradeTracker = lazy(() => import('@/components/trading-journal/TradeTracker'));
+const PortfolioManager = lazy(() =>
+  import('@/components/portfolio').then(mod => ({ default: mod.PortfolioManager }))
+);
 
 type ActiveTab = 'dashboard' | 'watchlists' | 'trades' | 'portfolio';
 
@@ -98,20 +108,28 @@ export default function Home() {
       <main className="py-8">
         <ResponsiveLayoutErrorBoundary>
           {activeTab === 'dashboard' && (
-            <StockDashboard />
+            <Suspense fallback={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><DashboardSkeleton /></div>}>
+              <StockDashboard />
+            </Suspense>
           )}
           {activeTab === 'watchlists' && (
             <ResponsiveContainer variant="wide">
-              <WatchlistManager useMockData={true} />
+              <Suspense fallback={<WatchlistSkeleton />}>
+                <WatchlistManager useMockData={true} />
+              </Suspense>
             </ResponsiveContainer>
           )}
           {activeTab === 'trades' && (
             <ResponsiveContainer variant="wide">
-              <TradeTracker />
+              <Suspense fallback={<TradeTrackerSkeleton />}>
+                <TradeTracker />
+              </Suspense>
             </ResponsiveContainer>
           )}
           {activeTab === 'portfolio' && (
-            <PortfolioManager />
+            <Suspense fallback={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><PortfolioSkeleton /></div>}>
+              <PortfolioManager />
+            </Suspense>
           )}
         </ResponsiveLayoutErrorBoundary>
       </main>

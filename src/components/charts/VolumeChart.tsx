@@ -2,9 +2,13 @@
  * VolumeChart Component
  *
  * Shows trading volume with price overlay on dual axes.
+ *
+ * Memoized to prevent re-renders when parent state changes
+ * but chart data remains the same.
  */
 'use client';
 
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -17,7 +21,7 @@ import {
 } from 'recharts';
 import { ChartComponentProps } from '@/types/components';
 
-export function VolumeChart({ chartData, formatPrice, formatVolume }: ChartComponentProps) {
+export const VolumeChart = memo(function VolumeChart({ chartData, formatPrice, formatVolume }: ChartComponentProps) {
   return (
     <ResponsiveContainer width="100%" height={400}>
       <ComposedChart data={chartData}>
@@ -66,4 +70,4 @@ export function VolumeChart({ chartData, formatPrice, formatVolume }: ChartCompo
       </ComposedChart>
     </ResponsiveContainer>
   );
-}
+});

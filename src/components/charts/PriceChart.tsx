@@ -3,9 +3,13 @@
  *
  * Displays stock price movement with moving averages.
  * Features high/low range areas and SMA overlays.
+ *
+ * Memoized to prevent re-renders when parent state changes
+ * but chart data remains the same.
  */
 'use client';
 
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -19,7 +23,7 @@ import {
 } from 'recharts';
 import { ChartComponentProps } from '@/types/components';
 
-export function PriceChart({ chartData, formatPrice }: ChartComponentProps) {
+export const PriceChart = memo(function PriceChart({ chartData, formatPrice }: ChartComponentProps) {
   return (
     <ResponsiveContainer width="100%" height={400}>
       <ComposedChart data={chartData}>
@@ -98,4 +102,4 @@ export function PriceChart({ chartData, formatPrice }: ChartComponentProps) {
       </ComposedChart>
     </ResponsiveContainer>
   );
-}
+});

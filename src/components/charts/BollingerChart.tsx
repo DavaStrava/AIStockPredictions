@@ -3,9 +3,13 @@
  *
  * Bollinger Bands volatility and mean reversion indicator chart.
  * Shows upper/lower bands, middle line (SMA), and price.
+ *
+ * Memoized to prevent re-renders when parent state changes
+ * but chart data remains the same.
  */
 'use client';
 
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -19,7 +23,7 @@ import {
 } from 'recharts';
 import { ChartComponentProps } from '@/types/components';
 
-export function BollingerChart({ chartData, formatPrice }: ChartComponentProps) {
+export const BollingerChart = memo(function BollingerChart({ chartData, formatPrice }: ChartComponentProps) {
   return (
     <ResponsiveContainer width="100%" height={400}>
       <AreaChart data={chartData}>
@@ -83,4 +87,4 @@ export function BollingerChart({ chartData, formatPrice }: ChartComponentProps) 
       </AreaChart>
     </ResponsiveContainer>
   );
-}
+});

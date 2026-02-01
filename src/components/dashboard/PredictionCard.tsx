@@ -3,13 +3,17 @@
  *
  * Displays a single stock prediction with direction indicator,
  * key metrics, and action buttons.
+ *
+ * Memoized to prevent unnecessary re-renders when parent state changes
+ * but this card's prediction data remains the same.
  */
 'use client';
 
+import { memo } from 'react';
 import { PredictionCardProps } from '@/types/components';
 import { usePredictionStyles } from './hooks/usePredictionStyles';
 
-export function PredictionCard({
+export const PredictionCard = memo(function PredictionCard({
   prediction,
   onSelect,
   onRemove,
@@ -79,4 +83,4 @@ export function PredictionCard({
       </button>
     </div>
   );
-}
+});

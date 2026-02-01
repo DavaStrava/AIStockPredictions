@@ -3,9 +3,13 @@
  *
  * Relative Strength Index momentum oscillator chart.
  * Features overbought/oversold zones and reference lines.
+ *
+ * Memoized to prevent re-renders when parent state changes
+ * but chart data remains the same.
  */
 'use client';
 
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -18,7 +22,7 @@ import {
 } from 'recharts';
 import { ChartComponentProps } from '@/types/components';
 
-export function RSIChart({ chartData }: ChartComponentProps) {
+export const RSIChart = memo(function RSIChart({ chartData }: ChartComponentProps) {
   return (
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={chartData}>
@@ -90,4 +94,4 @@ export function RSIChart({ chartData }: ChartComponentProps) {
       </LineChart>
     </ResponsiveContainer>
   );
-}
+});

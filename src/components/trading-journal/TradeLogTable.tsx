@@ -4,12 +4,13 @@
  * TradeLogTable Component
  * Displays trades in a sortable table with P&L information.
  * Shows unrealized P&L for open trades, realized P&L for closed trades.
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4
  */
 
 import { useState, useCallback, useMemo } from 'react';
 import { TradeWithPnL } from '@/types/models';
+import { TradeRow } from './TradeRow';
 
 export type SortColumn =
   | 'symbol'
@@ -30,54 +31,14 @@ export interface TradeLogTableProps {
 }
 
 /**
- * Formats a number as currency
- */
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) {
-    return '-';
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-/**
- * Formats a date for display
- */
-function formatDate(date: Date | null | undefined): string {
-  if (!date) {
-    return '-';
-  }
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date instanceof Date ? date : new Date(date));
-}
-
-/**
  * Gets the P&L value for a trade (unrealized for open, realized for closed)
+ * Exported for use in sorting logic
  */
 export function getTradeDisplayPnL(trade: TradeWithPnL): number | null {
   if (trade.status === 'OPEN') {
     return trade.unrealizedPnl ?? null;
   }
   return trade.realizedPnl;
-}
-
-/**
- * Gets the P&L label for a trade
- */
-function getPnLLabel(trade: TradeWithPnL): string {
-  if (trade.status === 'OPEN') {
-    return 'Unrealized';
-  }
-  return 'Realized';
 }
 
 export function TradeLogTable({
@@ -259,119 +220,19 @@ export function TradeLogTable({
           </tr>
         </thead>
         <tbody>
-          {sortedTrades.map((trade) => {
-            const pnl = getTradeDisplayPnL(trade);
-            const pnlLabel = getPnLLabel(trade);
-            const isClosing = closingTradeId === trade.id;
-
-            return (
-              <tr
-                key={trade.id}
-                className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              >
-                <td className="px-4 py-3 font-medium text-foreground">
-                  {trade.symbol}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      trade.side === 'LONG'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                    }`}
-                  >
-                    {trade.side}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      trade.status === 'OPEN'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {trade.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-foreground">
-                  {formatCurrency(trade.entryPrice)}
-                </td>
-                <td className="px-4 py-3 text-foreground">
-                  {formatCurrency(trade.exitPrice)}
-                </td>
-                <td className="px-4 py-3 text-foreground">{trade.quantity}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col">
-                    <span
-                      className={`font-medium ${
-                        pnl === null
-                          ? 'text-gray-500'
-                          : pnl >= 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-red-600 dark:text-red-400'
-                      }`}
-                    >
-                      {pnl !== null ? formatCurrency(pnl) : '-'}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {pnlLabel}
-                    </span>
-                    {trade.pnlError && (
-                      <span className="text-xs text-orange-500">
-                        {trade.pnlError}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-foreground text-sm">
-                  {formatDate(trade.entryDate)}
-                </td>
-                <td className="px-4 py-3">
-                  {trade.status === 'OPEN' && (
-                    <>
-                      {isClosing ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={closePrice}
-                            onChange={(e) => setClosePrice(e.target.value)}
-                            placeholder="Exit price"
-                            className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-foreground"
-                            aria-label="Exit price"
-                          />
-                          <button
-                            onClick={() => handleCloseConfirm(trade.id)}
-                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={handleCloseCancel}
-                            className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleCloseClick(trade.id)}
-                          className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
-                        >
-                          Close
-                        </button>
-                      )}
-                      {closeError && isClosing && (
-                        <p className="text-xs text-red-500 mt-1">{closeError}</p>
-                      )}
-                    </>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
+          {sortedTrades.map((trade) => (
+            <TradeRow
+              key={trade.id}
+              trade={trade}
+              isClosing={closingTradeId === trade.id}
+              closePrice={closePrice}
+              closeError={closeError}
+              onCloseClick={handleCloseClick}
+              onCloseCancel={handleCloseCancel}
+              onCloseConfirm={handleCloseConfirm}
+              onClosePriceChange={setClosePrice}
+            />
+          ))}
         </tbody>
       </table>
     </div>
