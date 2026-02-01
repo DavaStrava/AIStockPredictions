@@ -177,11 +177,11 @@ export function withErrorHandling(): Middleware {
       }
 
       if (error instanceof ZodError) {
-        const firstError = error.errors[0];
+        const firstError = error.errors?.[0];
         return ApiResponse.error(
-          firstError.message,
+          firstError?.message || 'Validation failed',
           400,
-          firstError.path.join('.'),
+          firstError?.path?.join('.'),
           'VALIDATION_ERROR',
           JSON.stringify(error.errors)
         );

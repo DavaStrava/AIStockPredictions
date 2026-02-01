@@ -5,7 +5,7 @@
  * Generates AI-powered stock predictions based on technical analysis.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   withMiddleware,
   withErrorHandling,

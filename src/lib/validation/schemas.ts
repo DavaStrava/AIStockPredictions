@@ -146,7 +146,7 @@ export const StockAnalysisQuerySchema = z.object({
  */
 
 export const StockSearchQuerySchema = z.object({
-  query: z
+  q: z
     .string()
     .min(1, 'Search query is required')
     .max(50, 'Search query must be 50 characters or less'),

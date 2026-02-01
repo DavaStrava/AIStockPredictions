@@ -24,10 +24,10 @@ export const GET = withMiddleware(
   withValidation(StockSearchQuerySchema, 'query'),
   withLogging(),
   async (req: NextRequest, { validatedData }: RequestContext) => {
-    const { query, limit } = validatedData as { query: string; limit: number };
+    const { q, limit } = validatedData as { q: string; limit: number };
 
     const fmpProvider = getFMPProvider();
-    const searchResults = await fmpProvider.searchStocks(query, limit);
+    const searchResults = await fmpProvider.searchStocks(q, limit);
 
     // Filter for major US exchanges and format results
     const formattedResults = searchResults
@@ -48,7 +48,7 @@ export const GET = withMiddleware(
       success: true,
       data: formattedResults,
       metadata: {
-        query,
+        query: q,
         resultsCount: formattedResults.length,
         timestamp: new Date().toISOString(),
       },
