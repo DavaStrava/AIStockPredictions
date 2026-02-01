@@ -1,219 +1,172 @@
 /**
- * React Testing Library Render Helpers
+ * Render Helpers for React Component Testing
  *
- * This module provides custom render functions that wrap components with
- * necessary providers (context, query client, etc.) for testing.
+ * This module provides utilities for rendering React components in tests
+ * with common providers (QueryClient, etc.) pre-configured.
  */
 
-import React, { type ReactElement, type PropsWithChildren } from 'react';
-import { render, type RenderOptions, type RenderResult, waitFor, screen } from '@testing-library/react';
+import React from 'react';
+import { render, RenderOptions, RenderResult, screen, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 /**
  * Options for renderWithProviders
  */
 export interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
-  /** Initial route for testing */
-  route?: string;
-  /** Additional wrapper component */
-  additionalWrapper?: React.ComponentType<PropsWithChildren>;
+  queryClient?: QueryClient;
 }
 
 /**
- * Extended render result with user event setup
+ * Extended render result with user event instance
  */
 export interface ExtendedRenderResult extends RenderResult {
   user: ReturnType<typeof userEvent.setup>;
 }
 
 /**
- * Default wrapper that provides necessary context for components.
- * This wrapper can be extended as the app grows to include more providers.
+ * Create a new QueryClient for testing with optimized settings
  */
-function DefaultWrapper({ children }: PropsWithChildren): ReactElement {
-  return <>{children}</>;
+function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+        staleTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
 }
 
 /**
- * Renders a component with all necessary providers and returns
- * a userEvent instance for simulating user interactions.
- *
- * This is the recommended way to render components in tests as it:
- * - Sets up userEvent properly (which handles act() automatically)
- * - Provides necessary context providers
- * - Returns both render result and user event instance
+ * Render a component with all required providers for testing.
  *
  * @example
- * const { user, getByRole } = renderWithProviders(<MyComponent />);
- * await user.click(getByRole('button'));
- *
- * @example
- * // With additional wrapper
- * const { user } = renderWithProviders(<MyComponent />, {
- *   additionalWrapper: ({ children }) => (
- *     <MyContext.Provider value={mockValue}>{children}</MyContext.Provider>
- *   )
- * });
+ * const { getByText, user } = renderWithProviders(<MyComponent />);
+ * await user.click(getByText('Submit'));
  */
 export function renderWithProviders(
-  ui: ReactElement,
+  ui: React.ReactElement,
   options: RenderWithProvidersOptions = {}
 ): ExtendedRenderResult {
-  const { additionalWrapper: AdditionalWrapper, ...renderOptions } = options;
+  const { queryClient = createTestQueryClient(), ...renderOptions } = options;
 
-  function Wrapper({ children }: PropsWithChildren): ReactElement {
-    const content = <DefaultWrapper>{children}</DefaultWrapper>;
-    return AdditionalWrapper ? <AdditionalWrapper>{content}</AdditionalWrapper> : content;
-  }
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
 
   const user = userEvent.setup();
 
   return {
-    user,
     ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    user,
   };
 }
 
 /**
- * Renders a component and waits for async operations to complete.
- * Useful for components that fetch data on mount.
+ * Render and wait for async effects to settle.
  *
  * @example
  * const { getByText } = await renderAsync(<AsyncComponent />);
- * expect(getByText('Loaded')).toBeInTheDocument();
- *
- * @example
- * // Wait for specific element
- * const { user } = await renderAsync(<AsyncComponent />, {
- *   waitForElement: () => screen.findByText('Data loaded')
- * });
  */
 export async function renderAsync(
-  ui: ReactElement,
-  options: RenderWithProvidersOptions & {
-    waitForElement?: () => Promise<HTMLElement>;
-    waitForLoadingToFinish?: boolean;
-  } = {}
+  ui: React.ReactElement,
+  options: RenderWithProvidersOptions = {}
 ): Promise<ExtendedRenderResult> {
-  const { waitForElement, waitForLoadingToFinish = true, ...renderOptions } = options;
+  const result = renderWithProviders(ui, options);
 
-  const result = renderWithProviders(ui, renderOptions);
-
-  if (waitForElement) {
-    await waitForElement();
-  } else if (waitForLoadingToFinish) {
-    // Wait for common loading indicators to disappear
-    await waitFor(
-      () => {
-        const loadingElements = result.queryAllByText(/loading/i);
-        expect(loadingElements.length).toBe(0);
-      },
-      { timeout: 5000 }
-    ).catch(() => {
-      // Silently continue if no loading elements found
-    });
-  }
+  // Wait for any pending effects
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
   return result;
 }
 
 /**
- * Creates a custom render function with preset options.
- * Useful when many tests need the same setup.
+ * Create a custom render function with pre-configured options.
  *
  * @example
- * // In test setup file
- * export const renderWithTradingContext = createCustomRender({
- *   additionalWrapper: ({ children }) => (
- *     <TradingContext.Provider value={mockTradingContext}>
- *       {children}
- *     </TradingContext.Provider>
- *   )
- * });
- *
- * // In test file
- * const { user } = renderWithTradingContext(<TradeForm />);
+ * const renderWithAuth = createCustomRender({ queryClient: myClient });
+ * const { getByText } = renderWithAuth(<MyComponent />);
  */
-export function createCustomRender(defaultOptions: RenderWithProvidersOptions) {
-  return (ui: ReactElement, options: RenderWithProvidersOptions = {}): ExtendedRenderResult => {
-    return renderWithProviders(ui, { ...defaultOptions, ...options });
-  };
+export function createCustomRender(
+  defaultOptions: Partial<RenderWithProvidersOptions>
+): (ui: React.ReactElement, options?: RenderWithProvidersOptions) => ExtendedRenderResult {
+  return (ui, options = {}) => renderWithProviders(ui, { ...defaultOptions, ...options });
 }
 
 /**
- * Helper to wait for an element and then interact with it.
+ * Wait for an element and click it.
  *
  * @example
- * const { user } = renderWithProviders(<MyComponent />);
- * await waitAndClick(user, () => screen.findByRole('button', { name: 'Submit' }));
+ * await waitAndClick(screen, 'Submit');
  */
 export async function waitAndClick(
-  user: ReturnType<typeof userEvent.setup>,
-  findElement: () => Promise<HTMLElement>
+  container: typeof screen,
+  textOrMatcher: string | RegExp
 ): Promise<void> {
-  const element = await findElement();
+  const user = userEvent.setup();
+  const element = await waitFor(() => container.getByText(textOrMatcher));
   await user.click(element);
 }
 
 /**
- * Helper to wait for an element and type into it.
+ * Wait for an element and type into it.
  *
  * @example
- * const { user } = renderWithProviders(<MyForm />);
- * await waitAndType(user, () => screen.findByRole('textbox', { name: 'Email' }), 'test@example.com');
+ * await waitAndType(screen, 'Email', 'test@example.com');
  */
 export async function waitAndType(
-  user: ReturnType<typeof userEvent.setup>,
-  findElement: () => Promise<HTMLElement>,
-  text: string
+  container: typeof screen,
+  labelText: string | RegExp,
+  value: string
 ): Promise<void> {
-  const element = await findElement();
-  await user.clear(element);
-  await user.type(element, text);
+  const user = userEvent.setup();
+  const input = await waitFor(() => container.getByLabelText(labelText));
+  await user.clear(input);
+  await user.type(input, value);
 }
 
 /**
- * Helper to fill a form with multiple fields.
+ * Fill a form with the given values.
  *
  * @example
- * const { user } = renderWithProviders(<LoginForm />);
- * await fillForm(user, {
- *   Email: 'test@example.com',
- *   Password: 'password123'
+ * await fillForm(screen, {
+ *   'Email': 'test@example.com',
+ *   'Password': 'secret123',
  * });
  */
 export async function fillForm(
-  user: ReturnType<typeof userEvent.setup>,
-  fields: Record<string, string>,
-  options: { getByLabel?: boolean } = { getByLabel: true }
+  container: typeof screen,
+  values: Record<string, string>
 ): Promise<void> {
-  for (const [label, value] of Object.entries(fields)) {
-    const input = options.getByLabel
-      ? screen.getByLabelText(new RegExp(label, 'i'))
-      : screen.getByRole('textbox', { name: new RegExp(label, 'i') });
-    await user.clear(input);
-    await user.type(input, value);
+  for (const [label, value] of Object.entries(values)) {
+    await waitAndType(container, label, value);
   }
 }
 
 /**
- * Helper to select an option from a dropdown.
+ * Select an option from a select element.
  *
  * @example
- * const { user } = renderWithProviders(<MyForm />);
- * await selectOption(user, 'Status', 'Active');
+ * await selectOption(screen, 'Country', 'USA');
  */
 export async function selectOption(
-  user: ReturnType<typeof userEvent.setup>,
-  selectLabel: string,
+  container: typeof screen,
+  labelText: string | RegExp,
   optionText: string
 ): Promise<void> {
-  const select = screen.getByRole('combobox', { name: new RegExp(selectLabel, 'i') });
+  const user = userEvent.setup();
+  const select = await waitFor(() => container.getByLabelText(labelText));
   await user.selectOptions(select, optionText);
 }
 
-/**
- * Re-export common testing library utilities for convenience
- */
-export { screen, waitFor, within, act } from '@testing-library/react';
-export { default as userEvent } from '@testing-library/user-event';
+// Re-export testing-library utilities for convenience
+export { screen, waitFor, within, act, userEvent };
