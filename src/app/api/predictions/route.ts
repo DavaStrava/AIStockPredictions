@@ -12,7 +12,6 @@ import {
   withRateLimit,
   withValidation,
   withLogging,
-  ApiResponse,
   RequestContext,
   NotFoundError,
 } from '@/lib/api/middleware';
@@ -20,6 +19,10 @@ import { PredictionSymbolsSchema } from '@/lib/validation/schemas';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
 import { getFMPProvider } from '@/lib/data-providers/fmp';
 import { PredictionResult } from '@/types/predictions';
+
+// Prediction target price ranges
+const MIN_PRICE_MOVEMENT = 0.03; // 3% minimum price movement
+const MAX_PRICE_MOVEMENT = 0.10; // 10% maximum price movement (MIN + 7%)
 
 export const GET = withMiddleware(
   withErrorHandling(),
@@ -75,14 +78,16 @@ export const GET = withMiddleware(
 
         if (overallSentiment === 'bullish' && bullishSignals.length > bearishSignals.length) {
           direction = 'bullish';
-          targetPrice = quote.price * (1 + 0.03 + Math.random() * 0.07); // 3-10% upside
+          const priceMovement = MIN_PRICE_MOVEMENT + Math.random() * (MAX_PRICE_MOVEMENT - MIN_PRICE_MOVEMENT);
+          targetPrice = quote.price * (1 + priceMovement);
           reasoning = [
             `Strong bullish sentiment (${Math.round(sentimentScore * 100)}% strength)`,
             ...bullishSignals.slice(0, 2).map(s => s.description)
           ];
         } else if (overallSentiment === 'bearish' && bearishSignals.length > bullishSignals.length) {
           direction = 'bearish';
-          targetPrice = quote.price * (1 - 0.03 - Math.random() * 0.07); // 3-10% downside
+          const priceMovement = MIN_PRICE_MOVEMENT + Math.random() * (MAX_PRICE_MOVEMENT - MIN_PRICE_MOVEMENT);
+          targetPrice = quote.price * (1 - priceMovement);
           reasoning = [
             `Strong bearish sentiment (${Math.round(sentimentScore * 100)}% strength)`,
             ...bearishSignals.slice(0, 2).map(s => s.description)

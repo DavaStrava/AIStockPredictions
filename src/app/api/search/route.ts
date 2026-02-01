@@ -12,11 +12,13 @@ import {
   withRateLimit,
   withValidation,
   withLogging,
-  ApiResponse,
   RequestContext,
 } from '@/lib/api/middleware';
 import { StockSearchQuerySchema } from '@/lib/validation/schemas';
 import { getFMPProvider } from '@/lib/data-providers/fmp';
+
+// Supported US stock exchanges
+const SUPPORTED_EXCHANGES = ['NASDAQ', 'NYSE', 'AMEX'] as const;
 
 export const GET = withMiddleware(
   withErrorHandling(),
@@ -33,7 +35,7 @@ export const GET = withMiddleware(
     const formattedResults = searchResults
       .filter(result =>
         result.exchangeShortName &&
-        ['NASDAQ', 'NYSE', 'AMEX'].includes(result.exchangeShortName.toUpperCase())
+        SUPPORTED_EXCHANGES.includes(result.exchangeShortName.toUpperCase() as typeof SUPPORTED_EXCHANGES[number])
       )
       .map(result => ({
         symbol: result.symbol,

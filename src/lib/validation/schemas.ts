@@ -142,6 +142,43 @@ export const StockAnalysisQuerySchema = z.object({
 });
 
 /**
+ * Schema for price data item (OHLCV)
+ */
+export const PriceDataItemSchema = z.object({
+  date: z.union([z.string(), z.date()]).transform((val) => new Date(val)),
+  open: z.number().nonnegative('Open price must be non-negative').finite(),
+  high: z.number().nonnegative('High price must be non-negative').finite(),
+  low: z.number().nonnegative('Low price must be non-negative').finite(),
+  close: z.number().nonnegative('Close price must be non-negative').finite(),
+  volume: z.number().nonnegative('Volume must be non-negative').finite(),
+}).refine(
+  (data) => data.high >= data.low,
+  { message: 'High price must be greater than or equal to low price' }
+).refine(
+  (data) => data.high >= data.open && data.high >= data.close,
+  { message: 'High price must be greater than or equal to open and close prices' }
+).refine(
+  (data) => data.low <= data.open && data.low <= data.close,
+  { message: 'Low price must be less than or equal to open and close prices' }
+);
+
+/**
+ * Schema for POST analysis request body
+ */
+export const AnalysisPostBodySchema = z.object({
+  symbol: z
+    .string()
+    .min(1, 'Symbol is required')
+    .max(10, 'Symbol must be 10 characters or less')
+    .regex(/^[A-Za-z0-9.-]+$/, 'Symbol must be alphanumeric with optional dots or hyphens'),
+  priceData: z
+    .array(PriceDataItemSchema)
+    .min(1, 'Price data cannot be empty')
+    .max(5000, 'Price data cannot exceed 5000 items'),
+  config: z.record(z.string(), z.any()).optional(),
+});
+
+/**
  * Stock Search Validation Schemas
  */
 
@@ -198,6 +235,8 @@ export type CloseTradeData = z.infer<typeof CloseTradeSchema>;
 export type TradeFiltersData = z.infer<typeof TradeFiltersSchema>;
 export type PredictionSymbolsData = z.infer<typeof PredictionSymbolsSchema>;
 export type StockAnalysisQueryData = z.infer<typeof StockAnalysisQuerySchema>;
+export type PriceDataItemData = z.infer<typeof PriceDataItemSchema>;
+export type AnalysisPostBodyData = z.infer<typeof AnalysisPostBodySchema>;
 export type StockSearchQueryData = z.infer<typeof StockSearchQuerySchema>;
 export type CreateWatchlistData = z.infer<typeof CreateWatchlistSchema>;
 export type UpdateWatchlistData = z.infer<typeof UpdateWatchlistSchema>;
