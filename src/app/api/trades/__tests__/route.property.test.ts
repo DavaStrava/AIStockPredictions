@@ -114,10 +114,13 @@ describe('Property 9: API Validation Returns Appropriate Error Codes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQuery.mockReset();
+    // Enable demo mode for tests by setting NODE_ENV to development
+    vi.stubEnv('NODE_ENV', 'development');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   /**

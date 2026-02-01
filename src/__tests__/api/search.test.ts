@@ -47,26 +47,17 @@ describe('GET /api/search', () => {
 
   describe('Response Structure', () => {
     test('should return correct response structure', () => {
-      const expectedStructure = {
+      // Mock a well-formed response
+      const mockResponse = {
         success: true,
-        data: expect.arrayContaining([
-          expect.objectContaining({
-            symbol: expect.any(String),
-            name: expect.any(String),
-            exchange: expect.any(String),
-            currency: expect.any(String),
-            type: expect.any(String),
-          }),
-        ]),
-        metadata: expect.objectContaining({
-          query: expect.any(String),
-          resultsCount: expect.any(Number),
-          timestamp: expect.any(String),
-        }),
+        data: [
+          { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ', currency: 'USD', type: 'stock' },
+        ],
+        metadata: { query: 'AAPL', resultsCount: 1, timestamp: new Date().toISOString() },
       };
 
-      expect(expectedStructure.success).toBe(true);
-      expect(Array.isArray(expectedStructure.data)).toBe(true);
+      expect(mockResponse.success).toBe(true);
+      expect(Array.isArray(mockResponse.data)).toBe(true);
     });
 
     test('data should be an array', () => {
@@ -101,7 +92,7 @@ describe('GET /api/search', () => {
   describe('Input Validation', () => {
     test('should require query parameter', () => {
       const query = '';
-      const isValid = query && query.trim().length >= 1;
+      const isValid = Boolean(query && query.trim().length >= 1);
       expect(isValid).toBe(false);
     });
 

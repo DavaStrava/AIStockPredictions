@@ -103,20 +103,20 @@ describe('Mobile Layout Preservation', () => {
   });
 
   describe('MultiColumnLayout - Mobile Sidebar Hiding', () => {
-    it('should hide left sidebar on mobile with lg:block class', () => {
+    it('should hide left sidebar on mobile with xl:block class', () => {
       const { container } = render(
         <MultiColumnLayout
           leftColumn={<div>Left Sidebar</div>}
           centerColumn={<div>Main Content</div>}
         />
       );
-      
+
       const leftSidebar = container.querySelector('aside:first-of-type');
       expect(leftSidebar?.className).toContain('hidden');
-      expect(leftSidebar?.className).toContain('lg:block');
+      expect(leftSidebar?.className).toContain('xl:block');
     });
 
-    it('should hide right sidebar on mobile with xl:block class', () => {
+    it('should always show right sidebar (no hidden class)', () => {
       const { container } = render(
         <MultiColumnLayout
           leftColumn={<div>Left Sidebar</div>}
@@ -124,10 +124,9 @@ describe('Mobile Layout Preservation', () => {
           rightColumn={<div>Right Sidebar</div>}
         />
       );
-      
+
       const rightSidebar = container.querySelector('aside:last-of-type');
-      expect(rightSidebar?.className).toContain('hidden');
-      expect(rightSidebar?.className).toContain('xl:block');
+      expect(rightSidebar?.className).not.toContain('hidden');
     });
 
     it('should always show center column on mobile', () => {

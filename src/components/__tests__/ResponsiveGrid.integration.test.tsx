@@ -20,12 +20,18 @@ const mockMatchMedia = (matches: boolean) => {
   });
 };
 
-// Mock ResizeObserver for responsive behavior testing
-const mockResizeObserver = vi.fn(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// Mock ResizeObserver for responsive behavior testing using a class
+class MockResizeObserver {
+  callback: ResizeObserverCallback;
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
+
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
 
 describe('ResponsiveGrid Integration Tests', () => {
   let originalMatchMedia: any;
@@ -35,9 +41,9 @@ describe('ResponsiveGrid Integration Tests', () => {
     // Store original implementations
     originalMatchMedia = window.matchMedia;
     originalResizeObserver = window.ResizeObserver;
-    
-    // Mock ResizeObserver
-    vi.stubGlobal('ResizeObserver', mockResizeObserver);
+
+    // Mock ResizeObserver with class-based implementation
+    vi.stubGlobal('ResizeObserver', MockResizeObserver);
   });
 
   afterEach(() => {

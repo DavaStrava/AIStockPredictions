@@ -93,7 +93,7 @@ export default defineConfig({
 
     /**
      * Setup Files
-     * 
+     *
      * Files to run before each test file to set up the testing environment.
      * This is useful for configuring testing libraries, polyfills, or global mocks.
      */
@@ -101,11 +101,108 @@ export default defineConfig({
 
     /**
      * CSS Handling
-     * 
+     *
      * Configure how CSS imports are handled during testing.
      * For component tests, we often don't need actual CSS processing.
      */
-    css: false
+    css: false,
+
+    /**
+     * Exclude Patterns
+     *
+     * Exclude e2e tests which require Playwright/a running server.
+     * These should be run separately with npm run test:e2e.
+     */
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+      '**/*.spec.ts',
+    ],
+
+    /**
+     * Coverage Configuration
+     *
+     * Configure code coverage collection and reporting.
+     * Uses v8 provider for fast, accurate coverage.
+     */
+    coverage: {
+      /**
+       * Coverage Provider
+       * v8 is faster and provides accurate coverage for Node.js
+       */
+      provider: 'v8',
+
+      /**
+       * Reporter formats
+       * - text: Console output summary
+       * - html: Interactive HTML report
+       * - json: Machine-readable JSON
+       * - lcov: For CI/CD integration (Codecov, Coveralls)
+       */
+      reporter: ['text', 'html', 'json', 'lcov'],
+
+      /**
+       * Output directory for coverage reports
+       */
+      reportsDirectory: './coverage',
+
+      /**
+       * Files to include in coverage
+       */
+      include: [
+        'src/**/*.{ts,tsx}',
+      ],
+
+      /**
+       * Files to exclude from coverage
+       */
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.spec.{ts,tsx}',
+        'src/**/__tests__/**',
+        'src/**/__mocks__/**',
+        'src/test-setup.ts',
+        'src/types/**',
+        'node_modules/**',
+        'e2e/**',
+      ],
+
+      /**
+       * Coverage Thresholds
+       *
+       * These thresholds define minimum coverage requirements.
+       * The build will fail if coverage falls below these values.
+       *
+       * Current baseline (as of Phase 1.4):
+       * - statements: 20% - Current baseline
+       * - branches: 15% - Current baseline
+       * - functions: 10% - Current baseline
+       * - lines: 20% - Current baseline
+       *
+       * Target goals (to increase incrementally):
+       * - statements: 50%+
+       * - branches: 40%+
+       * - functions: 50%+
+       * - lines: 50%+
+       */
+      thresholds: {
+        statements: 20,
+        branches: 15,
+        functions: 10,
+        lines: 20,
+      },
+
+      /**
+       * Skip full coverage for files with no tests
+       */
+      skipFull: false,
+
+      /**
+       * Clean coverage folder before running
+       */
+      clean: true,
+    },
   },
 
   /**

@@ -27,10 +27,13 @@ describe('getDemoUserId', () => {
     vi.clearAllMocks();
     // Clear the cache before each test to ensure isolation
     clearDemoUserCache();
+    // Enable demo mode for tests by setting NODE_ENV to development
+    vi.stubEnv('NODE_ENV', 'development');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   describe('Successful User Retrieval', () => {
@@ -266,6 +269,12 @@ describe('clearDemoUserCache', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearDemoUserCache();
+    // Enable demo mode for tests by setting NODE_ENV to development
+    vi.stubEnv('NODE_ENV', 'development');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('should clear the cached user ID', async () => {

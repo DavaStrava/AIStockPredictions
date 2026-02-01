@@ -85,42 +85,46 @@ describe('GET /api/predictions', () => {
 
   describe('Response Structure', () => {
     test('should return correct response structure', async () => {
-      // This would be an integration test
-      // For now, we'll test the contract
-      const expectedStructure = {
+      // Mock response matching expected API response shape
+      const mockResponse = {
         success: true,
-        data: expect.arrayContaining([
-          expect.objectContaining({
-            symbol: expect.any(String),
-            currentPrice: expect.any(Number),
-            prediction: expect.objectContaining({
-              direction: expect.stringMatching(/^(bullish|bearish|neutral)$/),
-              confidence: expect.any(Number),
-              targetPrice: expect.any(Number),
-              timeframe: expect.any(String),
-              reasoning: expect.any(Array),
-            }),
-            signals: expect.any(Array),
-            riskMetrics: expect.objectContaining({
-              volatility: expect.stringMatching(/^(low|medium|high)$/),
-              support: expect.any(Number),
-              resistance: expect.any(Number),
-              stopLoss: expect.any(Number),
-            }),
-            marketData: expect.any(Object),
-          }),
-        ]),
-        metadata: expect.objectContaining({
-          timestamp: expect.any(String),
-          symbolsRequested: expect.any(Number),
-          symbolsProcessed: expect.any(Number),
-          dataSource: expect.any(String),
-        }),
+        data: [
+          {
+            symbol: 'AAPL',
+            currentPrice: 152.50,
+            prediction: {
+              direction: 'bullish',
+              confidence: 0.75,
+              targetPrice: 160.00,
+              timeframe: '1 week',
+              reasoning: ['RSI oversold', 'MACD crossover'],
+            },
+            signals: [{ signal: 'buy', strength: 0.8 }],
+            riskMetrics: {
+              volatility: 'medium',
+              support: 148.00,
+              resistance: 160.00,
+              stopLoss: 145.00,
+            },
+            marketData: { pe: 28.5, volume: 1000000 },
+          },
+        ],
+        metadata: {
+          timestamp: new Date().toISOString(),
+          symbolsRequested: 1,
+          symbolsProcessed: 1,
+          dataSource: 'FMP',
+        },
       };
 
-      // Contract validation
-      expect(expectedStructure.success).toBe(true);
-      expect(Array.isArray(expectedStructure.data)).toBe(true);
+      // Validate response structure
+      expect(mockResponse.success).toBe(true);
+      expect(Array.isArray(mockResponse.data)).toBe(true);
+      expect(mockResponse.data.length).toBeGreaterThan(0);
+      expect(mockResponse.data[0]).toHaveProperty('symbol');
+      expect(mockResponse.data[0]).toHaveProperty('prediction');
+      expect(mockResponse.data[0].prediction).toHaveProperty('direction');
+      expect(mockResponse.metadata).toHaveProperty('timestamp');
     });
 
     test('data should be an array, not an object', async () => {
@@ -132,7 +136,9 @@ describe('GET /api/predictions', () => {
       };
 
       expect(Array.isArray(mockResponse.data)).toBe(true);
-      expect(typeof mockResponse.data).not.toBe('object'); // arrays are objects, but check anyway
+      // Note: Arrays are technically objects in JS, so this assertion isn't quite right
+      // Instead, check that it's an array specifically
+      expect(mockResponse.data).toBeInstanceOf(Array);
       expect(mockResponse.data.length).toBeGreaterThanOrEqual(0);
     });
   });

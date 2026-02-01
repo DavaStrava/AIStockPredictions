@@ -98,6 +98,31 @@ vi.mock('../CollapsibleSection', () => ({
   )
 }));
 
+// Mock the TradeEntryModal component
+vi.mock('../trading-journal/TradeEntryModal', () => ({
+  TradeEntryModal: () => null
+}));
+
+// Mock the usePortfolioStats hook
+vi.mock('../trading-journal/hooks/usePortfolioStats', () => ({
+  usePortfolioStats: () => ({
+    trades: [],
+    stats: null,
+    loading: false,
+    statsLoading: false,
+    error: null,
+    fetchTrades: vi.fn(),
+    createTrade: vi.fn().mockResolvedValue({}),
+    closeTrade: vi.fn().mockResolvedValue({}),
+    refreshStats: vi.fn(),
+  })
+}));
+
+// Mock TechnicalIndicatorExplanations to prevent complex rendering
+vi.mock('../TechnicalIndicatorExplanations', () => ({
+  default: () => <div data-testid="technical-indicator-explanations">Tech Indicators</div>
+}));
+
 describe('StockDashboard - Left Column Conditional Rendering', () => {
   let consoleSpy: any;
 
@@ -424,45 +449,48 @@ describe('StockDashboard - Left Column Conditional Rendering', () => {
         symbol: 'GOOGL'
       };
 
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: mockPredictionData2 })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ 
-            success: true, 
-            data: mockAnalysisData,
-            priceData: mockAnalysisData.priceData 
-          })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ 
-            success: true, 
-            data: mockAnalysisData2,
-            priceData: mockAnalysisData.priceData 
-          })
-        });
+      // Use a smarter mock that returns correct data based on URL
+      let analysisCallCount = 0;
+      (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('/api/predictions')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ success: true, data: mockPredictionData2 })
+          });
+        }
+        if (url.includes('/api/analysis')) {
+          analysisCallCount++;
+          // Return AAPL analysis for first call, GOOGL for second
+          const analysisData = analysisCallCount === 1 ? mockAnalysisData : mockAnalysisData2;
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: analysisData,
+              priceData: mockAnalysisData.priceData
+            })
+          });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({ success: false }) });
+      });
 
       render(<StockDashboard />);
-      
+
       await screen.findByText('$150');
       await screen.findByText('$2800');
-      
+
       // Click first stock
       const appleCard = screen.getByText('$150').closest('div');
       fireEvent.click(appleCard!);
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('sidebar-symbol')).toHaveTextContent('AAPL');
       });
-      
+
       // Click second stock
       const googleCard = screen.getByText('$2800').closest('div');
       fireEvent.click(googleCard!);
-      
+
       // Sidebar should update to show new stock
       await waitFor(() => {
         expect(screen.getByTestId('sidebar-symbol')).toHaveTextContent('GOOGL');
@@ -568,33 +596,40 @@ describe('StockDashboard - Left Column Conditional Rendering', () => {
         }
       ];
 
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: mockPredictionData2 })
-        })
-        .mockResolvedValue({
-          ok: true,
-          json: async () => ({ 
-            success: true, 
-            data: mockAnalysisData,
-            priceData: mockAnalysisData.priceData 
-          })
-        });
+      // Create a smart mock that returns predictions for prediction calls and analysis for analysis calls
+      (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('/api/predictions')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ success: true, data: mockPredictionData2 })
+          });
+        }
+        if (url.includes('/api/analysis')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: mockAnalysisData,
+              priceData: mockAnalysisData.priceData
+            })
+          });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({ success: false }) });
+      });
 
       render(<StockDashboard />);
-      
+
       await screen.findByText('$150');
       await screen.findByText('$2800');
-      
+
       // Rapidly click different stocks
       const appleCard = screen.getByText('$150').closest('div');
       const googleCard = screen.getByText('$2800').closest('div');
-      
+
       fireEvent.click(appleCard!);
       fireEvent.click(googleCard!);
       fireEvent.click(appleCard!);
-      
+
       // Should eventually settle on the last clicked stock
       await waitFor(() => {
         expect(screen.getByTestId('additional-insights-sidebar')).toBeInTheDocument();

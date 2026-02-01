@@ -11,7 +11,28 @@ __tests__/
 │   ├── predictions.test.ts       # /api/predictions tests
 │   ├── analysis.test.ts          # /api/analysis tests
 │   └── search.test.ts            # /api/search tests
+├── utils/                        # Shared test utilities
+│   ├── index.ts                  # Central exports
+│   ├── mock-request.ts           # NextRequest mocking
+│   ├── mock-data.ts              # Test data builders
+│   ├── render-helpers.tsx        # Component render helpers
+│   ├── test-constants.ts         # Shared constants
+│   └── README.md                 # Utilities documentation
 └── README.md                     # This file
+```
+
+## Test Utilities
+
+All tests should use the shared utilities from `@/__tests__/utils`. See [utils/README.md](./utils/README.md) for full documentation.
+
+```typescript
+import {
+  createMockGetRequest,
+  parseResponseJson,
+  mockTrade,
+  HTTP_STATUS,
+  renderWithProviders,
+} from '@/__tests__/utils';
 ```
 
 ## Running Tests
@@ -140,16 +161,57 @@ test('predictions.data should be an array', () => {
 
 ---
 
-## Test Coverage Goals
+## Coverage Monitoring
+
+### Running Coverage
+
+```bash
+# Generate coverage report
+npm run test:coverage
+
+# View HTML report in browser
+npm run test:coverage:view
+
+# CI-friendly coverage with verbose output
+npm run test:coverage:ci
+```
+
+### Coverage Reports
+
+Reports are generated in the `./coverage` directory:
+- **HTML Report:** `coverage/index.html` (interactive browser view)
+- **LCOV:** `coverage/lcov.info` (CI integration: Codecov, Coveralls)
+- **JSON:** `coverage/coverage-final.json` (machine-readable)
+
+### Current Coverage Status
+
+| Module | Statements | Branches | Functions | Lines |
+|--------|-----------|----------|-----------|-------|
+| Technical Analysis | 93% | 89% | 92% | 94% |
+| Overall Codebase | 20% | 17% | 12% | 20% |
+
+### Coverage Thresholds
+
+Current baseline thresholds (in `vitest.config.ts`):
+- Statements: 20%
+- Branches: 15%
+- Functions: 10%
+- Lines: 20%
+
+**Target goals** (to increase incrementally):
+- Statements: 50%+
+- Branches: 40%+
+- Functions: 50%+
+- Lines: 50%+
+
+## Test Coverage Goals by Component
 
 | Component | Current | Target |
 |-----------|---------|--------|
-| API Routes | 0%* | 80% |
-| Validation Logic | 100% | 100% |
-| Business Logic | 0%* | 70% |
-| Error Handling | 0%* | 90% |
-
-*Tests written but not yet integrated with Jest runner
+| Technical Analysis | 93% | 95% |
+| API Routes | 20% | 80% |
+| Components | 15% | 70% |
+| Utilities | 10% | 80% |
 
 ## Common Test Patterns
 
@@ -200,6 +262,33 @@ test('should continue on partial failure', () => {
 
 ## Mocking Strategy
 
+### Using Test Utilities
+
+Always use the shared test utilities for consistent mocking:
+
+```typescript
+import {
+  createMockGetRequest,
+  createMockPostRequest,
+  parseResponseJson,
+  mockTrade,
+  mockPriceDataArray,
+  mockResponses,
+  HTTP_STATUS,
+} from '@/__tests__/utils';
+
+// Create mock requests
+const request = createMockGetRequest('/api/trades', { status: 'OPEN' });
+
+// Create mock data with dynamic dates
+const trade = mockTrade({ symbol: 'AAPL' });
+const priceData = mockPriceDataArray(90);
+
+// Parse responses safely
+const response = await GET(request);
+const data = await parseResponseJson(response);
+```
+
 ### External Dependencies
 ```typescript
 jest.mock('@/lib/data-providers/fmp');
@@ -216,6 +305,7 @@ const mockFMPProvider = {
 - ✅ Tests are deterministic (no flaky results)
 - ✅ Can test error scenarios
 - ✅ No API costs during testing
+- ✅ Dynamic dates prevent test staleness
 
 ## Integration Tests (Future)
 
@@ -273,7 +363,11 @@ npm test -- -t "should return correct response structure"
 
 ### Debug Mode
 ```bash
-node --inspect-brk node_modules/.bin/jest predictions.test.ts
+# Use Vitest's built-in debug mode
+npm test -- --inspect-brk
+
+# Or use the UI for interactive debugging
+npm run test:ui
 ```
 
 ### Verbose Output
@@ -341,7 +435,7 @@ describe('Feature Name', () => {
 ## FAQ
 
 **Q: Why are tests not running?**
-A: Check that Jest is configured in `package.json` and dependencies are installed.
+A: Check that Vitest is configured in `vitest.config.ts` and dependencies are installed (`npm install`).
 
 **Q: How do I test middleware?**
 A: Middleware is tested through the route tests. Each route test verifies middleware behavior.
@@ -357,9 +451,11 @@ A: E2E tests (Playwright/Cypress) are separate and test the full stack.
 
 ## Resources
 
-- [Jest Documentation](https://jestjs.io/)
-- [Testing Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
+- [Vitest Documentation](https://vitest.dev/)
+- [Testing Library Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 - [Contract Testing Guide](../docs/PREVENTING_BREAKING_CHANGES.md)
+- [Component Testing Guide](../docs/COMPONENT_TESTING_GUIDE.md)
+- [Test Utilities Documentation](./utils/README.md)
 
 ## Quick Reference
 
@@ -373,8 +469,11 @@ npm test predictions
 # Watch mode
 npm test -- --watch
 
-# Coverage
-npm test -- --coverage
+# Coverage report
+npm run test:coverage
+
+# View coverage in browser
+npm run test:coverage:view
 
 # Contracts only
 npm run test:contracts
@@ -382,12 +481,15 @@ npm run test:contracts
 # Verbose
 npm test -- --verbose
 
-# Debug
-node --inspect-brk node_modules/.bin/jest
+# Run tests in UI mode
+npm run test:ui
+
+# Single run (no watch)
+npm run test:run
 ```
 
 ---
 
-**Last Updated:** 2026-01-31
-**Test Coverage:** 0% → 80% (target)
-**Test Count:** ~80 tests across 4 files
+**Last Updated:** 2026-02-01
+**Test Coverage:** 20% current → 50%+ (target)
+**Test Count:** ~1100+ tests across 45+ files
