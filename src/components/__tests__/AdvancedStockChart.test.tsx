@@ -151,7 +151,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
       expect(screen.getByText(/No price data available for TEST/i)).toBeInTheDocument();
 
       // Console warn should be called for empty chart data
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No chart data available for rendering');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No price data available for TEST for rendering');
     });
 
     it('should log warning when chartData becomes empty after filtering', async () => {
@@ -180,7 +180,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
 
       // Should log warning about empty chart data
       await waitFor(() => {
-        expect(consoleWarnSpy).toHaveBeenCalledWith('No chart data available for rendering');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('No price data available for TEST for rendering');
       });
     });
 
@@ -201,7 +201,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
       expect(screen.getByText(/No price data available for TEST/i)).toBeInTheDocument();
 
       // Should log warning
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No chart data available for rendering');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No price data available for TEST for rendering');
     });
 
     it('should handle null priceData gracefully', () => {
@@ -212,7 +212,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
       expect(screen.getByText(/No price data available for TEST/i)).toBeInTheDocument();
 
       // Should log warning
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No chart data available for rendering');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No price data available for TEST for rendering');
     });
   });
 
@@ -453,7 +453,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
 
       // Should NOT log warning about empty chart data
       const warningCalls = consoleWarnSpy.mock.calls.filter(
-        (call: any) => call[0] === 'No chart data available for rendering'
+        (call: any) => call[0] === 'No price data available for TEST for rendering'
       );
       expect(warningCalls.length).toBe(0);
     });
@@ -562,7 +562,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
 
       // Initially should show no data
       expect(screen.getByText(/No price data available for TEST/i)).toBeInTheDocument();
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No chart data available for rendering');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No price data available for TEST for rendering');
 
       // Clear logs
       consoleWarnSpy.mockClear();
@@ -583,7 +583,7 @@ describe('AdvancedStockChart - Defensive Check and Logging', () => {
       });
 
       // Should not log warning anymore
-      expect(consoleWarnSpy).not.toHaveBeenCalledWith('No chart data available for rendering');
+      expect(consoleWarnSpy).not.toHaveBeenCalledWith('No price data available for TEST for rendering');
     });
   });
 

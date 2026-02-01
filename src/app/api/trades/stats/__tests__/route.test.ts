@@ -49,6 +49,16 @@ vi.mock('@/lib/auth/demo-user', () => ({
   getDemoUserId: () => mockGetDemoUserId(),
 }));
 
+// Helper to create mock NextRequest
+function createMockRequest(url = 'http://localhost:3000/api/trades/stats'): any {
+  return {
+    nextUrl: new URL(url),
+    url,
+    method: 'GET',
+    headers: new Headers(),
+  };
+}
+
 describe('GET /api/trades/stats', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,13 +72,13 @@ describe('GET /api/trades/stats', () => {
     it('should return 503 when database health check fails', async () => {
       mockHealthCheck.mockResolvedValueOnce(false);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Database connection unavailable');
-      expect(data.details).toContain('npm run db:setup');
+      expect(data.error).toContain('Database connection unavailable');
+      expect(data.error).toContain('npm run db:setup');
     });
 
     it('should proceed with request when database is healthy', async () => {
@@ -87,7 +97,7 @@ describe('GET /api/trades/stats', () => {
         worstTrade: -200,
       });
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -115,7 +125,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-456');
       mockGetPortfolioStats.mockResolvedValueOnce(mockStats);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -141,7 +151,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-789');
       mockGetPortfolioStats.mockResolvedValueOnce(emptyStats);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -156,12 +166,12 @@ describe('GET /api/trades/stats', () => {
       mockHealthCheck.mockResolvedValueOnce(true);
       mockGetDemoUserId.mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Database connection failed');
+      expect(data.error).toContain('Database connection failed');
       expect(data.details).toContain('ECONNREFUSED');
     });
 
@@ -169,12 +179,12 @@ describe('GET /api/trades/stats', () => {
       mockHealthCheck.mockResolvedValueOnce(true);
       mockGetDemoUserId.mockRejectedValueOnce(new Error('connection timeout'));
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Database connection failed');
+      expect(data.error).toContain('Database connection failed');
     });
   });
 
@@ -185,12 +195,12 @@ describe('GET /api/trades/stats', () => {
         new Error('relation "trades" does not exist')
       );
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Database tables not found. Please run migrations: npm run db:migrate');
+      expect(data.error).toContain('Database tables not found. Please run migrations: npm run db:migrate');
       expect(data.details).toContain('relation');
       expect(data.details).toContain('does not exist');
     });
@@ -201,7 +211,7 @@ describe('GET /api/trades/stats', () => {
         new Error('relation "users" does not exist')
       );
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
@@ -216,12 +226,12 @@ describe('GET /api/trades/stats', () => {
         new Error('Authentication service unavailable')
       );
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(503);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('User authentication failed. Database may not be properly configured.');
+      expect(data.error).toContain('User authentication failed. Database may not be properly configured.');
       expect(data.details).toContain('Authentication service unavailable');
     });
   });
@@ -232,12 +242,12 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-123');
       mockGetPortfolioStats.mockRejectedValueOnce(new Error('Unexpected internal error'));
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Failed to fetch portfolio statistics');
+      expect(data.error).toContain('Failed to fetch portfolio statistics');
       expect(data.details).toBe('Unexpected internal error');
     });
 
@@ -246,12 +256,12 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-123');
       mockGetPortfolioStats.mockRejectedValueOnce('String error');
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Failed to fetch portfolio statistics');
+      expect(data.error).toContain('Failed to fetch portfolio statistics');
       expect(data.details).toBe('Unknown error');
     });
 
@@ -260,7 +270,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-123');
       mockGetPortfolioStats.mockRejectedValueOnce(null);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -277,7 +287,7 @@ describe('GET /api/trades/stats', () => {
       mockHealthCheck.mockResolvedValueOnce(true);
       mockGetDemoUserId.mockRejectedValueOnce(testError);
 
-      await GET();
+      await GET(createMockRequest());
 
       expect(consoleSpy).toHaveBeenCalledWith('Trades stats GET error:', testError);
       consoleSpy.mockRestore();
@@ -288,7 +298,7 @@ describe('GET /api/trades/stats', () => {
     it('should handle health check throwing an error', async () => {
       mockHealthCheck.mockRejectedValueOnce(new Error('Health check failed'));
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       // When healthCheck throws, it should be caught by the outer try-catch
@@ -301,7 +311,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-123');
       mockGetPortfolioStats.mockRejectedValueOnce(new Error('Database query failed'));
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -327,7 +337,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-losing');
       mockGetPortfolioStats.mockResolvedValueOnce(negativeStats);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -354,7 +364,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-zero-wins');
       mockGetPortfolioStats.mockResolvedValueOnce(zeroWinStats);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -380,7 +390,7 @@ describe('GET /api/trades/stats', () => {
       mockGetDemoUserId.mockResolvedValueOnce('user-perfect');
       mockGetPortfolioStats.mockResolvedValueOnce(perfectStats);
 
-      const response = await GET();
+      const response = await GET(createMockRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);

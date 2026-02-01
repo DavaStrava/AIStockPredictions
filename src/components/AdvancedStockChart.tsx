@@ -371,7 +371,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     const renderChart = () => {
         // Add defensive check
         if (!chartData || chartData.length === 0) {
-            console.warn('No chart data available for rendering');
+            console.warn('No price data available for {symbol} for rendering');
             return null;
         }
 
@@ -594,7 +594,7 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                     </div>
                 ) : chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-96 text-gray-500">
-                        No chart data available
+                        No price data available for {symbol}
                     </div>
                 ) : (
                     <div style={{ width: '100%', height: '400px' }}>
