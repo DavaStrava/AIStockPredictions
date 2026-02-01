@@ -1,6 +1,6 @@
 # 📚 Documentation Index
 
-**Last Updated:** 2026-01-31 (After Phase 1 cleanup)
+**Last Updated:** 2026-02-01 (After Phase 1.4 test documentation)
 **Status:** ✅ All docs synced and up to date
 
 ---
@@ -20,8 +20,10 @@
 ### **Deep Dives**
 7. **[docs/CI_CD_SETUP.md](#docsci_cd_setupmd)** 🔧 Complete CI/CD guide
 8. **[docs/PREVENTING_BREAKING_CHANGES.md](#docspreventing_breaking_changesmd)** 🔒 Testing strategy
-9. **[docs/PHASE_1_2_CODE_REVIEW.md](#docsphase_1_2_code_reviewmd)** 👀 Code quality
-10. **[src/__tests__/README.md](#src__tests__readmemd)** 🧪 Testing guide
+9. **[docs/COMPONENT_TESTING_GUIDE.md](#docscomponent_testing_guidemd)** 🧩 Component testing patterns
+10. **[docs/PHASE_1_2_CODE_REVIEW.md](#docsphase_1_2_code_reviewmd)** 👀 Code quality
+11. **[src/__tests__/README.md](#src__tests__readmemd)** 🧪 Testing guide + coverage
+12. **[src/__tests__/utils/README.md](#src__tests__utilsreadmemd)** 🔧 Test utilities
 
 ---
 
@@ -42,6 +44,7 @@ AIStockPredictions/
 ├─ 📁 docs/ (Detailed Documentation)
 │  ├─ CI_CD_SETUP.md               ← Complete CI/CD guide
 │  ├─ TEST_SUITE_SUMMARY.md        ← Test coverage details
+│  ├─ COMPONENT_TESTING_GUIDE.md   ← Component testing patterns (NEW)
 │  ├─ PHASE_1_2_MIGRATION_SUMMARY.md ← Migration recap
 │  ├─ PHASE_1_2_CODE_REVIEW.md     ← Code quality review
 │  ├─ PHASE_1_CLEANUP_SUMMARY.md   ← Phase 1 cleanup recap
@@ -51,7 +54,8 @@ AIStockPredictions/
 │  └─ MIGRATION_EXAMPLE.md         ← How to migrate routes
 │
 └─ 🧪 src/__tests__/
-   └─ README.md                    ← Testing guide & patterns
+   ├─ README.md                    ← Testing guide + coverage monitoring
+   └─ utils/README.md              ← Test utilities documentation (NEW)
 ```
 
 ---
