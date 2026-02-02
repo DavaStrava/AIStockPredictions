@@ -2,11 +2,13 @@
  * HoldingRow Component
  *
  * Renders a single row in the HoldingsDataGrid.
+ * Supports dynamic column visibility and links symbol to stock detail page.
  * Memoized to prevent re-renders when other holdings change.
  */
 'use client';
 
 import { memo } from 'react';
+import Link from 'next/link';
 import {
   TrendingUp,
   TrendingDown,
@@ -14,9 +16,12 @@ import {
   Edit2,
 } from 'lucide-react';
 import { HoldingWithMarketData } from '@/types/portfolio';
+import type { ColumnKey } from './HoldingsDataGrid';
 
 interface HoldingRowProps {
   holding: HoldingWithMarketData;
+  /** Array of visible column keys (stable reference for memo optimization) */
+  visibleColumns: ColumnKey[];
   isEditing: boolean;
   editingTarget: string;
   onStartEdit: (symbol: string, currentTarget: number | null) => void;
@@ -35,6 +40,11 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+function formatCurrencyCompact(value: number): string {
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${formatCurrency(value)}`;
+}
+
 function formatPercent(value: number): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
@@ -49,6 +59,7 @@ function formatNumber(value: number): string {
 
 export const HoldingRow = memo(function HoldingRow({
   holding,
+  visibleColumns,
   isEditing,
   editingTarget,
   onStartEdit,
@@ -63,61 +74,165 @@ export const HoldingRow = memo(function HoldingRow({
 
   return (
     <tr className="hover:bg-slate-700/20 transition-colors">
-      {/* Symbol */}
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">
-              {holding.symbol.substring(0, 2)}
-            </span>
-          </div>
-          <div>
-            <p className="font-semibold text-slate-100">{holding.symbol}</p>
-            {holding.companyName && (
-              <p className="text-xs text-slate-500 truncate max-w-[150px]">
-                {holding.companyName}
+      {/* Symbol - Always clickable link to stock detail page */}
+      {visibleColumns.includes('symbol') && (
+        <td className="px-3 py-3">
+          <Link href={`/stock/${holding.symbol}`} className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
+                {holding.symbol.substring(0, 2)}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-100 group-hover:text-indigo-400 transition-colors">
+                {holding.symbol}
               </p>
-            )}
-          </div>
-        </div>
-      </td>
+              {holding.companyName && (
+                <p className="text-xs text-slate-500 truncate max-w-[140px]">
+                  {holding.companyName}
+                </p>
+              )}
+            </div>
+          </Link>
+        </td>
+      )}
 
       {/* Price */}
-      <td className="px-4 py-4 text-right">
-        <span className="text-slate-100 font-medium">
-          {formatCurrency(holding.currentPrice)}
-        </span>
-      </td>
+      {visibleColumns.includes('currentPrice') && (
+        <td className="px-3 py-3 text-right">
+          <div className="flex flex-col items-end">
+            <span className="text-slate-100 font-medium">
+              {formatCurrency(holding.currentPrice)}
+            </span>
+            {holding.postMarketPrice !== undefined && (
+              <span className="text-xs text-slate-500">
+                AH: {formatCurrency(holding.postMarketPrice)}
+              </span>
+            )}
+          </div>
+        </td>
+      )}
 
-      {/* Shares */}
-      <td className="px-4 py-4 text-right">
-        <span className="text-slate-300">{formatNumber(holding.quantity)}</span>
-      </td>
+      {/* Day Change ($) */}
+      {visibleColumns.includes('dayChange') && (
+        <td className="px-3 py-3 text-right">
+          <span className={`font-medium ${isPositiveDay ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatCurrencyCompact(holding.dayChange)}
+          </span>
+        </td>
+      )}
 
-      {/* Value */}
-      <td className="px-4 py-4 text-right">
-        <span className="text-slate-100 font-medium">
-          {formatCurrency(holding.marketValue)}
-        </span>
-      </td>
+      {/* Day Change (%) */}
+      {visibleColumns.includes('dayChangePercent') && (
+        <td className="px-3 py-3 text-right">
+          <div
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
+              isPositiveDay ? 'bg-emerald-500/10' : 'bg-rose-500/10'
+            }`}
+          >
+            {isPositiveDay ? (
+              <TrendingUp className="w-3 h-3 text-emerald-400" />
+            ) : (
+              <TrendingDown className="w-3 h-3 text-rose-400" />
+            )}
+            <span
+              className={`text-sm font-medium ${
+                isPositiveDay ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {formatPercent(holding.dayChangePercent)}
+            </span>
+          </div>
+        </td>
+      )}
 
       {/* Weight */}
-      <td className="px-4 py-4 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-all"
-              style={{ width: `${Math.min(holding.portfolioWeight, 100)}%` }}
-            />
+      {visibleColumns.includes('portfolioWeight') && (
+        <td className="px-3 py-3 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all"
+                style={{ width: `${Math.min(holding.portfolioWeight, 100)}%` }}
+              />
+            </div>
+            <span className="text-slate-300 text-sm w-12 text-right">
+              {holding.portfolioWeight.toFixed(1)}%
+            </span>
           </div>
-          <span className="text-slate-300 text-sm w-14 text-right">
-            {holding.portfolioWeight.toFixed(1)}%
-          </span>
-        </div>
-      </td>
+        </td>
+      )}
 
-      {/* Target */}
-      <td className="px-4 py-4 text-right">
+      {/* Shares */}
+      {visibleColumns.includes('quantity') && (
+        <td className="px-3 py-3 text-right">
+          <span className="text-slate-300">{formatNumber(holding.quantity)}</span>
+        </td>
+      )}
+
+      {/* Avg Cost */}
+      {visibleColumns.includes('averageCostBasis') && (
+        <td className="px-3 py-3 text-right">
+          <span className="text-slate-300">{formatCurrency(holding.averageCostBasis)}</span>
+        </td>
+      )}
+
+      {/* Today's Gain ($) */}
+      {visibleColumns.includes('todayGain') && (
+        <td className="px-3 py-3 text-right">
+          <span className={`font-medium ${holding.todayGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatCurrencyCompact(holding.todayGain)}
+          </span>
+        </td>
+      )}
+
+      {/* Today's Gain (%) */}
+      {visibleColumns.includes('todayGainPercent') && (
+        <td className="px-3 py-3 text-right">
+          <span className={`text-sm ${holding.todayGainPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatPercent(holding.todayGainPercent)}
+          </span>
+        </td>
+      )}
+
+      {/* Est. Annual Income */}
+      {visibleColumns.includes('estimatedAnnualIncome') && (
+        <td className="px-3 py-3 text-right">
+          <span className="text-slate-300">
+            {holding.estimatedAnnualIncome > 0 ? formatCurrency(holding.estimatedAnnualIncome) : '—'}
+          </span>
+        </td>
+      )}
+
+      {/* Total Change ($) */}
+      {visibleColumns.includes('totalGainLoss') && (
+        <td className="px-3 py-3 text-right">
+          <span className={`font-medium ${isPositiveTotal ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatCurrencyCompact(holding.totalGainLoss)}
+          </span>
+        </td>
+      )}
+
+      {/* Total Change (%) */}
+      {visibleColumns.includes('totalGainLossPercent') && (
+        <td className="px-3 py-3 text-right">
+          <span className={`text-sm ${isPositiveTotal ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatPercent(holding.totalGainLossPercent)}
+          </span>
+        </td>
+      )}
+
+      {/* Value */}
+      {visibleColumns.includes('marketValue') && (
+        <td className="px-3 py-3 text-right">
+          <span className="text-slate-100 font-medium">
+            {formatCurrency(holding.marketValue)}
+          </span>
+        </td>
+      )}
+
+      {/* Target (always shown) */}
+      <td className="px-3 py-3 text-right">
         {isEditing ? (
           <div className="flex items-center justify-end gap-2">
             <input
@@ -128,7 +243,7 @@ export const HoldingRow = memo(function HoldingRow({
                 if (e.key === 'Enter') onSaveTarget(holding.symbol);
                 if (e.key === 'Escape') onCancelEdit();
               }}
-              className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-slate-100 text-right"
+              className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-slate-100 text-right"
               placeholder="%"
               min="0"
               max="100"
@@ -142,11 +257,11 @@ export const HoldingRow = memo(function HoldingRow({
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-1">
             {holding.targetAllocationPercent !== null ? (
               <>
                 <Target
-                  className={`w-4 h-4 ${hasDrift ? 'text-amber-400' : 'text-slate-500'}`}
+                  className={`w-3.5 h-3.5 ${hasDrift ? 'text-amber-400' : 'text-slate-500'}`}
                 />
                 <span
                   className={`text-sm ${hasDrift ? 'text-amber-400' : 'text-slate-400'}`}
@@ -169,48 +284,6 @@ export const HoldingRow = memo(function HoldingRow({
             )}
           </div>
         )}
-      </td>
-
-      {/* Day Change */}
-      <td className="px-4 py-4 text-right">
-        <div
-          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
-            isPositiveDay ? 'bg-emerald-500/10' : 'bg-rose-500/10'
-          }`}
-        >
-          {isPositiveDay ? (
-            <TrendingUp className="w-3 h-3 text-emerald-400" />
-          ) : (
-            <TrendingDown className="w-3 h-3 text-rose-400" />
-          )}
-          <span
-            className={`text-sm font-medium ${
-              isPositiveDay ? 'text-emerald-400' : 'text-rose-400'
-            }`}
-          >
-            {formatPercent(holding.dayChangePercent)}
-          </span>
-        </div>
-      </td>
-
-      {/* Total Return */}
-      <td className="px-4 py-4 text-right">
-        <div className="flex flex-col items-end">
-          <span
-            className={`font-medium ${
-              isPositiveTotal ? 'text-emerald-400' : 'text-rose-400'
-            }`}
-          >
-            {formatCurrency(holding.totalGainLoss)}
-          </span>
-          <span
-            className={`text-xs ${
-              isPositiveTotal ? 'text-emerald-500' : 'text-rose-500'
-            }`}
-          >
-            {formatPercent(holding.totalGainLossPercent)}
-          </span>
-        </div>
       </td>
     </tr>
   );

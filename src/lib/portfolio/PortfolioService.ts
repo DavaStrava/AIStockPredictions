@@ -510,14 +510,30 @@ export class PortfolioService {
         }
       }
 
+      // Calculate day change for this holding
+      const dayChangeAmount = (quote?.change ?? 0) * holding.quantity;
+      const dayChangePercent = quote?.changesPercentage ?? 0;
+
+      // Today's gain calculations
+      const todayGain = dayChangeAmount;
+      const previousMarketValue = holding.quantity * (quote?.previousClose ?? currentPrice);
+      const todayGainPercent = previousMarketValue > 0
+        ? (todayGain / previousMarketValue) * 100
+        : 0;
+
+      // Dividend data - FMP quote doesn't include this, set to 0 for now
+      // TODO: Fetch from company profile or financial statements endpoint
+      const dividendYield = 0;
+      const estimatedAnnualIncome = (dividendYield / 100) * marketValue;
+
       enrichedHoldings.push({
         ...holding,
         currentPrice,
         marketValue,
         portfolioWeight: 0, // Will be calculated after we have totalMarketValue
         driftPercent: null,
-        dayChange: (quote?.change ?? 0) * holding.quantity,
-        dayChangePercent: quote?.changesPercentage ?? 0,
+        dayChange: dayChangeAmount,
+        dayChangePercent,
         totalGainLoss: marketValue - holding.totalCostBasis,
         totalGainLossPercent:
           holding.totalCostBasis > 0
@@ -527,6 +543,16 @@ export class PortfolioService {
         companyName: quote?.name,
         priceStatus,
         priceStatusMessage,
+        // Phase 1: Enhanced Holdings View fields
+        todayGain,
+        todayGainPercent,
+        estimatedAnnualIncome,
+        dividendYield,
+        yearHigh: quote?.yearHigh ?? 0,
+        yearLow: quote?.yearLow ?? 0,
+        // Post-market data not available in standard FMP quote
+        postMarketPrice: undefined,
+        postMarketChangePercent: undefined,
       });
     }
 

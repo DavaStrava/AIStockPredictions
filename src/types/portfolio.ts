@@ -91,6 +91,24 @@ export interface HoldingWithMarketData extends PortfolioHolding {
   priceStatus: PriceStatus;
   /** Human-readable message if price data is unavailable */
   priceStatusMessage?: string;
+
+  // Phase 1: Enhanced Holdings View fields
+  /** Today's gain in dollars (dayChange * quantity) */
+  todayGain: number;
+  /** Today's gain as percentage of market value */
+  todayGainPercent: number;
+  /** Estimated annual dividend income (dividendYield * marketValue) */
+  estimatedAnnualIncome: number;
+  /** Annual dividend yield as percentage */
+  dividendYield: number;
+  /** 52-week high price */
+  yearHigh: number;
+  /** 52-week low price */
+  yearLow: number;
+  /** Post-market/after-hours price (if available) */
+  postMarketPrice?: number;
+  /** Post-market change percentage (if available) */
+  postMarketChangePercent?: number;
 }
 
 /**
