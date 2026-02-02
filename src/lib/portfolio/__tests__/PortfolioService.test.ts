@@ -406,6 +406,229 @@ describe('PortfolioService', () => {
     });
   });
 
+  describe('addTransaction with externalClient (batch imports)', () => {
+    const mockPortfolioData = {
+      id: 'portfolio-123',
+      user_id: 'user-123',
+      name: 'My Portfolio',
+      description: null,
+      currency: 'USD',
+      is_default: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should use external client instead of internal transaction', async () => {
+      const mockTransactionData = {
+        id: 'txn-123',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: null,
+        transaction_type: 'DEPOSIT',
+        quantity: null,
+        price_per_share: null,
+        fees: '0',
+        total_amount: '10000',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Setup: external client for batch operation
+      const externalMockClientQuery = vi.fn();
+      const externalMockClient = { query: externalMockClientQuery };
+
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      externalMockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert via external client
+
+      const result = await service.addTransaction(
+        {
+          portfolioId: 'portfolio-123',
+          transactionType: 'DEPOSIT',
+          totalAmount: 10000,
+          transactionDate: new Date(),
+        },
+        externalMockClient as any
+      );
+
+      expect(result.transactionType).toBe('DEPOSIT');
+      expect(result.totalAmount).toBe(10000);
+      // Internal transaction should NOT be called when external client is provided
+      expect(mockTransaction).not.toHaveBeenCalled();
+      // External client should be used
+      expect(externalMockClientQuery).toHaveBeenCalled();
+    });
+
+    it('should support batch BUY transactions with external client', async () => {
+      const mockTransactionData = {
+        id: 'txn-123',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: 'AAPL',
+        transaction_type: 'BUY',
+        quantity: '10',
+        price_per_share: '150',
+        fees: '0',
+        total_amount: '-1500',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Setup: external client for batch operation
+      const externalMockClientQuery = vi.fn();
+      const externalMockClient = { query: externalMockClientQuery };
+
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol
+
+      // All calls go through external client
+      externalMockClientQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '5000' }] }); // getCashBalanceForUpdate
+      externalMockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert
+      externalMockClientQuery.mockResolvedValueOnce({
+        rows: [{
+          total_bought: '10',
+          total_sold: '0',
+          total_cost: '1500',
+          first_purchase: new Date().toISOString(),
+          last_transaction: new Date().toISOString()
+        }]
+      }); // updateHoldingsCache query
+      externalMockClientQuery.mockResolvedValueOnce({ rows: [] }); // upsert holding
+
+      const result = await service.addTransaction(
+        {
+          portfolioId: 'portfolio-123',
+          transactionType: 'BUY',
+          assetSymbol: 'AAPL',
+          quantity: 10,
+          pricePerShare: 150,
+          totalAmount: 1500,
+          transactionDate: new Date(),
+        },
+        externalMockClient as any
+      );
+
+      expect(result.transactionType).toBe('BUY');
+      expect(result.assetSymbol).toBe('AAPL');
+      // Internal transaction should NOT be called
+      expect(mockTransaction).not.toHaveBeenCalled();
+      // All 4 operations should go through external client
+      expect(externalMockClientQuery).toHaveBeenCalledTimes(4);
+    });
+
+    it('should propagate errors to caller when using external client', async () => {
+      // Setup: external client for batch operation
+      const externalMockClientQuery = vi.fn();
+      const externalMockClient = { query: externalMockClientQuery };
+
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      externalMockClientQuery.mockRejectedValueOnce(new Error('Database constraint violation'));
+
+      await expect(
+        service.addTransaction(
+          {
+            portfolioId: 'portfolio-123',
+            transactionType: 'DEPOSIT',
+            totalAmount: 10000,
+            transactionDate: new Date(),
+          },
+          externalMockClient as any
+        )
+      ).rejects.toThrow('Database constraint violation');
+
+      // Error should propagate without internal transaction handling
+      expect(mockTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should allow multiple transactions in same external transaction scope', async () => {
+      // This simulates what happens during CSV batch import
+      const mockTxnData1 = {
+        id: 'txn-1',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: null,
+        transaction_type: 'DEPOSIT',
+        quantity: null,
+        price_per_share: null,
+        fees: '0',
+        total_amount: '10000',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const mockTxnData2 = {
+        id: 'txn-2',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: 'AAPL',
+        transaction_type: 'BUY',
+        quantity: '10',
+        price_per_share: '150',
+        fees: '0',
+        total_amount: '-1500',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Shared external client simulating a single transaction scope
+      const batchClientQuery = vi.fn();
+      const batchClient = { query: batchClientQuery };
+
+      // First transaction: DEPOSIT
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] });
+      batchClientQuery.mockResolvedValueOnce({ rows: [mockTxnData1] });
+
+      const result1 = await service.addTransaction(
+        {
+          portfolioId: 'portfolio-123',
+          transactionType: 'DEPOSIT',
+          totalAmount: 10000,
+          transactionDate: new Date(),
+        },
+        batchClient as any
+      );
+
+      // Second transaction: BUY
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] });
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' });
+      batchClientQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '10000' }] });
+      batchClientQuery.mockResolvedValueOnce({ rows: [mockTxnData2] });
+      batchClientQuery.mockResolvedValueOnce({
+        rows: [{
+          total_bought: '10',
+          total_sold: '0',
+          total_cost: '1500',
+          first_purchase: new Date().toISOString(),
+          last_transaction: new Date().toISOString()
+        }]
+      });
+      batchClientQuery.mockResolvedValueOnce({ rows: [] });
+
+      const result2 = await service.addTransaction(
+        {
+          portfolioId: 'portfolio-123',
+          transactionType: 'BUY',
+          assetSymbol: 'AAPL',
+          quantity: 10,
+          pricePerShare: 150,
+          totalAmount: 1500,
+          transactionDate: new Date(),
+        },
+        batchClient as any
+      );
+
+      expect(result1.transactionType).toBe('DEPOSIT');
+      expect(result2.transactionType).toBe('BUY');
+      // Both should use the same client
+      expect(batchClientQuery).toHaveBeenCalled();
+      // No internal transactions should be created
+      expect(mockTransaction).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getCashBalance', () => {
     it('should calculate cash balance from transactions', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '5000' }] });

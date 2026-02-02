@@ -13,7 +13,7 @@
  * - Performance chart
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Plus,
   ChevronDown,
@@ -31,6 +31,7 @@ import { HoldingsDataGrid } from './HoldingsDataGrid';
 import { TransactionModal } from './TransactionModal';
 import { PortfolioTreeMap } from './PortfolioTreeMap';
 import { PerformanceChart } from './PerformanceChart';
+import { PortfolioCSVImport } from './PortfolioCSVImport';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { PortfolioTransactionType } from '@/types/portfolio';
 
@@ -155,6 +156,11 @@ export function PortfolioManager() {
     setShowTransactionModal(true);
   };
 
+  const handleImportSuccess = useCallback(() => {
+    // Refresh portfolio data after successful import
+    refreshPortfolioData();
+  }, [refreshPortfolioData]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -242,6 +248,12 @@ export function PortfolioManager() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
+            {selectedPortfolioId && (
+              <PortfolioCSVImport
+                portfolioId={selectedPortfolioId}
+                onImportSuccess={handleImportSuccess}
+              />
+            )}
             <button
               onClick={() => openTransactionModal('DEPOSIT')}
               className="px-4 py-2.5 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/30 transition-colors font-medium"

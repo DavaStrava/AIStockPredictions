@@ -6,9 +6,10 @@
  * Integrates TradeLogTable with usePortfolioStats hook.
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { TradeLogTable } from './TradeLogTable';
 import { TradeEntryModal } from './TradeEntryModal';
+import { TradeCSVImport } from './TradeCSVImport';
 import { usePortfolioStats } from './hooks/usePortfolioStats';
 import { CreateTradeRequest, TradeFilters } from '@/types/models';
 
@@ -86,9 +87,14 @@ export function TradeTracker() {
     fetchTrades(filters);
   };
 
-  const filteredTrades = filterStatus === 'ALL' 
-    ? trades 
+  const filteredTrades = filterStatus === 'ALL'
+    ? trades
     : trades.filter(t => t.status === filterStatus);
+
+  const handleImportSuccess = useCallback(() => {
+    // Refresh trades after successful import
+    fetchTrades(filterStatus === 'ALL' ? {} : { status: filterStatus });
+  }, [fetchTrades, filterStatus]);
 
   return (
     <div className="space-y-6">
@@ -100,12 +106,15 @@ export function TradeTracker() {
             Track your trades and monitor P&L performance
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          + New Trade
-        </button>
+        <div className="flex items-center gap-3">
+          <TradeCSVImport onImportSuccess={handleImportSuccess} />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            + New Trade
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Stats Summary */}

@@ -228,8 +228,14 @@ export class PortfolioService {
    *
    * Balance/holdings validation occurs INSIDE the transaction with row locking
    * to prevent race conditions in concurrent scenarios.
+   *
+   * @param data - Transaction data
+   * @param externalClient - Optional PoolClient for external transaction control (batch imports)
    */
-  async addTransaction(data: CreateTransactionRequest): Promise<PortfolioTransaction> {
+  async addTransaction(
+    data: CreateTransactionRequest,
+    externalClient?: PoolClient
+  ): Promise<PortfolioTransaction> {
     this.validateTransactionRequest(data);
 
     const portfolio = await this.getPortfolioById(data.portfolioId);
@@ -260,9 +266,8 @@ export class PortfolioService {
       sector = await this.fetchSectorForSymbol(data.assetSymbol);
     }
 
-    // Execute validation, insert, and holdings update atomically
-    // Validation inside transaction with FOR UPDATE prevents race conditions
-    return this.db.transaction(async (client) => {
+    // Internal helper that does the actual insert (used with or without external client)
+    const executeInsert = async (client: PoolClient): Promise<PortfolioTransaction> => {
       // For BUY transactions, check cash balance with row locking
       if (data.transactionType === 'BUY') {
         const cashBalance = await this.getCashBalanceForUpdate(data.portfolioId, client);
@@ -315,7 +320,15 @@ export class PortfolioService {
       }
 
       return transaction;
-    });
+    };
+
+    // If external client provided, use it directly (caller manages transaction)
+    // Otherwise, wrap in our own transaction for atomicity
+    if (externalClient) {
+      return executeInsert(externalClient);
+    }
+
+    return this.db.transaction(executeInsert);
   }
 
   /**

@@ -12,6 +12,7 @@
 
 import { DatabaseConnection } from '../database/connection';
 import { FMPDataProvider } from '../data-providers/fmp';
+import { PoolClient } from 'pg';
 import {
   JournalTrade,
   TradeWithPnL,
@@ -57,7 +58,6 @@ export class TradeStateError extends Error {
 }
 
 const VALID_SIDES: TradeSide[] = ['LONG', 'SHORT'];
-const VALID_STATUSES: TradeStatus[] = ['OPEN', 'CLOSED'];
 
 /**
  * TradeService Class - Core Business Logic for Trading Journal Management
@@ -128,21 +128,22 @@ export class TradeService {
    * Creates a new trade record.
    *
    * @param data - The trade creation request containing all trade details
+   * @param client - Optional PoolClient for external transaction control (batch imports)
    * @returns Promise resolving to the newly created trade
    * @throws TradeValidationError if validation fails
    */
-  async createTrade(data: CreateTradeRequest): Promise<JournalTrade> {
+  async createTrade(data: CreateTradeRequest, client?: PoolClient): Promise<JournalTrade> {
     // Validate input
     this.validateCreateTradeRequest(data);
 
     const query = `
       INSERT INTO trades (user_id, symbol, side, status, entry_price, quantity, fees, notes, prediction_id)
       VALUES ($1, $2, $3, 'OPEN', $4, $5, $6, $7, $8)
-      RETURNING id, user_id, symbol, side, status, entry_price, quantity, entry_date, 
+      RETURNING id, user_id, symbol, side, status, entry_price, quantity, entry_date,
                 exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
     `;
 
-    const result = await this.db.query(query, [
+    const params = [
       data.userId,
       data.symbol.toUpperCase(),
       data.side,
@@ -151,7 +152,12 @@ export class TradeService {
       data.fees ?? 0,
       data.notes ?? null,
       data.predictionId ?? null,
-    ]);
+    ];
+
+    // Use provided client or default to db.query
+    const result = client
+      ? await client.query(query, params)
+      : await this.db.query(query, params);
 
     const row = result.rows[0];
     return this.mapRowToTrade(row);
@@ -203,19 +209,20 @@ export class TradeService {
    *
    * @param tradeId - The ID of the trade to close
    * @param exitPrice - The exit price for the trade
+   * @param client - Optional PoolClient for external transaction control (batch imports)
    * @returns Promise resolving to the updated trade
    * @throws TradeNotFoundError if trade doesn't exist
    * @throws TradeStateError if trade is already closed
    * @throws TradeValidationError if exitPrice is invalid
    */
-  async closeTrade(tradeId: string, exitPrice: number): Promise<JournalTrade> {
+  async closeTrade(tradeId: string, exitPrice: number, client?: PoolClient): Promise<JournalTrade> {
     // Validate exit price
     if (typeof exitPrice !== 'number' || !isFinite(exitPrice) || exitPrice <= 0) {
       throw new TradeValidationError('Exit price must be a positive number', 'exitPrice', 'INVALID_VALUE');
     }
 
     // Get the existing trade
-    const existingTrade = await this.getTradeById(tradeId);
+    const existingTrade = await this.getTradeById(tradeId, client);
     if (!existingTrade) {
       throw new TradeNotFoundError(tradeId);
     }
@@ -236,7 +243,11 @@ export class TradeService {
                 exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
     `;
 
-    const result = await this.db.query(query, [exitPrice, realizedPnl, tradeId]);
+    const params = [exitPrice, realizedPnl, tradeId];
+    const result = client
+      ? await client.query(query, params)
+      : await this.db.query(query, params);
+
     return this.mapRowToTrade(result.rows[0]);
   }
 
@@ -244,9 +255,10 @@ export class TradeService {
    * Gets a single trade by ID.
    *
    * @param tradeId - The ID of the trade to retrieve
+   * @param client - Optional PoolClient for external transaction control
    * @returns Promise resolving to the trade or null if not found
    */
-  async getTradeById(tradeId: string): Promise<JournalTrade | null> {
+  async getTradeById(tradeId: string, client?: PoolClient): Promise<JournalTrade | null> {
     const query = `
       SELECT id, user_id, symbol, side, status, entry_price, quantity, entry_date,
              exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
@@ -254,7 +266,10 @@ export class TradeService {
       WHERE id = $1
     `;
 
-    const result = await this.db.query(query, [tradeId]);
+    const result = client
+      ? await client.query(query, [tradeId])
+      : await this.db.query(query, [tradeId]);
+
     if (result.rows.length === 0) {
       return null;
     }
