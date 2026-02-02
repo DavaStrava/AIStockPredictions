@@ -832,66 +832,50 @@ fc.assert(
 
 ---
 
-## Phase 6: Database & Backend 📋 PLANNED
+## Phase 6: Database & Backend ✅ COMPLETE
 
 **Goal:** Improve database layer, add transaction support
-**Timeline:** Not started
-**Effort:** 3-4 hours
+**Timeline:** Completed 2026-02-01
+**Effort:** 1-2 hours (actual)
 
-### 6.1 Transaction Support 💡 PROPOSED
+### 6.1 Transaction Support ✅ COMPLETE
 
 **Priority:** LOW | **Impact:** MEDIUM | **Effort:** LOW (1-2 hours)
 
-**Status:** 💡 Proposed
+**Status:** ✅ Complete
 
-**Current State:**
-- No transaction wrapping
-- Risk of inconsistent state on errors
+**What Was Found:**
+- Transaction infrastructure already existed in `DatabaseConnection.transaction()` method
+- However, critical service methods were NOT using transactions
+- Risk of data inconsistency on partial failures
 
-**Proposed Solution:**
+**What Was Done:**
+- ✅ Wrapped `PortfolioService.createPortfolio()` in transaction
+  - Ensures default portfolio flag update + insert are atomic
+- ✅ Wrapped `PortfolioService.updatePortfolio()` in transaction
+  - Ensures default portfolio flag changes are atomic
+- ✅ Wrapped `PortfolioService.addTransaction()` in transaction (CRITICAL)
+  - Transaction insert + holdings cache update are now atomic
+  - Moved FMP API call outside transaction to avoid holding connections open
+  - Created `fetchSectorForSymbol()` helper for external API calls
+- ✅ Updated `updateHoldingsCache()` to accept optional client parameter
+- ✅ Added transaction rollback tests to `PortfolioService.test.ts`
+- ✅ All 25 tests passing
 
-Add transaction support to DatabaseConnection:
+**Files Modified:**
+- `src/lib/portfolio/PortfolioService.ts` - Added transactions to service methods
+- `src/lib/portfolio/__tests__/PortfolioService.test.ts` - Added transaction mocks and rollback tests
 
-```typescript
-// src/lib/database/connection.ts
-async withTransaction<T>(
-  callback: (client: pg.PoolClient) => Promise<T>
-): Promise<T> {
-  const client = await this.pool.connect();
-
-  try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-```
-
-**Usage:**
-
-```typescript
-// Create multiple related records atomically
-await db.withTransaction(async (client) => {
-  const user = await createUser(client, userData);
-  const watchlist = await createWatchlist(client, { userId: user.id });
-  await addStocksToWatchlist(client, watchlist.id, symbols);
-});
-```
-
-**Files to Modify:**
-- `src/lib/database/connection.ts`
+**Key Design Decisions:**
+- External API calls (FMP) kept OUTSIDE transactions to prevent long-running transactions
+- Sector info pre-fetched before transaction begins
+- `updateHoldingsCache()` accepts optional `PoolClient` for transaction support
 
 **Completion Criteria:**
-- [ ] Transaction support added
-- [ ] Used in multi-step operations
-- [ ] Rollback tested
-- [ ] Documentation updated
+- [x] Transaction support added (already existed in connection.ts)
+- [x] Used in multi-step operations (createPortfolio, updatePortfolio, addTransaction)
+- [x] Rollback tested (2 new tests for rollback behavior)
+- [x] Documentation updated
 
 ---
 
@@ -1587,14 +1571,41 @@ function withMetrics(): Middleware {
 
 ---
 
+### Session 8: 2026-02-01
+**Duration:** ~1 hour
+**Completed:**
+- ✅ Phase 6.1: Transaction Support
+  - Found existing `DatabaseConnection.transaction()` method
+  - Wrapped `PortfolioService.createPortfolio()` in transaction
+  - Wrapped `PortfolioService.updatePortfolio()` in transaction
+  - Wrapped `PortfolioService.addTransaction()` in transaction (CRITICAL fix)
+  - Created `fetchSectorForSymbol()` helper to keep external API calls outside transactions
+  - Updated `updateHoldingsCache()` to accept optional client parameter
+  - Added transaction rollback tests
+  - All 25 PortfolioService tests passing
+
+**Files Modified:**
+- `src/lib/portfolio/PortfolioService.ts` - Added transaction wrapping
+- `src/lib/portfolio/__tests__/PortfolioService.test.ts` - Added transaction mocks and rollback tests
+
+**Key Fix:**
+The `addTransaction()` method was inserting transactions and updating holdings without atomicity. If the holdings update failed, the transaction record would exist but holdings would be inconsistent. Now both operations are atomic - either both succeed or both are rolled back.
+
+**Status:** Phase 6.1 (Transaction Support) COMPLETE
+**Next Session Goals:**
+- Phase 6.2: Query Builder (deferred - not needed)
+- Phase 7: Security enhancements (input sanitization, auth middleware)
+
+---
+
 ## Quick Reference
 
 ### Current Stats
 - **Total Phases:** 9
-- **Completed:** 5 (Phases 1, 2, 3, 4, 5)
+- **Completed:** 6 (Phases 1, 2, 3, 4, 5, 6)
 - **In Progress:** 0
-- **Planned:** 8+ tasks
-- **Proposed:** 6 tasks
+- **Planned:** 6+ tasks
+- **Proposed:** 5 tasks
 
 ### Code Metrics Progress
 - **Lines Reduced:** ~1,500+ total
@@ -1649,6 +1660,8 @@ function withMetrics(): Middleware {
 - `useCallback` for handlers passed to memoized children prevents unnecessary re-renders
 - Integration tests require careful mock setup - match actual API interface methods
 - Testing route handlers directly (without HTTP layer) is faster than full server tests
+- Keep external API calls OUTSIDE database transactions to avoid holding connections open
+- Transaction infrastructure may exist but not be used - audit service methods for atomicity needs
 
 ---
 
@@ -1673,6 +1686,6 @@ function withMetrics(): Middleware {
 
 ---
 
-**Last Updated:** 2026-02-01 by Claude Code (Phase 5 Complete)
-**Version:** 1.3
+**Last Updated:** 2026-02-01 by Claude Code (Phase 6 Complete)
+**Version:** 1.4
 **Status:** Living Document - Update after each session

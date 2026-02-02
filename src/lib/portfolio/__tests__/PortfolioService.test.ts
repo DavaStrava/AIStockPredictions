@@ -20,8 +20,22 @@ import { FMPDataProvider } from '../../data-providers/fmp';
 
 // Mock the database connection
 const mockQuery = vi.fn();
+const mockClientQuery = vi.fn();
+const mockTransaction = vi.fn();
+
+// Create a mock client for transactions
+const mockClient = {
+  query: mockClientQuery,
+};
+
+// Transaction mock that executes callback with mock client
+mockTransaction.mockImplementation(async (callback: (client: typeof mockClient) => Promise<unknown>) => {
+  return callback(mockClient);
+});
+
 const mockDb: Partial<DatabaseConnection> = {
   query: mockQuery,
+  transaction: mockTransaction,
 };
 
 // Mock the FMP provider
@@ -40,9 +54,16 @@ describe('PortfolioService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQuery.mockReset();
+    mockClientQuery.mockReset();
+    mockTransaction.mockReset();
     mockGetQuote.mockReset();
     mockGetMultipleQuotes.mockReset();
     mockGetCompanyProfile.mockReset();
+
+    // Re-establish transaction mock implementation after reset
+    mockTransaction.mockImplementation(async (callback: (client: typeof mockClient) => Promise<unknown>) => {
+      return callback(mockClient);
+    });
 
     service = new PortfolioService(
       mockDb as DatabaseConnection,
@@ -63,7 +84,8 @@ describe('PortfolioService', () => {
         updated_at: new Date().toISOString(),
       };
 
-      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolio] });
+      // Uses transaction, so mock client query
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockPortfolio] });
 
       const result = await service.createPortfolio({
         userId: 'user-123',
@@ -74,6 +96,7 @@ describe('PortfolioService', () => {
       expect(result.id).toBe('portfolio-123');
       expect(result.name).toBe('My Portfolio');
       expect(result.userId).toBe('user-123');
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should throw PortfolioValidationError for empty name', async () => {
@@ -106,10 +129,10 @@ describe('PortfolioService', () => {
         updated_at: new Date().toISOString(),
       };
 
-      // First call: unset existing defaults
-      mockQuery.mockResolvedValueOnce({ rows: [] });
-      // Second call: create new portfolio
-      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolio] });
+      // First call within transaction: unset existing defaults
+      mockClientQuery.mockResolvedValueOnce({ rows: [] });
+      // Second call within transaction: create new portfolio
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockPortfolio] });
 
       const result = await service.createPortfolio({
         userId: 'user-123',
@@ -118,7 +141,26 @@ describe('PortfolioService', () => {
       });
 
       expect(result.isDefault).toBe(true);
-      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(mockClientQuery).toHaveBeenCalledTimes(2);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should rollback transaction if insert fails after updating defaults', async () => {
+      // First call: unset existing defaults succeeds
+      mockClientQuery.mockResolvedValueOnce({ rows: [] });
+      // Second call: insert fails
+      mockClientQuery.mockRejectedValueOnce(new Error('Insert failed'));
+
+      await expect(
+        service.createPortfolio({
+          userId: 'user-123',
+          name: 'Default Portfolio',
+          isDefault: true,
+        })
+      ).rejects.toThrow('Insert failed');
+
+      // Transaction was called, rollback handled by transaction wrapper
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -183,7 +225,7 @@ describe('PortfolioService', () => {
   });
 
   describe('addTransaction', () => {
-    const mockPortfolio = {
+    const mockPortfolioData = {
       id: 'portfolio-123',
       user_id: 'user-123',
       name: 'My Portfolio',
@@ -195,7 +237,7 @@ describe('PortfolioService', () => {
     };
 
     it('should add a DEPOSIT transaction', async () => {
-      const mockTransaction = {
+      const mockTransactionData = {
         id: 'txn-123',
         portfolio_id: 'portfolio-123',
         asset_symbol: null,
@@ -210,8 +252,8 @@ describe('PortfolioService', () => {
         updated_at: new Date().toISOString(),
       };
 
-      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolio] }); // getPortfolioById
-      mockQuery.mockResolvedValueOnce({ rows: [mockTransaction] }); // insert
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert (in transaction)
 
       const result = await service.addTransaction({
         portfolioId: 'portfolio-123',
@@ -222,10 +264,11 @@ describe('PortfolioService', () => {
 
       expect(result.transactionType).toBe('DEPOSIT');
       expect(result.totalAmount).toBe(10000);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should add a BUY transaction with sufficient funds', async () => {
-      const mockTransaction = {
+      const mockTransactionData = {
         id: 'txn-123',
         portfolio_id: 'portfolio-123',
         asset_symbol: 'AAPL',
@@ -240,12 +283,15 @@ describe('PortfolioService', () => {
         updated_at: new Date().toISOString(),
       };
 
-      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolio] }); // getPortfolioById
-      mockQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '5000' }] }); // getCashBalance
-      mockQuery.mockResolvedValueOnce({ rows: [mockTransaction] }); // insert
-      mockQuery.mockResolvedValueOnce({ rows: [{ total_bought: '10', total_sold: '0', total_cost: '1500', first_purchase: new Date().toISOString(), last_transaction: new Date().toISOString() }] }); // update holdings
-      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // get sector
-      mockQuery.mockResolvedValueOnce({ rows: [] }); // upsert holding
+      // Outside transaction
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol (outside txn)
+
+      // Inside transaction
+      mockClientQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '5000' }] }); // getCashBalanceForUpdate
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert
+      mockClientQuery.mockResolvedValueOnce({ rows: [{ total_bought: '10', total_sold: '0', total_cost: '1500', first_purchase: new Date().toISOString(), last_transaction: new Date().toISOString() }] }); // updateHoldingsCache query
+      mockClientQuery.mockResolvedValueOnce({ rows: [] }); // upsert holding
 
       const result = await service.addTransaction({
         portfolioId: 'portfolio-123',
@@ -260,11 +306,16 @@ describe('PortfolioService', () => {
 
       expect(result.transactionType).toBe('BUY');
       expect(result.assetSymbol).toBe('AAPL');
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should throw InsufficientFundsError for BUY without enough cash', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolio] }); // getPortfolioById
-      mockQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '100' }] }); // getCashBalance (only $100)
+      // Outside transaction
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol
+
+      // Inside transaction - cash balance check fails
+      mockClientQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '100' }] }); // getCashBalanceForUpdate (only $100)
 
       await expect(
         service.addTransaction({
@@ -312,6 +363,46 @@ describe('PortfolioService', () => {
           transactionDate: new Date(),
         })
       ).rejects.toThrow(PortfolioValidationError);
+    });
+
+    it('should rollback transaction if holdings update fails after insert', async () => {
+      // Outside transaction
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol
+
+      // Inside transaction - cash check and insert succeed but holdings update fails
+      mockClientQuery.mockResolvedValueOnce({ rows: [{ cash_balance: '5000' }] }); // getCashBalanceForUpdate
+      mockClientQuery.mockResolvedValueOnce({ rows: [{
+        id: 'txn-123',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: 'AAPL',
+        transaction_type: 'BUY',
+        quantity: '10',
+        price_per_share: '150',
+        fees: '5',
+        total_amount: '-1505',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }] }); // insert succeeds
+      mockClientQuery.mockRejectedValueOnce(new Error('Holdings update failed')); // updateHoldingsCache fails
+
+      await expect(
+        service.addTransaction({
+          portfolioId: 'portfolio-123',
+          transactionType: 'BUY',
+          assetSymbol: 'AAPL',
+          quantity: 10,
+          pricePerShare: 150,
+          totalAmount: 1500,
+          fees: 5,
+          transactionDate: new Date(),
+        })
+      ).rejects.toThrow('Holdings update failed');
+
+      // Transaction wrapper handles rollback
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
     });
   });
 

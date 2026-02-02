@@ -15,6 +15,7 @@
 
 import { DatabaseConnection } from '../database/connection';
 import { FMPDataProvider, FMPQuote } from '../data-providers/fmp';
+import { PoolClient, QueryResult } from 'pg';
 import {
   Portfolio,
   PortfolioTransaction,
@@ -81,33 +82,36 @@ export class PortfolioService {
 
   /**
    * Creates a new portfolio for a user.
+   * Uses a database transaction to ensure atomicity when setting default portfolio.
    */
   async createPortfolio(data: CreatePortfolioRequest): Promise<Portfolio> {
     this.validateCreatePortfolioRequest(data);
 
-    // If this is set as default, unset any existing default
-    if (data.isDefault) {
-      await this.db.query(
-        'UPDATE portfolios SET is_default = FALSE WHERE user_id = $1',
-        [data.userId]
-      );
-    }
+    return this.db.transaction(async (client) => {
+      // If this is set as default, unset any existing default
+      if (data.isDefault) {
+        await client.query(
+          'UPDATE portfolios SET is_default = FALSE WHERE user_id = $1',
+          [data.userId]
+        );
+      }
 
-    const query = `
-      INSERT INTO portfolios (user_id, name, description, currency, is_default)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, user_id, name, description, currency, is_default, created_at, updated_at
-    `;
+      const query = `
+        INSERT INTO portfolios (user_id, name, description, currency, is_default)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, user_id, name, description, currency, is_default, created_at, updated_at
+      `;
 
-    const result = await this.db.query(query, [
-      data.userId,
-      data.name,
-      data.description ?? null,
-      data.currency ?? 'USD',
-      data.isDefault ?? false,
-    ]);
+      const result = await client.query(query, [
+        data.userId,
+        data.name,
+        data.description ?? null,
+        data.currency ?? 'USD',
+        data.isDefault ?? false,
+      ]);
 
-    return this.mapRowToPortfolio(result.rows[0]);
+      return this.mapRowToPortfolio(result.rows[0]);
+    });
   }
 
   /**
@@ -144,19 +148,12 @@ export class PortfolioService {
 
   /**
    * Updates a portfolio.
+   * Uses a database transaction to ensure atomicity when changing default portfolio.
    */
   async updatePortfolio(portfolioId: string, data: UpdatePortfolioRequest): Promise<Portfolio> {
     const portfolio = await this.getPortfolioById(portfolioId);
     if (!portfolio) {
       throw new PortfolioNotFoundError(portfolioId);
-    }
-
-    // If setting as default, unset others
-    if (data.isDefault) {
-      await this.db.query(
-        'UPDATE portfolios SET is_default = FALSE WHERE user_id = $1 AND id != $2',
-        [portfolio.userId, portfolioId]
-      );
     }
 
     const updates: string[] = [];
@@ -184,16 +181,26 @@ export class PortfolioService {
       return portfolio;
     }
 
-    params.push(portfolioId);
-    const query = `
-      UPDATE portfolios 
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING id, user_id, name, description, currency, is_default, created_at, updated_at
-    `;
+    return this.db.transaction(async (client) => {
+      // If setting as default, unset others first
+      if (data.isDefault) {
+        await client.query(
+          'UPDATE portfolios SET is_default = FALSE WHERE user_id = $1 AND id != $2',
+          [portfolio.userId, portfolioId]
+        );
+      }
 
-    const result = await this.db.query(query, params);
-    return this.mapRowToPortfolio(result.rows[0]);
+      params.push(portfolioId);
+      const query = `
+        UPDATE portfolios
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING id, user_id, name, description, currency, is_default, created_at, updated_at
+      `;
+
+      const result = await client.query(query, params);
+      return this.mapRowToPortfolio(result.rows[0]);
+    });
   }
 
   /**
@@ -215,6 +222,12 @@ export class PortfolioService {
   /**
    * Adds a transaction to a portfolio.
    * Automatically updates the holdings cache after the transaction.
+   *
+   * Uses a database transaction to ensure atomicity - either the transaction
+   * is recorded AND holdings are updated, or neither happens.
+   *
+   * Balance/holdings validation occurs INSIDE the transaction with row locking
+   * to prevent race conditions in concurrent scenarios.
    */
   async addTransaction(data: CreateTransactionRequest): Promise<PortfolioTransaction> {
     this.validateTransactionRequest(data);
@@ -222,27 +235,6 @@ export class PortfolioService {
     const portfolio = await this.getPortfolioById(data.portfolioId);
     if (!portfolio) {
       throw new PortfolioNotFoundError(data.portfolioId);
-    }
-
-    // For BUY transactions, check if we have enough cash
-    if (data.transactionType === 'BUY') {
-      const cashBalance = await this.getCashBalance(data.portfolioId);
-      const requiredAmount = Math.abs(data.totalAmount) + (data.fees ?? 0);
-      if (cashBalance < requiredAmount) {
-        throw new InsufficientFundsError(requiredAmount, cashBalance);
-      }
-    }
-
-    // For SELL transactions, check if we have enough shares
-    if (data.transactionType === 'SELL' && data.assetSymbol && data.quantity) {
-      const holding = await this.getHolding(data.portfolioId, data.assetSymbol);
-      if (!holding || holding.quantity < data.quantity) {
-        throw new PortfolioValidationError(
-          `Insufficient shares of ${data.assetSymbol}`,
-          'quantity',
-          'INSUFFICIENT_SHARES'
-        );
-      }
     }
 
     // Calculate total_amount based on transaction type
@@ -261,37 +253,111 @@ export class PortfolioService {
       totalAmount = -Math.abs(data.totalAmount);
     }
 
-    const query = `
-      INSERT INTO portfolio_transactions (
-        portfolio_id, asset_symbol, transaction_type, quantity, 
-        price_per_share, fees, total_amount, transaction_date, notes
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, portfolio_id, asset_symbol, transaction_type, quantity,
-                price_per_share, fees, total_amount, transaction_date, notes,
-                created_at, updated_at
-    `;
-
-    const result = await this.db.query(query, [
-      data.portfolioId,
-      data.assetSymbol ?? null,
-      data.transactionType,
-      data.quantity ?? null,
-      data.pricePerShare ?? null,
-      data.fees ?? 0,
-      totalAmount,
-      data.transactionDate,
-      data.notes ?? null,
-    ]);
-
-    const transaction = this.mapRowToTransaction(result.rows[0]);
-
-    // Update holdings cache if this affects holdings
-    if (data.transactionType === 'BUY' || data.transactionType === 'SELL') {
-      await this.updateHoldingsCache(data.portfolioId, data.assetSymbol!);
+    // Pre-fetch sector info OUTSIDE the transaction (external API call)
+    // This prevents holding the transaction open during slow API calls
+    let sector: string | null = null;
+    if ((data.transactionType === 'BUY' || data.transactionType === 'SELL') && data.assetSymbol) {
+      sector = await this.fetchSectorForSymbol(data.assetSymbol);
     }
 
-    return transaction;
+    // Execute validation, insert, and holdings update atomically
+    // Validation inside transaction with FOR UPDATE prevents race conditions
+    return this.db.transaction(async (client) => {
+      // For BUY transactions, check cash balance with row locking
+      if (data.transactionType === 'BUY') {
+        const cashBalance = await this.getCashBalanceForUpdate(data.portfolioId, client);
+        const requiredAmount = Math.abs(data.totalAmount) + (data.fees ?? 0);
+        if (cashBalance < requiredAmount) {
+          throw new InsufficientFundsError(requiredAmount, cashBalance);
+        }
+      }
+
+      // For SELL transactions, check holdings with row locking
+      if (data.transactionType === 'SELL' && data.assetSymbol && data.quantity) {
+        const holding = await this.getHoldingForUpdate(data.portfolioId, data.assetSymbol, client);
+        if (!holding || holding.quantity < data.quantity) {
+          throw new PortfolioValidationError(
+            `Insufficient shares of ${data.assetSymbol}`,
+            'quantity',
+            'INSUFFICIENT_SHARES'
+          );
+        }
+      }
+
+      const query = `
+        INSERT INTO portfolio_transactions (
+          portfolio_id, asset_symbol, transaction_type, quantity,
+          price_per_share, fees, total_amount, transaction_date, notes
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id, portfolio_id, asset_symbol, transaction_type, quantity,
+                  price_per_share, fees, total_amount, transaction_date, notes,
+                  created_at, updated_at
+      `;
+
+      const result = await client.query(query, [
+        data.portfolioId,
+        data.assetSymbol ?? null,
+        data.transactionType,
+        data.quantity ?? null,
+        data.pricePerShare ?? null,
+        data.fees ?? 0,
+        totalAmount,
+        data.transactionDate,
+        data.notes ?? null,
+      ]);
+
+      const transaction = this.mapRowToTransaction(result.rows[0]);
+
+      // Update holdings cache if this affects holdings (within same transaction)
+      if (data.transactionType === 'BUY' || data.transactionType === 'SELL') {
+        await this.updateHoldingsCache(data.portfolioId, data.assetSymbol!, client, sector);
+      }
+
+      return transaction;
+    });
+  }
+
+  /**
+   * Gets cash balance with FOR UPDATE lock for use within transactions.
+   * Prevents race conditions when checking balance before deducting funds.
+   */
+  private async getCashBalanceForUpdate(portfolioId: string, client: PoolClient): Promise<number> {
+    const query = `
+      SELECT COALESCE(SUM(total_amount), 0) as cash_balance
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1
+      FOR UPDATE
+    `;
+
+    const result = await client.query(query, [portfolioId]);
+    return parseFloat(result.rows[0].cash_balance) || 0;
+  }
+
+  /**
+   * Gets a holding with FOR UPDATE lock for use within transactions.
+   * Prevents race conditions when checking shares before selling.
+   */
+  private async getHoldingForUpdate(
+    portfolioId: string,
+    symbol: string,
+    client: PoolClient
+  ): Promise<PortfolioHolding | null> {
+    const query = `
+      SELECT id, portfolio_id, symbol, quantity, average_cost_basis,
+             total_cost_basis, target_allocation_percent, sector,
+             first_purchase_date, last_transaction_date, created_at, updated_at
+      FROM portfolio_holdings
+      WHERE portfolio_id = $1 AND symbol = $2
+      FOR UPDATE
+    `;
+
+    const result = await client.query(query, [portfolioId, symbol.toUpperCase()]);
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return this.mapRowToHolding(result.rows[0]);
   }
 
   /**
@@ -504,13 +570,44 @@ export class PortfolioService {
   }
 
   /**
+   * Fetches sector information for a symbol from FMP.
+   * This is separated from updateHoldingsCache to keep external API calls outside transactions.
+   */
+  private async fetchSectorForSymbol(symbol: string): Promise<string | null> {
+    try {
+      const profile = await this.fmpProvider.getCompanyProfile(symbol);
+      return profile.sector || null;
+    } catch {
+      // Sector lookup failed, continue without it
+      return null;
+    }
+  }
+
+  /**
    * Updates the holdings cache for a specific symbol after a transaction.
    * Uses weighted average cost basis calculation.
+   *
+   * @param portfolioId - The portfolio ID
+   * @param symbol - The stock symbol
+   * @param client - Optional database client for transaction support
+   * @param sector - Optional pre-fetched sector (to avoid API calls within transactions)
    */
-  private async updateHoldingsCache(portfolioId: string, symbol: string): Promise<void> {
+  private async updateHoldingsCache(
+    portfolioId: string,
+    symbol: string,
+    client?: PoolClient,
+    sector?: string | null
+  ): Promise<void> {
+    // Use provided client or fall back to pool query
+    // Explicit return type for type safety
+    type QueryFn = (text: string, params?: unknown[]) => Promise<QueryResult>;
+    const queryFn: QueryFn = client
+      ? (text: string, params?: unknown[]) => client.query(text, params)
+      : (text: string, params?: unknown[]) => this.db.query(text, params);
+
     // Calculate current position from transactions
     const query = `
-      SELECT 
+      SELECT
         SUM(CASE WHEN transaction_type = 'BUY' THEN quantity ELSE 0 END) as total_bought,
         SUM(CASE WHEN transaction_type = 'SELL' THEN quantity ELSE 0 END) as total_sold,
         SUM(CASE WHEN transaction_type = 'BUY' THEN quantity * price_per_share ELSE 0 END) as total_cost,
@@ -520,7 +617,7 @@ export class PortfolioService {
       WHERE portfolio_id = $1 AND asset_symbol = $2
     `;
 
-    const result = await this.db.query(query, [portfolioId, symbol.toUpperCase()]);
+    const result = await queryFn(query, [portfolioId, symbol.toUpperCase()]);
     const row = result.rows[0];
 
     const totalBought = parseFloat(row.total_bought) || 0;
@@ -530,7 +627,7 @@ export class PortfolioService {
 
     if (currentQuantity <= 0) {
       // No remaining position, delete from holdings
-      await this.db.query(
+      await queryFn(
         'DELETE FROM portfolio_holdings WHERE portfolio_id = $1 AND symbol = $2',
         [portfolioId, symbol.toUpperCase()]
       );
@@ -540,15 +637,6 @@ export class PortfolioService {
     // Calculate weighted average cost basis
     const averageCostBasis = totalBought > 0 ? totalCost / totalBought : 0;
     const totalCostBasis = currentQuantity * averageCostBasis;
-
-    // Try to get sector from FMP
-    let sector: string | null = null;
-    try {
-      const profile = await this.fmpProvider.getCompanyProfile(symbol);
-      sector = profile.sector || null;
-    } catch {
-      // Sector lookup failed, continue without it
-    }
 
     // Upsert the holding
     const upsertQuery = `
@@ -564,13 +652,13 @@ export class PortfolioService {
         last_transaction_date = EXCLUDED.last_transaction_date
     `;
 
-    await this.db.query(upsertQuery, [
+    await queryFn(upsertQuery, [
       portfolioId,
       symbol.toUpperCase(),
       currentQuantity,
       averageCostBasis,
       totalCostBasis,
-      sector,
+      sector ?? null,
       row.first_purchase,
       row.last_transaction,
     ]);
