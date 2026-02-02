@@ -228,6 +228,8 @@ export interface CreateTransactionRequest {
   fees?: number;
   transactionDate: Date;
   notes?: string;
+  /** Skip cash/holdings validation - use for historical imports where transactions already occurred */
+  skipValidation?: boolean;
 }
 
 /**

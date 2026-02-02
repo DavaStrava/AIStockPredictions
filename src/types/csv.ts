@@ -106,6 +106,43 @@ export interface PortfolioTransactionValidation {
 }
 
 // ============================================================================
+// Portfolio Holdings CSV (Direct Import)
+// ============================================================================
+
+/**
+ * Parsed holding from CSV for direct write to portfolio_holdings table.
+ * Used for Holdings Snapshot Import workflow (bypasses transactions).
+ */
+export interface ParsedHolding {
+  symbol: string;
+  quantity: number;
+  averageCostBasis: number;
+  totalValue?: number;
+  purchaseDate?: Date;
+  sector?: string;
+}
+
+/**
+ * Validation result for a holding row.
+ */
+export interface HoldingValidation {
+  valid: boolean;
+  data?: ParsedHolding;
+  errors: CSVValidationError[];
+}
+
+/**
+ * Result of importing holdings directly.
+ */
+export interface HoldingsImportResult {
+  success: boolean;
+  imported: number;
+  updated: number;
+  failed: number;
+  errors: CSVValidationError[];
+}
+
+// ============================================================================
 // Trade Tracker CSV
 // ============================================================================
 
@@ -203,6 +240,13 @@ export interface TradeImportRequest {
   trades: ParsedTrade[];
 }
 
+/**
+ * Request body for holdings snapshot import API.
+ */
+export interface HoldingsImportRequest {
+  holdings: ParsedHolding[];
+}
+
 // ============================================================================
 // Component Props
 // ============================================================================
@@ -215,7 +259,13 @@ export interface CSVImportModalProps {
   onClose: () => void;
   onSuccess: () => void;
   title: string;
-  importType: 'portfolio' | 'trade';
+  /**
+   * Import type:
+   * - 'portfolio': Transaction-based import (creates BUY/SELL/etc transactions)
+   * - 'holdings': Direct holdings snapshot import (writes to portfolio_holdings table)
+   * - 'trade': Trade tracker import
+   */
+  importType: 'portfolio' | 'holdings' | 'trade';
   portfolioId?: string;
 }
 

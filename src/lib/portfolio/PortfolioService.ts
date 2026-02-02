@@ -32,6 +32,7 @@ import {
   PerformanceHistoryFilters,
   PortfolioDailyPerformance,
 } from '@/types/portfolio';
+import type { ParsedHolding, HoldingsImportResult, CSVValidationError } from '@/types/csv';
 
 /**
  * Custom error for portfolio validation failures.
@@ -268,24 +269,27 @@ export class PortfolioService {
 
     // Internal helper that does the actual insert (used with or without external client)
     const executeInsert = async (client: PoolClient): Promise<PortfolioTransaction> => {
-      // For BUY transactions, check cash balance with row locking
-      if (data.transactionType === 'BUY') {
-        const cashBalance = await this.getCashBalanceForUpdate(data.portfolioId, client);
-        const requiredAmount = Math.abs(data.totalAmount) + (data.fees ?? 0);
-        if (cashBalance < requiredAmount) {
-          throw new InsufficientFundsError(requiredAmount, cashBalance);
+      // Skip validation for historical imports where transactions already occurred
+      if (!data.skipValidation) {
+        // For BUY transactions, check cash balance with row locking
+        if (data.transactionType === 'BUY') {
+          const cashBalance = await this.getCashBalanceForUpdate(data.portfolioId, client);
+          const requiredAmount = Math.abs(data.totalAmount) + (data.fees ?? 0);
+          if (cashBalance < requiredAmount) {
+            throw new InsufficientFundsError(requiredAmount, cashBalance);
+          }
         }
-      }
 
-      // For SELL transactions, check holdings with row locking
-      if (data.transactionType === 'SELL' && data.assetSymbol && data.quantity) {
-        const holding = await this.getHoldingForUpdate(data.portfolioId, data.assetSymbol, client);
-        if (!holding || holding.quantity < data.quantity) {
-          throw new PortfolioValidationError(
-            `Insufficient shares of ${data.assetSymbol}`,
-            'quantity',
-            'INSUFFICIENT_SHARES'
-          );
+        // For SELL transactions, check holdings with row locking
+        if (data.transactionType === 'SELL' && data.assetSymbol && data.quantity) {
+          const holding = await this.getHoldingForUpdate(data.portfolioId, data.assetSymbol, client);
+          if (!holding || holding.quantity < data.quantity) {
+            throw new PortfolioValidationError(
+              `Insufficient shares of ${data.assetSymbol}`,
+              'quantity',
+              'INSUFFICIENT_SHARES'
+            );
+          }
         }
       }
 
@@ -336,11 +340,16 @@ export class PortfolioService {
    * Prevents race conditions when checking balance before deducting funds.
    */
   private async getCashBalanceForUpdate(portfolioId: string, client: PoolClient): Promise<number> {
+    // Lock the transaction rows first in a subquery, then aggregate.
+    // FOR UPDATE cannot be used directly with aggregate functions.
     const query = `
       SELECT COALESCE(SUM(total_amount), 0) as cash_balance
-      FROM portfolio_transactions
-      WHERE portfolio_id = $1
-      FOR UPDATE
+      FROM (
+        SELECT total_amount
+        FROM portfolio_transactions
+        WHERE portfolio_id = $1
+        FOR UPDATE
+      ) AS locked_rows
     `;
 
     const result = await client.query(query, [portfolioId]);
@@ -606,6 +615,139 @@ export class PortfolioService {
 
     const result = await this.db.query(query, [targetAllocationPercent, portfolioId, symbol]);
     return this.mapRowToHolding(result.rows[0]);
+  }
+
+  /**
+   * Imports holdings directly to the portfolio_holdings table.
+   * Uses UPSERT pattern: updates existing holdings or creates new ones.
+   * No transactions are created - this is for snapshot imports.
+   *
+   * @param portfolioId - The portfolio to import holdings into
+   * @param holdings - Array of parsed holdings to import
+   * @returns Import result with counts and any errors
+   */
+  async importHoldings(
+    portfolioId: string,
+    holdings: ParsedHolding[]
+  ): Promise<HoldingsImportResult> {
+    const portfolio = await this.getPortfolioById(portfolioId);
+    if (!portfolio) {
+      throw new PortfolioNotFoundError(portfolioId);
+    }
+
+    if (!holdings || holdings.length === 0) {
+      return {
+        success: true,
+        imported: 0,
+        updated: 0,
+        failed: 0,
+        errors: [],
+      };
+    }
+
+    // Pre-fetch sector info for all symbols (outside transaction)
+    const sectorMap = new Map<string, string | null>();
+    const symbols = holdings.map((h) => h.symbol.toUpperCase());
+
+    // Fetch sectors in parallel (batch of 10 to avoid overwhelming API)
+    const batchSize = 10;
+    for (let i = 0; i < symbols.length; i += batchSize) {
+      const batch = symbols.slice(i, i + batchSize);
+      const sectorPromises = batch.map(async (symbol) => {
+        try {
+          const profile = await this.fmpProvider.getCompanyProfile(symbol);
+          return { symbol, sector: profile.sector || null };
+        } catch {
+          return { symbol, sector: null };
+        }
+      });
+
+      const results = await Promise.all(sectorPromises);
+      results.forEach(({ symbol, sector }) => sectorMap.set(symbol, sector));
+    }
+
+    // Check which holdings already exist
+    const existingHoldings = await this.getHoldings(portfolioId);
+    const existingSymbols = new Set(existingHoldings.map((h) => h.symbol));
+
+    // Perform import within a transaction
+    return this.db.transaction(async (client) => {
+      const errors: CSVValidationError[] = [];
+      let imported = 0;
+      let updated = 0;
+      let failed = 0;
+
+      for (let i = 0; i < holdings.length; i++) {
+        const holding = holdings[i];
+        const symbol = holding.symbol.toUpperCase();
+
+        try {
+          // Validate holding data
+          if (!symbol || !/^[A-Z]{1,5}$/.test(symbol)) {
+            throw new Error(`Invalid symbol: ${symbol}`);
+          }
+          if (holding.quantity <= 0) {
+            throw new Error('Quantity must be positive');
+          }
+          if (holding.averageCostBasis < 0) {
+            throw new Error('Cost basis cannot be negative');
+          }
+
+          const totalCostBasis = holding.quantity * holding.averageCostBasis;
+          const sector = holding.sector || sectorMap.get(symbol) || null;
+          const isUpdate = existingSymbols.has(symbol);
+
+          // UPSERT the holding
+          const upsertQuery = `
+            INSERT INTO portfolio_holdings (
+              portfolio_id, symbol, quantity, average_cost_basis, total_cost_basis,
+              sector, first_purchase_date, last_transaction_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (portfolio_id, symbol) DO UPDATE SET
+              quantity = EXCLUDED.quantity,
+              average_cost_basis = EXCLUDED.average_cost_basis,
+              total_cost_basis = EXCLUDED.total_cost_basis,
+              sector = COALESCE(EXCLUDED.sector, portfolio_holdings.sector),
+              last_transaction_date = EXCLUDED.last_transaction_date
+          `;
+
+          const purchaseDate = holding.purchaseDate || new Date();
+
+          await client.query(upsertQuery, [
+            portfolioId,
+            symbol,
+            holding.quantity,
+            holding.averageCostBasis,
+            totalCostBasis,
+            sector,
+            purchaseDate,
+            purchaseDate,
+          ]);
+
+          if (isUpdate) {
+            updated++;
+          } else {
+            imported++;
+          }
+        } catch (error) {
+          failed++;
+          errors.push({
+            row: i + 1,
+            field: 'symbol',
+            value: holding.symbol,
+            message: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
+
+      return {
+        success: failed === 0,
+        imported,
+        updated,
+        failed,
+        errors,
+      };
+    });
   }
 
   /**

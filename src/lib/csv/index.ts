@@ -16,5 +16,10 @@ export {
 // Mappers
 export { validateFidelityRow, mapFidelityRows } from './fidelityMapper';
 export { validateMerrillTransactionRow, mapMerrillTransactionRows } from './merrillTransactionsMapper';
-export { validateMerrillHoldingsRow, mapMerrillHoldingsRows } from './merrillHoldingsMapper';
+export {
+  validateMerrillHoldingsRow,
+  mapMerrillHoldingsRows,
+  validateMerrillHoldingForSnapshot,
+  mapMerrillHoldingsToHoldings,
+} from './merrillHoldingsMapper';
 export { validateTradeRow, mapTradeRows } from './tradeCSVMapper';

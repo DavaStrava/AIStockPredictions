@@ -110,6 +110,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               fees: tx.fees,
               transactionDate: new Date(tx.transactionDate),
               notes: tx.notes,
+              // Skip cash/holdings validation for historical imports
+              skipValidation: true,
             },
             client // Pass the transaction client for atomicity
           );

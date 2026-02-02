@@ -24,6 +24,7 @@ import {
   mapFidelityRows,
   mapMerrillTransactionRows,
   mapMerrillHoldingsRows,
+  mapMerrillHoldingsToHoldings,
   mapTradeRows,
 } from '@/lib/csv';
 import type {
@@ -33,8 +34,10 @@ import type {
   CSVParseResult,
   CSVValidationError,
   ParsedPortfolioTransaction,
+  ParsedHolding,
   ParsedTrade,
   CSVImportResult,
+  HoldingsImportResult,
 } from '@/types/csv';
 
 interface ValidatedRow {
@@ -50,8 +53,8 @@ interface ModalState {
   format: CSVFormatType;
   parseResult: CSVParseResult | null;
   validatedRows: ValidatedRow[];
-  validData: ParsedPortfolioTransaction[] | ParsedTrade[];
-  importResult: CSVImportResult | null;
+  validData: ParsedPortfolioTransaction[] | ParsedHolding[] | ParsedTrade[];
+  importResult: CSVImportResult | HoldingsImportResult | null;
   loading: boolean;
   error: string | null;
 }
@@ -103,6 +106,12 @@ export function CSVImportModal({
               'Please use Fidelity or Merrill Lynch format.'
           );
         }
+        if (importType === 'holdings' && detection.format !== 'merrill_holdings') {
+          throw new Error(
+            `This file format (${getFormatDisplayName(detection.format)}) is not compatible with holdings import. ` +
+              'Please use Merrill Lynch Holdings format.'
+          );
+        }
         if (importType === 'trade' && !isTradeCompatible(detection.format)) {
           throw new Error(
             `This file format (${getFormatDisplayName(detection.format)}) is not compatible with trade import. ` +
@@ -119,12 +128,16 @@ export function CSVImportModal({
 
         // Validate and map rows based on format
         let validatedRows: ValidatedRow[] = [];
-        let validData: ParsedPortfolioTransaction[] | ParsedTrade[] = [];
+        let validData: ParsedPortfolioTransaction[] | ParsedHolding[] | ParsedTrade[] = [];
 
         if (importType === 'portfolio') {
           const result = mapPortfolioData(detection.format, parsed);
           validatedRows = result.validatedRows;
           validData = result.transactions;
+        } else if (importType === 'holdings') {
+          const result = mapHoldingsData(detection.format, parsed);
+          validatedRows = result.validatedRows;
+          validData = result.holdings;
         } else {
           const result = mapTradeData(detection.format, parsed);
           validatedRows = result.validatedRows;
@@ -156,15 +169,19 @@ export function CSVImportModal({
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const endpoint =
-        importType === 'portfolio'
-          ? `/api/portfolios/${portfolioId}/transactions/import`
-          : '/api/trades/import';
+      let endpoint: string;
+      let body: Record<string, unknown>;
 
-      const body =
-        importType === 'portfolio'
-          ? { transactions: state.validData }
-          : { trades: state.validData };
+      if (importType === 'portfolio') {
+        endpoint = `/api/portfolios/${portfolioId}/transactions/import`;
+        body = { transactions: state.validData };
+      } else if (importType === 'holdings') {
+        endpoint = `/api/portfolios/${portfolioId}/holdings/import`;
+        body = { holdings: state.validData };
+      } else {
+        endpoint = '/api/trades/import';
+        body = { trades: state.validData };
+      }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -311,7 +328,7 @@ export function CSVImportModal({
                 </h3>
                 <p className="text-slate-400 mb-4">
                   You are about to import <span className="text-indigo-400 font-semibold">{validCount}</span>{' '}
-                  {importType === 'portfolio' ? 'transactions' : 'trades'}.
+                  {importType === 'portfolio' ? 'transactions' : importType === 'holdings' ? 'holdings' : 'trades'}.
                 </p>
                 {state.validatedRows.filter((r) => !r.valid).length > 0 && (
                   <p className="text-amber-400 text-sm">
@@ -349,7 +366,10 @@ export function CSVImportModal({
                       <span className="text-emerald-400 font-semibold">
                         {state.importResult.imported}
                       </span>{' '}
-                      {importType === 'portfolio' ? 'transactions' : 'trades'}.
+                      {importType === 'portfolio' ? 'transactions' : importType === 'holdings' ? 'holdings' : 'trades'}.
+                      {importType === 'holdings' && 'updated' in state.importResult && state.importResult.updated > 0 && (
+                        <> ({state.importResult.updated} updated)</>
+                      )}
                     </p>
                   </div>
                 </>
@@ -492,6 +512,44 @@ function mapPortfolioData(
   });
 
   return { validatedRows, transactions: result.transactions };
+}
+
+/**
+ * Map CSV data to holdings for direct import (bypasses transactions).
+ */
+function mapHoldingsData(
+  format: CSVFormatType,
+  parsed: CSVParseResult
+): { validatedRows: ValidatedRow[]; holdings: ParsedHolding[] } {
+  let result: { holdings: ParsedHolding[]; errors: CSVValidationError[] };
+
+  switch (format) {
+    case 'merrill_holdings':
+      result = mapMerrillHoldingsToHoldings(parsed.rows);
+      break;
+    default:
+      result = { holdings: [], errors: [] };
+  }
+
+  // Build validated rows for preview
+  const errorsByRow = new Map<number, CSVValidationError[]>();
+  result.errors.forEach((error) => {
+    const existing = errorsByRow.get(error.row) || [];
+    existing.push(error);
+    errorsByRow.set(error.row, existing);
+  });
+
+  const validatedRows: ValidatedRow[] = parsed.rows.map((row) => {
+    const errors = errorsByRow.get(row.rowNumber) || [];
+    return {
+      rowNumber: row.rowNumber,
+      valid: errors.length === 0,
+      data: row.data,
+      errors,
+    };
+  });
+
+  return { validatedRows, holdings: result.holdings };
 }
 
 /**

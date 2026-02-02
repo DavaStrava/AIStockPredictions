@@ -10,7 +10,12 @@
 import { describe, it, expect } from 'vitest';
 import { validateFidelityRow, mapFidelityRows } from '../fidelityMapper';
 import { validateMerrillTransactionRow, mapMerrillTransactionRows } from '../merrillTransactionsMapper';
-import { validateMerrillHoldingsRow, mapMerrillHoldingsRows } from '../merrillHoldingsMapper';
+import {
+  validateMerrillHoldingsRow,
+  mapMerrillHoldingsRows,
+  validateMerrillHoldingForSnapshot,
+  mapMerrillHoldingsToHoldings,
+} from '../merrillHoldingsMapper';
 import type { CSVParsedRow } from '@/types/csv';
 
 describe('Fidelity Mapper', () => {
@@ -509,6 +514,196 @@ describe('Merrill Holdings Mapper', () => {
 
       const result = validateMerrillHoldingsRow(row);
       expect(result.valid).toBe(false);
+    });
+  });
+
+  describe('validateMerrillHoldingForSnapshot', () => {
+    it('should parse valid holding for direct import', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'COB Date': '1/30/2026',
+          'Symbol': 'AAPL',
+          'Quantity': '10',
+          'Price ($)': '150.00',
+          'Value ($)': '1,500.00',
+        },
+      };
+
+      const result = validateMerrillHoldingForSnapshot(row);
+      expect(result.valid).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data?.symbol).toBe('AAPL');
+      expect(result.data?.quantity).toBe(10);
+      expect(result.data?.averageCostBasis).toBe(150);
+      expect(result.data?.totalValue).toBe(1500);
+      expect(result.data?.purchaseDate).toBeInstanceOf(Date);
+    });
+
+    it('should reject invalid symbol', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'COB Date': '1/30/2026',
+          'Symbol': 'INVALID_SYMBOL',
+          'Quantity': '10',
+          'Price ($)': '150.00',
+          'Value ($)': '1,500.00',
+        },
+      };
+
+      const result = validateMerrillHoldingForSnapshot(row);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'Symbol')).toBe(true);
+    });
+
+    it('should reject negative quantity', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'COB Date': '1/30/2026',
+          'Symbol': 'AAPL',
+          'Quantity': '-10',
+          'Price ($)': '150.00',
+          'Value ($)': '1,500.00',
+        },
+      };
+
+      const result = validateMerrillHoldingForSnapshot(row);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'Quantity')).toBe(true);
+    });
+
+    it('should allow zero price (for free shares)', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'COB Date': '1/30/2026',
+          'Symbol': 'AAPL',
+          'Quantity': '10',
+          'Price ($)': '0',
+          'Value ($)': '0',
+        },
+      };
+
+      const result = validateMerrillHoldingForSnapshot(row);
+      expect(result.valid).toBe(true);
+      expect(result.data?.averageCostBasis).toBe(0);
+    });
+
+    it('should skip money market funds', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'COB Date': '1/30/2026',
+          'Symbol': 'TSTXX',
+          'Quantity': '1000',
+          'Price ($)': '1.00',
+          'Value ($)': '1,000.00',
+        },
+      };
+
+      const result = validateMerrillHoldingForSnapshot(row);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.message.includes('skipped'))).toBe(true);
+    });
+  });
+
+  describe('mapMerrillHoldingsToHoldings', () => {
+    it('should map multiple valid rows to ParsedHolding[]', () => {
+      const rows: CSVParsedRow[] = [
+        {
+          rowNumber: 1,
+          data: {
+            'COB Date': '1/30/2026',
+            'Symbol': 'AAPL',
+            'Quantity': '10',
+            'Price ($)': '150.00',
+            'Value ($)': '1,500.00',
+          },
+        },
+        {
+          rowNumber: 2,
+          data: {
+            'COB Date': '1/30/2026',
+            'Symbol': 'GOOGL',
+            'Quantity': '5',
+            'Price ($)': '100.00',
+            'Value ($)': '500.00',
+          },
+        },
+      ];
+
+      const result = mapMerrillHoldingsToHoldings(rows);
+      expect(result.holdings).toHaveLength(2);
+      expect(result.errors).toHaveLength(0);
+
+      expect(result.holdings[0].symbol).toBe('AAPL');
+      expect(result.holdings[0].quantity).toBe(10);
+      expect(result.holdings[0].averageCostBasis).toBe(150);
+
+      expect(result.holdings[1].symbol).toBe('GOOGL');
+      expect(result.holdings[1].quantity).toBe(5);
+      expect(result.holdings[1].averageCostBasis).toBe(100);
+    });
+
+    it('should filter out invalid rows and collect errors', () => {
+      const rows: CSVParsedRow[] = [
+        {
+          rowNumber: 1,
+          data: {
+            'COB Date': '1/30/2026',
+            'Symbol': 'AAPL',
+            'Quantity': '10',
+            'Price ($)': '150.00',
+            'Value ($)': '1,500.00',
+          },
+        },
+        {
+          rowNumber: 2,
+          data: {
+            'COB Date': 'invalid-date',
+            'Symbol': 'GOOGL',
+            'Quantity': '5',
+            'Price ($)': '100.00',
+            'Value ($)': '500.00',
+          },
+        },
+      ];
+
+      const result = mapMerrillHoldingsToHoldings(rows);
+      expect(result.holdings).toHaveLength(1); // Only AAPL
+      expect(result.errors).toHaveLength(1); // Date error for GOOGL
+      expect(result.errors[0].row).toBe(2);
+    });
+
+    it('should skip money market funds without adding errors', () => {
+      const rows: CSVParsedRow[] = [
+        {
+          rowNumber: 1,
+          data: {
+            'COB Date': '1/30/2026',
+            'Symbol': 'AAPL',
+            'Quantity': '10',
+            'Price ($)': '150.00',
+            'Value ($)': '1,500.00',
+          },
+        },
+        {
+          rowNumber: 2,
+          data: {
+            'COB Date': '1/30/2026',
+            'Symbol': 'TSTXX', // Money market fund
+            'Quantity': '1000',
+            'Price ($)': '1.00',
+            'Value ($)': '1,000.00',
+          },
+        },
+      ];
+
+      const result = mapMerrillHoldingsToHoldings(rows);
+      expect(result.holdings).toHaveLength(1); // Only AAPL
+      expect(result.errors).toHaveLength(0); // Skip messages are filtered out
     });
   });
 });

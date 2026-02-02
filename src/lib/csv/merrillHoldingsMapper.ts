@@ -24,6 +24,8 @@ import type {
   ParsedPortfolioTransaction,
   PortfolioTransactionValidation,
   CSVValidationError,
+  ParsedHolding,
+  HoldingValidation,
 } from '@/types/csv';
 
 /**
@@ -222,6 +224,124 @@ export function mapMerrillHoldingsRows(
   }
 
   return { transactions, errors };
+}
+
+// ============================================================================
+// Holdings Snapshot Import (Direct to portfolio_holdings)
+// ============================================================================
+
+/**
+ * Validate a single Merrill holdings row for direct holdings import.
+ */
+export function validateMerrillHoldingForSnapshot(row: CSVParsedRow): HoldingValidation {
+  const errors: CSVValidationError[] = [];
+  const data = row.data;
+
+  // Get fields
+  const cobDate = data['COB Date'] || '';
+  const symbol = (data['Symbol'] || '').replace(/"/g, '').trim().toUpperCase();
+  const quantity = data['Quantity'] || '';
+  const price = data['Price ($)'] || '';
+
+  // Skip empty rows
+  if (!cobDate && !symbol) {
+    return { valid: false, errors: [{ row: row.rowNumber, field: '', value: '', message: 'Empty row - skipped' }] };
+  }
+
+  // Skip money market funds
+  if (isMoneyMarketFund(symbol)) {
+    return {
+      valid: false,
+      errors: [{ row: row.rowNumber, field: 'Symbol', value: symbol, message: 'Money market fund - skipped' }],
+    };
+  }
+
+  // Validate symbol
+  if (!symbol || !/^[A-Z]{1,5}$/.test(symbol)) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'Symbol',
+      value: symbol,
+      message: 'Invalid symbol. Must be 1-5 uppercase letters',
+    });
+  }
+
+  // Parse date
+  const purchaseDate = parseMerrillHoldingsDate(cobDate);
+  if (!purchaseDate) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'COB Date',
+      value: cobDate,
+      message: 'Invalid date format. Expected M/DD/YYYY',
+    });
+  }
+
+  // Parse numeric values
+  const quantityValue = parseNumber(quantity);
+  const priceValue = parseNumber(price);
+
+  // Validate quantity
+  if (quantityValue <= 0) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'Quantity',
+      value: quantity,
+      message: 'Quantity must be a positive number',
+    });
+  }
+
+  // Validate price (used as average cost basis)
+  if (priceValue < 0) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'Price ($)',
+      value: price,
+      message: 'Price cannot be negative',
+    });
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  // Build parsed holding for direct import
+  const totalValue = quantityValue * priceValue;
+
+  const parsed: ParsedHolding = {
+    symbol,
+    quantity: quantityValue,
+    averageCostBasis: priceValue,
+    totalValue,
+    purchaseDate: purchaseDate || undefined,
+  };
+
+  return { valid: true, data: parsed, errors: [] };
+}
+
+/**
+ * Map multiple Merrill holdings rows to ParsedHolding[] for direct import.
+ * This bypasses transaction creation and writes directly to portfolio_holdings.
+ */
+export function mapMerrillHoldingsToHoldings(
+  rows: CSVParsedRow[]
+): { holdings: ParsedHolding[]; errors: CSVValidationError[] } {
+  const holdings: ParsedHolding[] = [];
+  const errors: CSVValidationError[] = [];
+
+  for (const row of rows) {
+    const result = validateMerrillHoldingForSnapshot(row);
+
+    if (result.valid && result.data) {
+      holdings.push(result.data);
+    } else {
+      // Only add real errors (not skip messages)
+      const realErrors = result.errors.filter((e) => !e.message.includes('skipped'));
+      errors.push(...realErrors);
+    }
+  }
+
+  return { holdings, errors };
 }
 
 export default mapMerrillHoldingsRows;

@@ -893,6 +893,239 @@ describe('PortfolioService', () => {
       expect(result.length).toBe(0);
     });
   });
+
+  describe('addTransaction with skipValidation', () => {
+    const mockPortfolioData = {
+      id: 'portfolio-123',
+      user_id: 'user-123',
+      name: 'My Portfolio',
+      description: null,
+      currency: 'USD',
+      is_default: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should skip cash balance validation when skipValidation is true', async () => {
+      const mockTransactionData = {
+        id: 'txn-123',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: 'AAPL',
+        transaction_type: 'BUY',
+        quantity: '10',
+        price_per_share: '150',
+        fees: '0',
+        total_amount: '-1500',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Outside transaction
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol
+
+      // Inside transaction - NO cash balance check because skipValidation is true
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert
+      mockClientQuery.mockResolvedValueOnce({
+        rows: [{
+          total_bought: '10',
+          total_sold: '0',
+          total_cost: '1500',
+          first_purchase: new Date().toISOString(),
+          last_transaction: new Date().toISOString()
+        }]
+      }); // updateHoldingsCache query
+      mockClientQuery.mockResolvedValueOnce({ rows: [] }); // upsert holding
+
+      // Should succeed even with $0 cash balance because validation is skipped
+      const result = await service.addTransaction({
+        portfolioId: 'portfolio-123',
+        transactionType: 'BUY',
+        assetSymbol: 'AAPL',
+        quantity: 10,
+        pricePerShare: 150,
+        totalAmount: 1500,
+        transactionDate: new Date(),
+        skipValidation: true,
+      });
+
+      expect(result.transactionType).toBe('BUY');
+      expect(result.assetSymbol).toBe('AAPL');
+      // Cash balance check should NOT be called
+      expect(mockClientQuery).toHaveBeenCalledTimes(3); // Only insert + holdings update (not cash check)
+    });
+
+    it('should skip holdings validation for SELL when skipValidation is true', async () => {
+      const mockTransactionData = {
+        id: 'txn-123',
+        portfolio_id: 'portfolio-123',
+        asset_symbol: 'AAPL',
+        transaction_type: 'SELL',
+        quantity: '100',
+        price_per_share: '150',
+        fees: '0',
+        total_amount: '15000',
+        transaction_date: new Date().toISOString(),
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Outside transaction
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValueOnce({ sector: 'Technology' }); // fetchSectorForSymbol
+
+      // Inside transaction - NO holdings check because skipValidation is true
+      mockClientQuery.mockResolvedValueOnce({ rows: [mockTransactionData] }); // insert
+      mockClientQuery.mockResolvedValueOnce({
+        rows: [{
+          total_bought: '100',
+          total_sold: '100',
+          total_cost: '15000',
+          first_purchase: new Date().toISOString(),
+          last_transaction: new Date().toISOString()
+        }]
+      }); // updateHoldingsCache query
+      mockClientQuery.mockResolvedValueOnce({ rows: [] }); // delete holding (quantity = 0)
+
+      // Should succeed even without holding shares because validation is skipped
+      const result = await service.addTransaction({
+        portfolioId: 'portfolio-123',
+        transactionType: 'SELL',
+        assetSymbol: 'AAPL',
+        quantity: 100,
+        pricePerShare: 150,
+        totalAmount: 15000,
+        transactionDate: new Date(),
+        skipValidation: true,
+      });
+
+      expect(result.transactionType).toBe('SELL');
+      // Holdings check should NOT be called
+      expect(mockClientQuery).toHaveBeenCalledTimes(3); // Only insert + holdings update (not holdings check)
+    });
+  });
+
+  describe('importHoldings', () => {
+    const mockPortfolioData = {
+      id: 'portfolio-123',
+      user_id: 'user-123',
+      name: 'My Portfolio',
+      description: null,
+      currency: 'USD',
+      is_default: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should import new holdings directly to portfolio_holdings table', async () => {
+      // Setup
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValue({ sector: 'Technology' }); // fetchSectorForSymbol (called for each symbol)
+      mockQuery.mockResolvedValueOnce({ rows: [] }); // getHoldings (no existing holdings)
+
+      // Inside transaction
+      mockClientQuery.mockResolvedValue({ rows: [] }); // upsert queries
+
+      const holdings = [
+        { symbol: 'AAPL', quantity: 10, averageCostBasis: 150 },
+        { symbol: 'GOOGL', quantity: 5, averageCostBasis: 100 },
+      ];
+
+      const result = await service.importHoldings('portfolio-123', holdings);
+
+      expect(result.success).toBe(true);
+      expect(result.imported).toBe(2);
+      expect(result.updated).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should update existing holdings on import', async () => {
+      const existingHoldings = [
+        {
+          id: 'holding-1',
+          portfolio_id: 'portfolio-123',
+          symbol: 'AAPL',
+          quantity: '5',
+          average_cost_basis: '140',
+          total_cost_basis: '700',
+          target_allocation_percent: null,
+          sector: 'Technology',
+          first_purchase_date: new Date().toISOString(),
+          last_transaction_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      // Setup
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValue({ sector: 'Technology' }); // fetchSectorForSymbol
+      mockQuery.mockResolvedValueOnce({ rows: existingHoldings }); // getHoldings (AAPL exists)
+
+      // Inside transaction
+      mockClientQuery.mockResolvedValue({ rows: [] }); // upsert queries
+
+      const holdings = [
+        { symbol: 'AAPL', quantity: 10, averageCostBasis: 150 }, // Updated
+        { symbol: 'GOOGL', quantity: 5, averageCostBasis: 100 }, // New
+      ];
+
+      const result = await service.importHoldings('portfolio-123', holdings);
+
+      expect(result.success).toBe(true);
+      expect(result.imported).toBe(1); // Only GOOGL is new
+      expect(result.updated).toBe(1); // AAPL is updated
+      expect(result.failed).toBe(0);
+    });
+
+    it('should handle validation errors during import', async () => {
+      // Setup
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+      mockGetCompanyProfile.mockResolvedValue({ sector: 'Technology' }); // fetchSectorForSymbol
+      mockQuery.mockResolvedValueOnce({ rows: [] }); // getHoldings
+
+      // Inside transaction
+      mockClientQuery.mockResolvedValue({ rows: [] }); // upsert queries
+
+      const holdings = [
+        { symbol: 'AAPL', quantity: 10, averageCostBasis: 150 }, // Valid
+        { symbol: 'INVALID_SYMBOL_TOO_LONG', quantity: 5, averageCostBasis: 100 }, // Invalid symbol
+        { symbol: 'GOOGL', quantity: -5, averageCostBasis: 100 }, // Invalid quantity
+      ];
+
+      const result = await service.importHoldings('portfolio-123', holdings);
+
+      expect(result.success).toBe(false); // Has failures
+      expect(result.imported).toBe(1); // Only AAPL succeeded
+      expect(result.failed).toBe(2); // Invalid symbol and negative quantity
+      expect(result.errors).toHaveLength(2);
+    });
+
+    it('should return empty result for empty holdings array', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [mockPortfolioData] }); // getPortfolioById
+
+      const result = await service.importHoldings('portfolio-123', []);
+
+      expect(result.success).toBe(true);
+      expect(result.imported).toBe(0);
+      expect(result.updated).toBe(0);
+      expect(result.failed).toBe(0);
+    });
+
+    it('should throw PortfolioNotFoundError for non-existent portfolio', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] }); // getPortfolioById returns empty
+
+      const holdings = [{ symbol: 'AAPL', quantity: 10, averageCostBasis: 150 }];
+
+      await expect(service.importHoldings('nonexistent-id', holdings)).rejects.toThrow(
+        PortfolioNotFoundError
+      );
+    });
+  });
 });
 
 
