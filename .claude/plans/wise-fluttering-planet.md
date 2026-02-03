@@ -21,7 +21,9 @@ Implement a comprehensive portfolio tracking feature for the AI Stock Prediction
 
 ---
 
-## Phase 1: Holdings View Enhancement
+## Phase 1: Holdings View Enhancement - COMPLETE
+
+**Status:** Completed in commit `8dca9d8`
 
 **Goal:** Transform HoldingsDataGrid into a feature-rich table matching PRD specifications
 
@@ -125,34 +127,41 @@ src/components/portfolio/CSVImportPreview.tsx      # Preview table
 
 ---
 
-## Phase 4: Portfolio Health Dashboard
+## Phase 4: Portfolio Health Dashboard - COMPLETE
+
+**Status:** Completed (Phase 2 & 3 also completed in commits `3446ffe` and `aca2341`)
 
 **Goal:** Technical analysis-based health scoring with gauge visualization
 
-### New Files to Create
+### Files Created
 ```
-src/lib/portfolio/PortfolioHealthService.ts        # Health calculation
-src/app/api/portfolios/[id]/health/route.ts        # API endpoint
-src/components/portfolio/HealthScoreGauge.tsx      # SVG gauge component
-src/components/portfolio/HealthDashboard.tsx       # Dashboard layout
-src/components/portfolio/RatingBreakdown.tsx       # Bar chart component
-src/components/portfolio/DiagnosticsPanel.tsx      # Actionable statements
+src/lib/portfolio/PortfolioHealthService.ts        # Health calculation service
+src/app/api/portfolios/[id]/health/route.ts        # GET API endpoint
+src/components/portfolio/HealthScoreGauge.tsx      # SVG semi-circular gauge
+src/components/portfolio/HealthDashboard.tsx       # Dashboard composition layout
+src/components/portfolio/RatingBreakdown.tsx       # Stacked bar with legend
+src/components/portfolio/DiagnosticsPanel.tsx      # Per-holding diagnostic cards
+src/lib/portfolio/__tests__/PortfolioHealthService.test.ts  # 9 unit tests
 ```
+
+### Files Modified
+- `src/types/portfolio.ts` - Added `HealthRating`, `HoldingHealthAnalysis`, `PortfolioHealthResult`
+- `src/components/portfolio/hooks/usePortfolio.ts` - Added `healthData`, `healthLoading`, `fetchHealth` with AbortController
+- `src/components/portfolio/PortfolioManager.tsx` - Added "Health Score" tab with lazy-loading
 
 ### Health Score Calculation
-- Leverage existing `TechnicalAnalysisEngine` (RSI, MACD, Moving Averages)
-- Weight signals by portfolio allocation
-- Score range: 0-100
-- Ratings: Bullish (67-100), Neutral (34-66), Bearish (0-33)
+- Runs `TechnicalAnalysisEngine` on each holding's 6-month historical data
+- Converts summary to 0-100 score: bullish (67-100), neutral (34-66), bearish (0-33)
+- Portfolio-weighted overall score via `sum(score * weight) / sum(weights)`
+- Batched processing (5 concurrent) with `Promise.allSettled` for fault tolerance
 
 ### Dashboard Components
-- Semi-circular gauge (SVG with animated needle)
-- Rating breakdown bar chart (% Bullish/Neutral/Bearish holdings)
-- Diagnostics panel with actionable statements
+- Semi-circular SVG gauge with CSS transform animated needle and 3 color zones
+- Horizontal stacked bar showing bullish/neutral/bearish distribution with legend
+- Scrollable diagnostics panel sorted worst-first with signal pills and diagnostic messages
 
 ### Tests
-- `src/lib/portfolio/__tests__/PortfolioHealthService.test.ts`
-- `src/components/portfolio/__tests__/HealthScoreGauge.test.tsx`
+- `src/lib/portfolio/__tests__/PortfolioHealthService.test.ts` - 9 tests (all pass)
 
 ---
 
@@ -210,14 +219,14 @@ src/components/portfolio/DividendsTab.tsx    # Income tracking
 ## Phase Dependencies
 
 ```
-Phase 1 (Holdings) ---+
-                      +--> Phase 5 (Tab Navigation)
-Phase 2 (Stock Page) -+          |
-         |                       v
+Phase 1 (Holdings) ----DONE
+                        |
+Phase 2 (Stock Page) ---+--> Phase 5 (Tab Navigation)
+         |               DONE       |
          +----------> Phase 6 (Chart Polish)
 
-Phase 3 (CSV Import) --> Independent
-Phase 4 (Health) ------> Requires Phase 1 completion
+Phase 3 (CSV Import) --> DONE (Independent)
+Phase 4 (Health) ------> DONE
 ```
 
 ---

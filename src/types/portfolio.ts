@@ -292,6 +292,40 @@ export interface RebalanceResponse {
   rebalanceThreshold: number;
 }
 
+// ============================================================================
+// Health Dashboard Types
+// ============================================================================
+
+export type HealthRating = 'bullish' | 'neutral' | 'bearish';
+
+export interface HoldingHealthAnalysis {
+  symbol: string;
+  companyName?: string;
+  score: number; // 0-100
+  rating: HealthRating;
+  signalSummary: 'bullish' | 'bearish' | 'neutral';
+  topSignals: Array<{ indicator: string; signal: 'buy' | 'sell' | 'hold'; strength: number }>;
+  diagnosticMessage: string;
+  portfolioWeight: number;
+  volatility: 'low' | 'medium' | 'high';
+}
+
+export interface PortfolioHealthResult {
+  portfolioId: string;
+  overallScore: number; // 0-100
+  overallRating: HealthRating;
+  ratingBreakdown: {
+    bullish: { count: number; percent: number };
+    neutral: { count: number; percent: number };
+    bearish: { count: number; percent: number };
+  };
+  holdings: HoldingHealthAnalysis[];
+  analyzedAt: Date;
+  holdingsAnalyzed: number;
+  holdingsSkipped: number;
+}
+
+
 
 
 

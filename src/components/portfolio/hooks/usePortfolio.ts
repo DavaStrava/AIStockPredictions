@@ -8,7 +8,7 @@
  * - Performance history
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Portfolio,
   PortfolioTransaction,
@@ -17,6 +17,7 @@ import {
   SectorAllocation,
   BenchmarkDataPoint,
   RebalanceSuggestion,
+  PortfolioHealthResult,
   CreateTransactionRequest,
   PortfolioTransactionType,
 } from '@/types/portfolio';
@@ -35,12 +36,16 @@ interface PortfolioState {
   allocation: SectorAllocation[];
   history: BenchmarkDataPoint[];
   rebalanceSuggestions: RebalanceSuggestion[];
+  healthData: PortfolioHealthResult | null;
+  healthLoading: boolean;
   loading: boolean;
   error: string | null;
 }
 
 export function usePortfolio(options: UsePortfolioOptions = {}) {
   const { autoFetch = true, refreshInterval } = options;
+
+  const healthAbortRef = useRef<AbortController | null>(null);
 
   const [state, setState] = useState<PortfolioState>({
     portfolios: [],
@@ -51,6 +56,8 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     allocation: [],
     history: [],
     rebalanceSuggestions: [],
+    healthData: null,
+    healthLoading: false,
     loading: false,
     error: null,
   });
@@ -151,6 +158,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
       allocation: [],
       history: [],
       rebalanceSuggestions: [],
+      healthData: null,
     }));
   }, []);
 
@@ -292,6 +300,35 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     },
     []
   );
+
+  const fetchHealth = useCallback(async (portfolioId: string) => {
+    // Abort any in-flight health request
+    healthAbortRef.current?.abort();
+    const controller = new AbortController();
+    healthAbortRef.current = controller;
+
+    setState((prev) => ({ ...prev, healthLoading: true, healthData: null }));
+    try {
+      const response = await fetch(`/api/portfolios/${portfolioId}/health`, {
+        signal: controller.signal,
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch health data');
+      }
+
+      setState((prev) => ({ ...prev, healthData: data.data, healthLoading: false }));
+      return data.data as PortfolioHealthResult;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return null;
+      }
+      const message = error instanceof Error ? error.message : 'Failed to fetch health data';
+      setState((prev) => ({ ...prev, healthLoading: false, error: message }));
+      throw error;
+    }
+  }, []);
 
   // ============================================================================
   // Transaction Operations
@@ -451,6 +488,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     fetchAllocation,
     fetchHistory,
     fetchRebalanceSuggestions,
+    fetchHealth,
     refreshPortfolioData,
 
     // Transaction operations

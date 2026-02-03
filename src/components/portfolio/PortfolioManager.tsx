@@ -13,7 +13,7 @@
  * - Performance chart
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   ChevronDown,
@@ -23,6 +23,7 @@ import {
   LineChart,
   PieChart,
   List,
+  Activity,
   Trash2,
 } from 'lucide-react';
 import { usePortfolio } from './hooks/usePortfolio';
@@ -32,10 +33,11 @@ import { TransactionModal } from './TransactionModal';
 import { PortfolioTreeMap } from './PortfolioTreeMap';
 import { PerformanceChart } from './PerformanceChart';
 import { PortfolioCSVImport } from './PortfolioCSVImport';
+import { HealthDashboard } from './HealthDashboard';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { PortfolioTransactionType } from '@/types/portfolio';
 
-type TabId = 'holdings' | 'transactions' | 'allocation' | 'performance';
+type TabId = 'holdings' | 'transactions' | 'allocation' | 'performance' | 'health';
 
 interface Tab {
   id: TabId;
@@ -48,6 +50,7 @@ const TABS: Tab[] = [
   { id: 'transactions', label: 'Transactions', icon: <List className="w-4 h-4" /> },
   { id: 'allocation', label: 'Allocation', icon: <PieChart className="w-4 h-4" /> },
   { id: 'performance', label: 'Performance', icon: <LineChart className="w-4 h-4" /> },
+  { id: 'health', label: 'Health Score', icon: <Activity className="w-4 h-4" /> },
 ];
 
 function formatCurrency(value: number): string {
@@ -79,6 +82,8 @@ export function PortfolioManager() {
     transactions,
     allocation,
     history,
+    healthData,
+    healthLoading,
     loading,
     error,
     selectPortfolio,
@@ -87,6 +92,7 @@ export function PortfolioManager() {
     addTransaction,
     updateHoldingTarget,
     fetchHistory,
+    fetchHealth,
     refreshPortfolioData,
     clearError,
   } = usePortfolio({ autoFetch: true, refreshInterval: 60000 });
@@ -160,6 +166,13 @@ export function PortfolioManager() {
     // Refresh portfolio data after successful import
     refreshPortfolioData();
   }, [refreshPortfolioData]);
+
+  // Lazy-load health data when health tab is selected
+  useEffect(() => {
+    if (activeTab === 'health' && selectedPortfolioId && !healthData && !healthLoading) {
+      fetchHealth(selectedPortfolioId);
+    }
+  }, [activeTab, selectedPortfolioId, healthData, healthLoading, fetchHealth]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -416,6 +429,18 @@ export function PortfolioManager() {
               onFetchHistory={async (startDate, endDate) => {
                 if (selectedPortfolioId) {
                   await fetchHistory(selectedPortfolioId, startDate, endDate);
+                }
+              }}
+            />
+          )}
+
+          {activeTab === 'health' && (
+            <HealthDashboard
+              health={healthData}
+              loading={healthLoading}
+              onRefresh={() => {
+                if (selectedPortfolioId && !healthLoading) {
+                  fetchHealth(selectedPortfolioId);
                 }
               }}
             />
