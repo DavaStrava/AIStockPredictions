@@ -320,7 +320,7 @@ export interface PortfolioHealthResult {
     bearish: { count: number; percent: number };
   };
   holdings: HoldingHealthAnalysis[];
-  analyzedAt: Date;
+  analyzedAt: string;
   holdingsAnalyzed: number;
   holdingsSkipped: number;
 }

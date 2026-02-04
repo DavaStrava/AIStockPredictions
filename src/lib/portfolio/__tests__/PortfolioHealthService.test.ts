@@ -250,9 +250,8 @@ describe('PortfolioHealthService', () => {
 
     const { bullish, neutral, bearish } = result.ratingBreakdown;
     expect(bullish.count + neutral.count + bearish.count).toBe(3);
-    // Percentages should approximately sum to 100 (rounding may cause slight variance)
-    expect(bullish.percent + neutral.percent + bearish.percent).toBeGreaterThanOrEqual(99);
-    expect(bullish.percent + neutral.percent + bearish.percent).toBeLessThanOrEqual(102);
+    // Percentages should sum to exactly 100 after normalization
+    expect(bullish.percent + neutral.percent + bearish.percent).toBe(100);
   });
 
   it('includes analyzedAt timestamp', async () => {
@@ -262,8 +261,10 @@ describe('PortfolioHealthService', () => {
     const result = await service.analyzePortfolioHealth('p1');
     const after = new Date();
 
-    expect(new Date(result.analyzedAt).getTime()).toBeGreaterThanOrEqual(before.getTime());
-    expect(new Date(result.analyzedAt).getTime()).toBeLessThanOrEqual(after.getTime());
+    const analyzedTime = new Date(result.analyzedAt).getTime();
+    expect(analyzedTime).toBeGreaterThanOrEqual(before.getTime());
+    expect(analyzedTime).toBeLessThanOrEqual(after.getTime());
+    expect(typeof result.analyzedAt).toBe('string');
   });
 
   it('limits topSignals to 3', async () => {

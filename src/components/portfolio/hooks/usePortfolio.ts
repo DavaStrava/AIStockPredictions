@@ -336,7 +336,14 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
 
   const addTransaction = useCallback(
     async (transaction: Omit<CreateTransactionRequest, 'portfolioId'>) => {
-      if (!state.selectedPortfolioId) {
+      // Read portfolioId from state at call time via setState to avoid stale closures
+      let portfolioId: string | null = null;
+      setState((prev) => {
+        portfolioId = prev.selectedPortfolioId;
+        return prev;
+      });
+
+      if (!portfolioId) {
         throw new Error('No portfolio selected');
       }
 
@@ -344,7 +351,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
 
       try {
         const response = await fetch(
-          `/api/portfolios/${state.selectedPortfolioId}/transactions`,
+          `/api/portfolios/${portfolioId}/transactions`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -358,11 +365,11 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
           throw new Error(data.error || 'Failed to add transaction');
         }
 
-        // Refresh data
+        // Refresh data using the same portfolioId captured at call time
         await Promise.all([
-          fetchSummary(state.selectedPortfolioId),
-          fetchHoldings(state.selectedPortfolioId),
-          fetchTransactions(state.selectedPortfolioId),
+          fetchSummary(portfolioId),
+          fetchHoldings(portfolioId),
+          fetchTransactions(portfolioId),
         ]);
 
         setState((prev) => ({ ...prev, loading: false }));
@@ -373,18 +380,24 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
         throw error;
       }
     },
-    [state.selectedPortfolioId, fetchSummary, fetchHoldings, fetchTransactions]
+    [fetchSummary, fetchHoldings, fetchTransactions]
   );
 
   const updateHoldingTarget = useCallback(
     async (symbol: string, targetAllocationPercent: number | null) => {
-      if (!state.selectedPortfolioId) {
+      let portfolioId: string | null = null;
+      setState((prev) => {
+        portfolioId = prev.selectedPortfolioId;
+        return prev;
+      });
+
+      if (!portfolioId) {
         throw new Error('No portfolio selected');
       }
 
       try {
         const response = await fetch(
-          `/api/portfolios/${state.selectedPortfolioId}/holdings?symbol=${symbol}`,
+          `/api/portfolios/${portfolioId}/holdings?symbol=${symbol}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -398,7 +411,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
           throw new Error(data.error || 'Failed to update target');
         }
 
-        await fetchHoldings(state.selectedPortfolioId);
+        await fetchHoldings(portfolioId);
         return data.data;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update target';
@@ -406,7 +419,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
         throw error;
       }
     },
-    [state.selectedPortfolioId, fetchHoldings]
+    [fetchHoldings]
   );
 
   // ============================================================================

@@ -12,13 +12,13 @@ interface HealthDashboardProps {
   onRefresh: () => void;
 }
 
-function formatTimestamp(date: Date): string {
+function formatTimestamp(dateStr: string): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(date));
+  }).format(new Date(dateStr));
 }
 
 export function HealthDashboard({ health, loading, onRefresh }: HealthDashboardProps) {

@@ -10,6 +10,7 @@ import {
 } from '@/types/portfolio';
 
 const BATCH_SIZE = 5;
+const BATCH_DELAY_MS = 200;
 
 function scoreFromSummary(summary: TechnicalAnalysisResult['summary']): number {
   const { overall, strength } = summary;
@@ -79,8 +80,12 @@ export class PortfolioHealthService {
     const results: HoldingHealthAnalysis[] = [];
     let skipped = 0;
 
-    // Process in batches to avoid FMP rate limits
+    // Process in batches with delay to avoid FMP rate limits
     for (let i = 0; i < holdings.length; i += BATCH_SIZE) {
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+
       const batch = holdings.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.allSettled(
         batch.map((h) => this.analyzeHolding(h))
@@ -104,23 +109,41 @@ export class PortfolioHealthService {
 
     const overallRating = ratingFromScore(overallScore);
 
-    // Rating breakdown
+    // Rating breakdown with normalized percentages that always sum to 100
     const bullishCount = results.filter((r) => r.rating === 'bullish').length;
     const neutralCount = results.filter((r) => r.rating === 'neutral').length;
     const bearishCount = results.filter((r) => r.rating === 'bearish').length;
     const total = results.length || 1;
+
+    let bullishPct = Math.round((bullishCount / total) * 100);
+    let neutralPct = Math.round((neutralCount / total) * 100);
+    let bearishPct = Math.round((bearishCount / total) * 100);
+
+    // Adjust for rounding so percentages always sum to exactly 100
+    const pctSum = bullishPct + neutralPct + bearishPct;
+    if (results.length > 0 && pctSum !== 100) {
+      const diff = 100 - pctSum;
+      // Apply correction to the largest category to minimize relative error
+      if (bullishCount >= neutralCount && bullishCount >= bearishCount) {
+        bullishPct += diff;
+      } else if (neutralCount >= bearishCount) {
+        neutralPct += diff;
+      } else {
+        bearishPct += diff;
+      }
+    }
 
     return {
       portfolioId,
       overallScore: Math.round(overallScore * 10) / 10,
       overallRating,
       ratingBreakdown: {
-        bullish: { count: bullishCount, percent: Math.round((bullishCount / total) * 100) },
-        neutral: { count: neutralCount, percent: Math.round((neutralCount / total) * 100) },
-        bearish: { count: bearishCount, percent: Math.round((bearishCount / total) * 100) },
+        bullish: { count: bullishCount, percent: bullishPct },
+        neutral: { count: neutralCount, percent: neutralPct },
+        bearish: { count: bearishCount, percent: bearishPct },
       },
       holdings: results,
-      analyzedAt: new Date(),
+      analyzedAt: new Date().toISOString(),
       holdingsAnalyzed: results.length,
       holdingsSkipped: skipped,
     };
