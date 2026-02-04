@@ -14,7 +14,7 @@
  */
 
 import { DatabaseConnection } from '../database/connection';
-import { FMPDataProvider, FMPQuote } from '../data-providers/fmp';
+import { FMPDataProvider, FMPQuote, FMPKeyMetrics } from '../data-providers/fmp';
 import { PoolClient, QueryResult } from 'pg';
 import {
   Portfolio,
@@ -492,13 +492,30 @@ export class PortfolioService {
       return [];
     }
 
-    // Fetch real-time quotes for all holdings
+    // Fetch real-time quotes and key metrics for all holdings
     const symbols = holdings.map((h) => h.symbol);
     let quotes: FMPQuote[] = [];
+    let keyMetricsMap = new Map<string, FMPKeyMetrics>();
     let fetchError: Error | null = null;
 
     try {
-      quotes = await this.fmpProvider.getMultipleQuotes(symbols);
+      const [quotesResult, metricsResult] = await Promise.allSettled([
+        this.fmpProvider.getMultipleQuotes(symbols),
+        this.fmpProvider.getMultipleKeyMetricsTTM(symbols),
+      ]);
+
+      if (quotesResult.status === 'fulfilled') {
+        quotes = quotesResult.value;
+      } else {
+        console.error('Failed to fetch quotes for holdings:', quotesResult.reason);
+        fetchError = quotesResult.reason instanceof Error ? quotesResult.reason : new Error('Unknown error');
+      }
+
+      if (metricsResult.status === 'fulfilled') {
+        keyMetricsMap = metricsResult.value;
+      } else {
+        console.error('Failed to fetch key metrics for holdings:', metricsResult.reason);
+      }
     } catch (error) {
       console.error('Failed to fetch market data for holdings:', error);
       fetchError = error instanceof Error ? error : new Error('Unknown error');
@@ -543,9 +560,11 @@ export class PortfolioService {
         ? (todayGain / previousMarketValue) * 100
         : 0;
 
-      // Dividend data - FMP quote doesn't include this, set to 0 for now
-      // TODO: Fetch from company profile or financial statements endpoint
-      const dividendYield = 0;
+      // Dividend data from key metrics TTM endpoint
+      // FMP returns yield as a decimal (e.g., 0.025 for 2.5%). If the value is > 1, assume it's already a percentage.
+      const metrics = keyMetricsMap.get(holding.symbol);
+      const rawYield = metrics?.dividendYieldTTM ?? 0;
+      const dividendYield = rawYield > 1 ? rawYield : rawYield * 100;
       const estimatedAnnualIncome = (dividendYield / 100) * marketValue;
 
       enrichedHoldings.push({

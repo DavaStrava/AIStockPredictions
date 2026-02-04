@@ -13,7 +13,7 @@
  * - Performance chart
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus,
   ChevronDown,
@@ -25,19 +25,24 @@ import {
   List,
   Activity,
   Trash2,
+  BarChart3,
+  DollarSign,
 } from 'lucide-react';
 import { usePortfolio } from './hooks/usePortfolio';
 import { PortfolioSummaryCard } from './PortfolioSummaryCard';
+import { SummaryTab } from './SummaryTab';
 import { HoldingsDataGrid } from './HoldingsDataGrid';
 import { TransactionModal } from './TransactionModal';
 import { PortfolioTreeMap } from './PortfolioTreeMap';
 import { PerformanceChart } from './PerformanceChart';
 import { PortfolioCSVImport } from './PortfolioCSVImport';
 import { HealthDashboard } from './HealthDashboard';
+import { DividendsTab } from './DividendsTab';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { PortfolioTransactionType } from '@/types/portfolio';
+import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
-type TabId = 'holdings' | 'transactions' | 'allocation' | 'performance' | 'health';
+type TabId = 'summary' | 'holdings' | 'health' | 'dividends' | 'transactions' | 'allocation' | 'performance';
 
 interface Tab {
   id: TabId;
@@ -46,31 +51,14 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { id: 'summary', label: 'Summary', icon: <BarChart3 className="w-4 h-4" /> },
   { id: 'holdings', label: 'Holdings', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'health', label: 'Health Score', icon: <Activity className="w-4 h-4" /> },
+  { id: 'dividends', label: 'Dividends', icon: <DollarSign className="w-4 h-4" /> },
   { id: 'transactions', label: 'Transactions', icon: <List className="w-4 h-4" /> },
   { id: 'allocation', label: 'Allocation', icon: <PieChart className="w-4 h-4" /> },
   { id: 'performance', label: 'Performance', icon: <LineChart className="w-4 h-4" /> },
-  { id: 'health', label: 'Health Score', icon: <Activity className="w-4 h-4" /> },
 ];
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
-}
 
 export function PortfolioManager() {
   const {
@@ -97,13 +85,16 @@ export function PortfolioManager() {
     clearError,
   } = usePortfolio({ autoFetch: true, refreshInterval: 60000 });
 
-  const [activeTab, setActiveTab] = useState<TabId>('holdings');
+  const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [showPortfolioDropdown, setShowPortfolioDropdown] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [transactionType, setTransactionType] = useState<PortfolioTransactionType>('BUY');
   const [newPortfolioName, setNewPortfolioName] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Track which portfolio's history has been loaded to avoid stale data on portfolio switch
+  const historyLoadedForRef = useRef<string | null>(null);
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -166,6 +157,17 @@ export function PortfolioManager() {
     // Refresh portfolio data after successful import
     refreshPortfolioData();
   }, [refreshPortfolioData]);
+
+  // Lazy-load 90-day history when summary tab is selected
+  // Re-fetches when portfolio changes to avoid showing stale data
+  useEffect(() => {
+    if (activeTab === 'summary' && selectedPortfolioId && historyLoadedForRef.current !== selectedPortfolioId) {
+      historyLoadedForRef.current = selectedPortfolioId;
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      fetchHistory(selectedPortfolioId, startDate, endDate);
+    }
+  }, [activeTab, selectedPortfolioId, fetchHistory]);
 
   // Lazy-load health data when health tab is selected
   useEffect(() => {
@@ -301,7 +303,7 @@ export function PortfolioManager() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-slate-800/30 rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-slate-800/30 rounded-xl p-1 w-fit overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -320,6 +322,15 @@ export function PortfolioManager() {
 
         {/* Tab Content */}
         <div className="space-y-6">
+          {activeTab === 'summary' && (
+            <SummaryTab
+              summary={summary}
+              holdings={holdings}
+              history={history}
+              loading={loading}
+            />
+          )}
+
           {activeTab === 'holdings' && (
             <HoldingsDataGrid
               holdings={holdings}
@@ -388,7 +399,7 @@ export function PortfolioManager() {
                               {txn.assetSymbol && ` ${txn.assetSymbol}`}
                             </p>
                             <p className="text-sm text-slate-500">
-                              {formatDate(txn.transactionDate)}
+                              {formatDateTime(txn.transactionDate)}
                             </p>
                           </div>
                         </div>
@@ -443,6 +454,14 @@ export function PortfolioManager() {
                   fetchHealth(selectedPortfolioId);
                 }
               }}
+            />
+          )}
+
+          {activeTab === 'dividends' && (
+            <DividendsTab
+              holdings={holdings}
+              transactions={transactions}
+              loading={loading}
             />
           )}
         </div>

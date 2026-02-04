@@ -42,10 +42,12 @@ const mockDb: Partial<DatabaseConnection> = {
 const mockGetQuote = vi.fn();
 const mockGetMultipleQuotes = vi.fn();
 const mockGetCompanyProfile = vi.fn();
+const mockGetMultipleKeyMetricsTTM = vi.fn();
 const mockFmpProvider: Partial<FMPDataProvider> = {
   getQuote: mockGetQuote,
   getMultipleQuotes: mockGetMultipleQuotes,
   getCompanyProfile: mockGetCompanyProfile,
+  getMultipleKeyMetricsTTM: mockGetMultipleKeyMetricsTTM,
 };
 
 describe('PortfolioService', () => {
@@ -59,6 +61,10 @@ describe('PortfolioService', () => {
     mockGetQuote.mockReset();
     mockGetMultipleQuotes.mockReset();
     mockGetCompanyProfile.mockReset();
+    mockGetMultipleKeyMetricsTTM.mockReset();
+
+    // Default: return empty metrics map
+    mockGetMultipleKeyMetricsTTM.mockResolvedValue(new Map());
 
     // Re-establish transaction mock implementation after reset
     mockTransaction.mockImplementation(async (callback: (client: typeof mockClient) => Promise<unknown>) => {
@@ -696,6 +702,133 @@ describe('PortfolioService', () => {
       const result = await service.getHoldingsWithMarketData('portfolio-123');
 
       expect(result).toHaveLength(0);
+    });
+
+    it('should enrich holdings with real dividend yield from key metrics', async () => {
+      const mockHoldings = [
+        {
+          id: 'holding-1',
+          portfolio_id: 'portfolio-123',
+          symbol: 'AAPL',
+          quantity: '100',
+          average_cost_basis: '150',
+          total_cost_basis: '15000',
+          target_allocation_percent: '20',
+          sector: 'Technology',
+          first_purchase_date: new Date().toISOString(),
+          last_transaction_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const mockQuotes = [
+        {
+          symbol: 'AAPL',
+          name: 'Apple Inc.',
+          price: 175,
+          change: 2.5,
+          changesPercentage: 1.45,
+          previousClose: 172.5,
+        },
+      ];
+
+      const metricsMap = new Map([
+        ['AAPL', { dividendYieldTTM: 0.0055, dividendPerShareTTM: 0.96, payoutRatioTTM: 0.153 }],
+      ]);
+
+      mockQuery.mockResolvedValueOnce({ rows: mockHoldings });
+      mockGetMultipleQuotes.mockResolvedValueOnce(mockQuotes);
+      mockGetMultipleKeyMetricsTTM.mockResolvedValueOnce(metricsMap);
+
+      const result = await service.getHoldingsWithMarketData('portfolio-123');
+
+      expect(mockGetMultipleKeyMetricsTTM).toHaveBeenCalledWith(['AAPL']);
+      expect(result[0].dividendYield).toBeCloseTo(0.55, 1); // 0.0055 * 100
+      // marketValue = 100 * 175 = 17500; annualIncome = (0.55 / 100) * 17500 = 96.25
+      expect(result[0].estimatedAnnualIncome).toBeCloseTo(96.25, 0);
+    });
+
+    it('should fallback to zero dividend yield when key metrics unavailable', async () => {
+      const mockHoldings = [
+        {
+          id: 'holding-1',
+          portfolio_id: 'portfolio-123',
+          symbol: 'TSLA',
+          quantity: '50',
+          average_cost_basis: '200',
+          total_cost_basis: '10000',
+          target_allocation_percent: null,
+          sector: 'Technology',
+          first_purchase_date: new Date().toISOString(),
+          last_transaction_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const mockQuotes = [
+        {
+          symbol: 'TSLA',
+          name: 'Tesla Inc.',
+          price: 250,
+          change: -5,
+          changesPercentage: -1.96,
+          previousClose: 255,
+        },
+      ];
+
+      // Empty metrics map — no metrics for TSLA
+      mockQuery.mockResolvedValueOnce({ rows: mockHoldings });
+      mockGetMultipleQuotes.mockResolvedValueOnce(mockQuotes);
+      mockGetMultipleKeyMetricsTTM.mockResolvedValueOnce(new Map());
+
+      const result = await service.getHoldingsWithMarketData('portfolio-123');
+
+      expect(result[0].dividendYield).toBe(0);
+      expect(result[0].estimatedAnnualIncome).toBe(0);
+    });
+
+    it('should handle key metrics fetch failure gracefully while quotes succeed', async () => {
+      const mockHoldings = [
+        {
+          id: 'holding-1',
+          portfolio_id: 'portfolio-123',
+          symbol: 'AAPL',
+          quantity: '10',
+          average_cost_basis: '150',
+          total_cost_basis: '1500',
+          target_allocation_percent: null,
+          sector: 'Technology',
+          first_purchase_date: new Date().toISOString(),
+          last_transaction_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const mockQuotes = [
+        {
+          symbol: 'AAPL',
+          name: 'Apple Inc.',
+          price: 175,
+          change: 2.5,
+          changesPercentage: 1.45,
+          previousClose: 172.5,
+        },
+      ];
+
+      mockQuery.mockResolvedValueOnce({ rows: mockHoldings });
+      mockGetMultipleQuotes.mockResolvedValueOnce(mockQuotes);
+      mockGetMultipleKeyMetricsTTM.mockRejectedValueOnce(new Error('Metrics API down'));
+
+      const result = await service.getHoldingsWithMarketData('portfolio-123');
+
+      // Quotes should still work even if metrics fail
+      expect(result).toHaveLength(1);
+      expect(result[0].currentPrice).toBe(175);
+      expect(result[0].dividendYield).toBe(0);
+      expect(result[0].estimatedAnnualIncome).toBe(0);
     });
 
     it('should handle FMP API failure gracefully', async () => {

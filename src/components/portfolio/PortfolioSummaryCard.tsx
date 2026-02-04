@@ -9,24 +9,11 @@
 
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Activity, Target } from 'lucide-react';
 import { PortfolioSummary } from '@/types/portfolio';
+import { formatCurrency, formatPercent } from '@/lib/formatters';
 
 interface PortfolioSummaryCardProps {
   summary: PortfolioSummary | null;
   loading?: boolean;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPercent(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
 }
 
 interface StatCardProps {

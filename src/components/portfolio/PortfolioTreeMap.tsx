@@ -11,6 +11,7 @@
 import { useMemo } from 'react';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { SectorAllocation } from '@/types/portfolio';
+import { formatPercent } from '@/lib/formatters';
 
 interface PortfolioTreeMapProps {
   allocation: SectorAllocation[];
@@ -25,18 +26,14 @@ interface TreeMapDataItem {
   holdings?: TreeMapDataItem[];
 }
 
-function formatCurrency(value: number): string {
+/** Tree map uses whole-dollar formatting (no cents) */
+function formatCurrencyCompact(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function formatPercent(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
 }
 
 // Color scale based on day change percentage
@@ -104,7 +101,7 @@ function TreeMapCell(props: TreeMapCellProps) {
             fill="#374151"
             style={{ fontSize: Math.min(width / 8, 11) }}
           >
-            {formatCurrency(value)}
+            {formatCurrencyCompact(value)}
           </text>
           {width > 80 && height > 60 && (
             <text
@@ -141,7 +138,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
       <div className="mt-2 space-y-1">
         <p className="text-slate-300">
           Value:{' '}
-          <span className="font-semibold text-slate-100">{formatCurrency(data.value)}</span>
+          <span className="font-semibold text-slate-100">{formatCurrencyCompact(data.value)}</span>
         </p>
         <p className="text-slate-300">
           Weight:{' '}

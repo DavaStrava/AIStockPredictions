@@ -16,6 +16,7 @@ import {
   Edit2,
 } from 'lucide-react';
 import { HoldingWithMarketData } from '@/types/portfolio';
+import { formatCurrency, formatCurrencyWithSign, formatPercent } from '@/lib/formatters';
 import type { ColumnKey } from './HoldingsDataGrid';
 
 interface HoldingRowProps {
@@ -29,25 +30,6 @@ interface HoldingRowProps {
   onSaveTarget: (symbol: string) => void;
   onCancelEdit: () => void;
   showTargetEdit?: boolean;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatCurrencyCompact(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${formatCurrency(value)}`;
-}
-
-function formatPercent(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
 }
 
 function formatNumber(value: number): string {
@@ -117,7 +99,7 @@ export const HoldingRow = memo(function HoldingRow({
       {visibleColumns.includes('dayChange') && (
         <td className="px-3 py-3 text-right">
           <span className={`font-medium ${isPositiveDay ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {formatCurrencyCompact(holding.dayChange)}
+            {formatCurrencyWithSign(holding.dayChange)}
           </span>
         </td>
       )}
@@ -181,7 +163,7 @@ export const HoldingRow = memo(function HoldingRow({
       {visibleColumns.includes('todayGain') && (
         <td className="px-3 py-3 text-right">
           <span className={`font-medium ${holding.todayGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {formatCurrencyCompact(holding.todayGain)}
+            {formatCurrencyWithSign(holding.todayGain)}
           </span>
         </td>
       )}
@@ -208,7 +190,7 @@ export const HoldingRow = memo(function HoldingRow({
       {visibleColumns.includes('totalGainLoss') && (
         <td className="px-3 py-3 text-right">
           <span className={`font-medium ${isPositiveTotal ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {formatCurrencyCompact(holding.totalGainLoss)}
+            {formatCurrencyWithSign(holding.totalGainLoss)}
           </span>
         </td>
       )}

@@ -291,6 +291,73 @@ export class FMPDataProvider {
     }
   }
 
+  /**
+   * Get trailing twelve months key metrics for a single stock.
+   * @param symbol - Stock ticker symbol
+   * @returns Key financial metrics including dividend yield
+   */
+  async getKeyMetricsTTM(symbol: string): Promise<FMPKeyMetrics> {
+    try {
+      const url = `${this.baseUrl}/key-metrics-ttm/${symbol}?apikey=${this.apiKey}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`FMP API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.Error) {
+        throw new Error(`FMP API error: ${data.Error}`);
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('No key metrics data found');
+      }
+
+      const metrics = data[0];
+      return {
+        dividendYieldTTM: typeof metrics.dividendYieldTTM === 'number' ? metrics.dividendYieldTTM : 0,
+        dividendPerShareTTM: typeof metrics.dividendPerShareTTM === 'number' ? metrics.dividendPerShareTTM : 0,
+        payoutRatioTTM: typeof metrics.payoutRatioTTM === 'number' ? metrics.payoutRatioTTM : 0,
+      };
+    } catch (error) {
+      console.error(`Failed to fetch key metrics for ${symbol}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get key metrics for multiple symbols using parallel individual calls.
+   * FMP doesn't support batch for this endpoint.
+   * @param symbols - Array of stock ticker symbols
+   * @returns Map of symbol to key metrics (failed symbols omitted)
+   */
+  async getMultipleKeyMetricsTTM(symbols: string[]): Promise<Map<string, FMPKeyMetrics>> {
+    const results = await Promise.allSettled(
+      symbols.map(async (symbol) => ({
+        symbol,
+        metrics: await this.getKeyMetricsTTM(symbol),
+      }))
+    );
+
+    const metricsMap = new Map<string, FMPKeyMetrics>();
+    let failedCount = 0;
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        metricsMap.set(result.value.symbol, result.value.metrics);
+      } else {
+        failedCount++;
+      }
+    }
+
+    if (failedCount > 0) {
+      console.warn(`Key metrics failed for ${failedCount}/${symbols.length} symbols`);
+    }
+
+    return metricsMap;
+  }
+
   /** Filter price data by time period */
   private filterByPeriod(data: PriceData[], period: string): PriceData[] {
     const now = new Date();
@@ -351,6 +418,13 @@ export function getFMPProvider(): FMPDataProvider {
     fmpInstance = new FMPDataProvider();
   }
   return fmpInstance;
+}
+
+/** Key financial metrics (trailing twelve months) from FMP API */
+export interface FMPKeyMetrics {
+  dividendYieldTTM: number;
+  dividendPerShareTTM: number;
+  payoutRatioTTM: number;
 }
 
 export type { FMPQuote };
