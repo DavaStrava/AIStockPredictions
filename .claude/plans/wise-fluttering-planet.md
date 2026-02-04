@@ -165,42 +165,63 @@ src/lib/portfolio/__tests__/PortfolioHealthService.test.ts  # 9 unit tests
 
 ---
 
-## Phase 5: Tab Navigation & Dividends
+## Phase 5: Tab Navigation & Dividends - COMPLETE
 
-**Goal:** Restructure PortfolioManager with new tab layout
+**Status:** Completed
 
-### Modify Existing
-- `src/components/portfolio/PortfolioManager.tsx` - New tab structure
-- `src/components/portfolio/hooks/usePortfolio.ts` - Add healthScore state
+**Goal:** Restructure PortfolioManager with new tab layout, fix dividend yield data
 
-### New Files to Create
+### Files Created
 ```
-src/components/portfolio/SummaryTab.tsx      # High-level dashboard
-src/components/portfolio/DividendsTab.tsx    # Income tracking
+src/components/portfolio/SummaryTab.tsx               # Key metrics, mini chart, top/bottom performers
+src/components/portfolio/DividendsTab.tsx              # Income tracking, dividend table, history
+src/lib/data-providers/__tests__/fmp-key-metrics.test.ts  # 9 tests
+src/components/portfolio/__tests__/SummaryTab.test.tsx     # 10 tests
+src/components/portfolio/__tests__/DividendsTab.test.tsx   # 10 tests
 ```
 
-### New Tab Structure
+### Files Modified
+- `src/lib/data-providers/fmp.ts` — Added `FMPKeyMetrics` interface, `getKeyMetricsTTM()`, `getMultipleKeyMetricsTTM()`
+- `src/lib/portfolio/PortfolioService.ts` — Real dividend yields from FMP key-metrics-ttm endpoint
+- `src/components/portfolio/PortfolioManager.tsx` — 7 tabs (Summary default), lazy-load history
+
+### Final Tab Structure (7 tabs)
 | Tab | Content |
 |-----|---------|
-| Summary | Key metrics, mini chart, top performers |
-| Health Score | HealthDashboard component |
+| Summary | Key metrics, mini chart, top/bottom performers |
 | Holdings | Enhanced HoldingsDataGrid |
-| Dividends | Income tracking, yield info |
+| Health Score | HealthDashboard component |
+| Dividends | Income tracking, yield info, dividend history |
+| Transactions | Transaction list |
+| Allocation | TreeMap visualization |
+| Performance | Benchmark chart |
 
 ---
 
-## Phase 6: Performance Chart Enhancement
+## Phase 6: Performance Chart Enhancement - COMPLETE
 
-**Goal:** Improve chart with time period selectors
+**Status:** Completed
 
-### Modify Existing
-- `src/components/portfolio/PerformanceChart.tsx`
+**Goal:** Improve chart with time period selectors, aggregation, display modes, and benchmark visibility
+
+### Files Modified
+- `src/components/portfolio/PerformanceChart.tsx` — All enhancements (sole production file)
+
+### Files Created
+- `src/components/portfolio/__tests__/PerformanceChart.test.tsx` — 18 tests
 
 ### Enhancements
-- Add daily/weekly/monthly aggregation options
-- Add YTD/all-time quick selectors
-- Improve S&P 500 benchmark visibility
-- Add percentage vs absolute toggle
+- **YTD Time Period** — Added `YTD` to time range selector (between 6M and 1Y), filters from Jan 1 of current year
+- **Data Aggregation** — Daily/Weekly/Monthly toggle (`D`/`W`/`M` pills), groups data points keeping end-of-period snapshots via `getWeekKey()` and `getMonthKey()` helpers
+- **Percent vs Absolute Toggle** — `%`/`$` switch; percent mode shows normalized returns with benchmarks, absolute mode shows portfolio dollar value only
+- **Improved Benchmark Visibility** — QQQ enabled by default, portfolio line thick solid (`strokeWidth: 3`), benchmarks thinner dashed (`strokeWidth: 1.5`, `strokeDasharray: "6 3"`), alpha badges on benchmark toggles
+- **Controls Layout** — Two-row layout: Row 1 (title + time range + aggregation), Row 2 (display mode toggle + line toggles with alpha badges)
+- **ReferenceLine** — Replaced dummy `<Line dataKey={() => 0}>` with proper `<ReferenceLine y={0}>`, only shown in percent mode
+- **X-axis Formatting** — Adapts to aggregation: monthly shows `"Jan '25"`, daily/weekly shows `"Jan 15"`
+
+### Tests (18 total)
+- Aggregation helpers: `getWeekKey`, `getMonthKey`, `aggregateData` (7 tests)
+- Component rendering: loading/empty states, line defaults, stroke styling, YTD filtering, display mode toggle, benchmark visibility (11 tests)
 
 ---
 
@@ -221,12 +242,14 @@ src/components/portfolio/DividendsTab.tsx    # Income tracking
 ```
 Phase 1 (Holdings) ----DONE
                         |
-Phase 2 (Stock Page) ---+--> Phase 5 (Tab Navigation)
+Phase 2 (Stock Page) ---+--> Phase 5 (Tab Nav) --DONE
          |               DONE       |
-         +----------> Phase 6 (Chart Polish)
+         +----------> Phase 6 (Chart Polish) --DONE
 
 Phase 3 (CSV Import) --> DONE (Independent)
 Phase 4 (Health) ------> DONE
+
+ALL PHASES COMPLETE - Portfolio Feature MVP Done
 ```
 
 ---
