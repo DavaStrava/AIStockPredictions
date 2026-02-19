@@ -1,6 +1,6 @@
 # 📚 Documentation Index
 
-**Last Updated:** 2026-02-03 (After Portfolio Phase 4 - Health Dashboard)
+**Last Updated:** 2026-02-17 (After Portfolio Import Scripts Update)
 **Status:** All docs synced and up to date
 
 ---
@@ -24,6 +24,9 @@
 10. **[docs/PHASE_1_2_CODE_REVIEW.md](#docsphase_1_2_code_reviewmd)** 👀 Code quality
 11. **[src/__tests__/README.md](#src__tests__readmemd)** 🧪 Testing guide + coverage
 12. **[src/__tests__/utils/README.md](#src__tests__utilsreadmemd)** 🔧 Test utilities
+
+### **Tools & Scripts**
+13. **[scripts/README.md](#scriptsreadmemd)** 📦 Portfolio import scripts
 
 ---
 
@@ -53,9 +56,12 @@ AIStockPredictions/
 │  ├─ MIDDLEWARE_REFACTORING_SUMMARY.md ← Phase 1.1 recap
 │  └─ MIGRATION_EXAMPLE.md         ← How to migrate routes
 │
-└─ 🧪 src/__tests__/
-   ├─ README.md                    ← Testing guide + coverage monitoring
-   └─ utils/README.md              ← Test utilities documentation (NEW)
+├─ 🧪 src/__tests__/
+│  ├─ README.md                    ← Testing guide + coverage monitoring
+│  └─ utils/README.md              ← Test utilities documentation
+│
+└─ 📦 scripts/
+   └─ README.md                    ← Portfolio import scripts documentation
 ```
 
 ---
@@ -251,6 +257,22 @@ AIStockPredictions/
 
 ---
 
+### **scripts/README.md**
+**Purpose:** Portfolio import scripts documentation
+**Audience:** Importing brokerage data
+**Time to read:** 10 minutes
+**Covers:**
+- `reconcile-portfolio.ts` - Analyze and prepare import data
+- `import-merrill-portfolio.ts` - Import to database
+- Complete workflow for Merrill Lynch imports
+- CSV format specifications
+- API import alternative
+- Troubleshooting guide
+
+**When to use:** Importing portfolio data from brokerage exports
+
+---
+
 ### **REFACTORING_PLAN.md**
 **Purpose:** Overall project roadmap
 **Audience:** Understanding project phases
@@ -303,6 +325,12 @@ AIStockPredictions/
 2. Check: Session Progress Tracker
 3. Review: Next steps for each phase
 
+### **"I want to import portfolio data from my brokerage"**
+1. Read: `scripts/README.md`
+2. Export transaction history and holdings from your brokerage
+3. Run: `npx tsx scripts/reconcile-portfolio.ts` to analyze
+4. Run: `npx tsx scripts/import-merrill-portfolio.ts` to import
+
 ---
 
 ## 📊 Documentation Coverage Matrix
@@ -314,6 +342,7 @@ AIStockPredictions/
 | **Middleware** | docs/MIGRATION_EXAMPLE.md | docs/API_MIDDLEWARE_GUIDE.md | docs/MIDDLEWARE_REFACTORING_SUMMARY.md |
 | **Code Quality** | docs/PHASE_1_2_MIGRATION_SUMMARY.md | docs/PHASE_1_2_CODE_REVIEW.md | docs/PREVENTING_BREAKING_CHANGES.md |
 | **Project Planning** | REFACTORING_PLAN.md (Overview) | REFACTORING_PLAN.md (Phases) | REFACTORING_PLAN.md (Full) |
+| **Portfolio Import** | scripts/README.md (Workflow) | scripts/README.md (Full) | API docs + source code |
 
 ---
 
@@ -452,9 +481,9 @@ ls src/__tests__/api/*.test.ts
 
 ## 🎯 Summary
 
-**Total Documents:** 15 files
-**Total Pages:** ~200 pages (estimated)
-**Coverage:** Complete (setup, usage, deep dives, troubleshooting)
+**Total Documents:** 16 files
+**Total Pages:** ~210 pages (estimated)
+**Coverage:** Complete (setup, usage, deep dives, troubleshooting, scripts)
 **Status:** ✅ All synced and up to date
 **Maintained:** Yes, updated with each phase
 
@@ -462,6 +491,6 @@ ls src/__tests__/api/*.test.ts
 
 ---
 
-**Last Sync:** 2026-01-31
-**Next Review:** When Phase 2 starts
+**Last Sync:** 2026-02-17
+**Next Review:** As needed
 **Status:** 📚 Complete and comprehensive

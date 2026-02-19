@@ -657,6 +657,7 @@ describe('POST /api/trades', () => {
 - `GET /api/trades/[id]` - Get single trade
 - `PATCH /api/trades/[id]` - Close trade
 - `GET /api/trades/stats` - Portfolio statistics
+- `POST /api/portfolios/[id]/transactions/import` - Bulk import transactions with comprehensive validation
 
 ### 📋 To Be Migrated
 
