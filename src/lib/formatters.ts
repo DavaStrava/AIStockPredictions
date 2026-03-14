@@ -11,6 +11,22 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
+/** Format number with appropriate decimal places (up to 8 for fractional shares). */
+export function formatNumber(value: number): string {
+  // For whole numbers or very close to whole, show no decimals
+  if (Math.abs(value - Math.round(value)) < 0.0001) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+  // For fractional shares, show up to 8 decimal places (trim trailing zeros)
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  }).format(value);
+}
+
 /** Format currency with explicit +/- sign prefix. */
 export function formatCurrencyWithSign(value: number): string {
   const sign = value >= 0 ? '+' : '';

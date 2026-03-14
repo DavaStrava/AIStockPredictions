@@ -38,11 +38,12 @@ import { PerformanceChart } from './PerformanceChart';
 import { PortfolioCSVImport } from './PortfolioCSVImport';
 import { HealthDashboard } from './HealthDashboard';
 import { DividendsTab } from './DividendsTab';
+import { TransactionsTab } from './TransactionsTab';
+import { PositionsPanel } from './PositionsPanel';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { PortfolioTransactionType } from '@/types/portfolio';
-import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { PortfolioTransactionType, PortfolioTransaction } from '@/types/portfolio';
 
-type TabId = 'summary' | 'holdings' | 'health' | 'dividends' | 'transactions' | 'allocation' | 'performance';
+type TabId = 'summary' | 'holdings' | 'positions' | 'health' | 'dividends' | 'transactions' | 'allocation' | 'performance';
 
 interface Tab {
   id: TabId;
@@ -53,6 +54,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'summary', label: 'Summary', icon: <BarChart3 className="w-4 h-4" /> },
   { id: 'holdings', label: 'Holdings', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'positions', label: 'Positions', icon: <Briefcase className="w-4 h-4" /> },
   { id: 'health', label: 'Health Score', icon: <Activity className="w-4 h-4" /> },
   { id: 'dividends', label: 'Dividends', icon: <DollarSign className="w-4 h-4" /> },
   { id: 'transactions', label: 'Transactions', icon: <List className="w-4 h-4" /> },
@@ -68,6 +70,7 @@ export function PortfolioManager() {
     summary,
     holdings,
     transactions,
+    positions,
     allocation,
     history,
     healthData,
@@ -78,7 +81,10 @@ export function PortfolioManager() {
     createPortfolio,
     deletePortfolio,
     addTransaction,
+    editTransaction,
+    deleteTransaction,
     updateHoldingTarget,
+    sellPosition,
     fetchHistory,
     fetchHealth,
     refreshPortfolioData,
@@ -157,6 +163,27 @@ export function PortfolioManager() {
     // Refresh portfolio data after successful import
     refreshPortfolioData();
   }, [refreshPortfolioData]);
+
+  const handleEditTransaction = useCallback(
+    async (txn: PortfolioTransaction, updates: Partial<PortfolioTransaction>) => {
+      await editTransaction(txn.id, updates);
+    },
+    [editTransaction]
+  );
+
+  const handleDeleteTransaction = useCallback(
+    async (txnId: string) => {
+      await deleteTransaction(txnId);
+    },
+    [deleteTransaction]
+  );
+
+  const handleSellPosition = useCallback(
+    async (symbol: string, quantity: number, pricePerShare: number) => {
+      await sellPosition(symbol, quantity, pricePerShare);
+    },
+    [sellPosition]
+  );
 
   // Lazy-load 90-day history when summary tab is selected
   // Re-fetches when portfolio changes to avoid showing stale data
@@ -339,94 +366,22 @@ export function PortfolioManager() {
             />
           )}
 
-          {activeTab === 'transactions' && (
-            <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 overflow-hidden">
-              <div className="p-4 border-b border-slate-700/50 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-100">Transaction History</h3>
-                <button
-                  onClick={() => openTransactionModal('BUY')}
-                  className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-500 transition-colors"
-                >
-                  + Add Transaction
-                </button>
-              </div>
+          {activeTab === 'positions' && (
+            <PositionsPanel
+              positions={positions}
+              loading={loading}
+              onSellPosition={handleSellPosition}
+            />
+          )}
 
-              {transactions.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-slate-400">No transactions yet</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-700/30">
-                  {transactions.map((txn) => (
-                    <div
-                      key={txn.id}
-                      className="p-4 hover:bg-slate-700/20 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              txn.transactionType === 'BUY'
-                                ? 'bg-emerald-600/20'
-                                : txn.transactionType === 'SELL'
-                                  ? 'bg-rose-600/20'
-                                  : txn.transactionType === 'DEPOSIT'
-                                    ? 'bg-indigo-600/20'
-                                    : txn.transactionType === 'WITHDRAW'
-                                      ? 'bg-amber-600/20'
-                                      : 'bg-cyan-600/20'
-                            }`}
-                          >
-                            <span
-                              className={`text-sm font-bold ${
-                                txn.transactionType === 'BUY'
-                                  ? 'text-emerald-400'
-                                  : txn.transactionType === 'SELL'
-                                    ? 'text-rose-400'
-                                    : txn.transactionType === 'DEPOSIT'
-                                      ? 'text-indigo-400'
-                                      : txn.transactionType === 'WITHDRAW'
-                                        ? 'text-amber-400'
-                                        : 'text-cyan-400'
-                              }`}
-                            >
-                              {txn.transactionType.charAt(0)}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-100">
-                              {txn.transactionType}
-                              {txn.assetSymbol && ` ${txn.assetSymbol}`}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {formatDateTime(txn.transactionDate)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p
-                            className={`font-semibold ${
-                              txn.totalAmount >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                            }`}
-                          >
-                            {txn.totalAmount >= 0 ? '+' : ''}
-                            {formatCurrency(txn.totalAmount)}
-                          </p>
-                          {txn.quantity && txn.pricePerShare && (
-                            <p className="text-sm text-slate-500">
-                              {txn.quantity} × {formatCurrency(txn.pricePerShare)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {txn.notes && (
-                        <p className="mt-2 text-sm text-slate-500 pl-14">{txn.notes}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          {activeTab === 'transactions' && (
+            <TransactionsTab
+              transactions={transactions}
+              loading={loading}
+              onAddTransaction={openTransactionModal}
+              onEditTransaction={handleEditTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+            />
           )}
 
           {activeTab === 'allocation' && (

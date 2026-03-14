@@ -5,8 +5,7 @@
  * for both Portfolio transactions and Trade Tracker.
  */
 
-import type { PortfolioTransactionType } from './portfolio';
-import type { TradeSide, TradeStatus } from './models';
+import type { PortfolioTransactionType, TradeSide, TradeStatus } from './portfolio';
 
 // ============================================================================
 // CSV Format Detection
@@ -94,6 +93,14 @@ export interface ParsedPortfolioTransaction {
   fees: number;
   transactionDate: Date;
   notes?: string;
+
+  // Trade tracking fields (optional, for unified transactions)
+  side?: TradeSide;
+  tradeStatus?: TradeStatus;
+  linkedTradeId?: string;
+  settlementDate?: Date;
+  importSource?: string;
+  rawDescription?: string;
 }
 
 /**

@@ -79,6 +79,36 @@ interface TransactionTypeResult {
   type: PortfolioTransactionType | null;
   skip?: boolean;
   reason?: string;
+  /** DRIP details extracted from description */
+  dripDetails?: {
+    dividendAmount: number;
+    reinvPrice: number;
+    reinvShares: number;
+  };
+}
+
+/**
+ * Extract DRIP details from reinvestment description.
+ * Example: "Reinvestment Share(s) REINV AMT $14.23 REINV PRICE $659.38 REINV SHRS .0216"
+ */
+function extractDripDetails(description: string): {
+  dividendAmount: number;
+  reinvPrice: number;
+  reinvShares: number;
+} | null {
+  const amtMatch = description.match(/REINV\s*AMT\s*\$?([\d,.]+)/i);
+  const priceMatch = description.match(/REINV\s*PRICE\s*\$?([\d,.]+)/i);
+  const sharesMatch = description.match(/REINV\s*SHRS?\s*([\d,.]+)/i);
+
+  if (amtMatch && priceMatch && sharesMatch) {
+    return {
+      dividendAmount: parseFloat(amtMatch[1].replace(/,/g, '')),
+      reinvPrice: parseFloat(priceMatch[1].replace(/,/g, '')),
+      reinvShares: parseFloat(sharesMatch[1].replace(/,/g, '')),
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -87,9 +117,14 @@ interface TransactionTypeResult {
 function parseTransactionType(description: string): TransactionTypeResult {
   const upperDesc = description.toUpperCase();
 
-  // Skip reinvestment transactions (DRIP) - the dividend is already captured separately
-  if (upperDesc.includes('REINVESTMENT')) {
-    return { type: null, skip: true, reason: 'Reinvestment (DRIP) - skipped' };
+  // Reinvestment transactions (DRIP) - now captured as DIVIDEND_REINVESTMENT
+  if (upperDesc.includes('REINVESTMENT') && !upperDesc.includes('STOCK DIVIDEND')) {
+    const dripDetails = extractDripDetails(description);
+    if (dripDetails) {
+      return { type: 'DIVIDEND_REINVESTMENT', dripDetails };
+    }
+    // If we can't extract DRIP details, still import it but without the details
+    return { type: 'DIVIDEND_REINVESTMENT' };
   }
 
   // Skip stock dividends with $0 amount (like stock splits)
@@ -102,8 +137,11 @@ function parseTransactionType(description: string): TransactionTypeResult {
     return { type: null, skip: true, reason: 'Exchange/corporate action - skipped' };
   }
 
-  // Skip fractional share sales from DRIP cleanup
+  // Fractional share sales - import as regular SELL
   if (upperDesc.includes('FRAC SHR') || upperDesc.includes('FRACTIONAL SHARE')) {
+    if (upperDesc.includes('SALE')) {
+      return { type: 'SELL' };
+    }
     return { type: null, skip: true, reason: 'Fractional share cleanup - skipped' };
   }
 
@@ -112,7 +150,12 @@ function parseTransactionType(description: string): TransactionTypeResult {
     return { type: 'BUY' };
   }
 
-  // Sale = SELL (but not fractional share sales from DRIP)
+  // Pending Sale = SELL (handle Merrill's pending sale format)
+  if (upperDesc.startsWith('PENDING SALE') || upperDesc.includes('PENDING SALE')) {
+    return { type: 'SELL' };
+  }
+
+  // Sale = SELL
   if (upperDesc.startsWith('SALE') || upperDesc.includes('SALE')) {
     return { type: 'SELL' };
   }
@@ -126,9 +169,9 @@ function parseTransactionType(description: string): TransactionTypeResult {
     return { type: 'DIVIDEND' };
   }
 
-  // Bank Interest
-  if (upperDesc.includes('BANK INTEREST')) {
-    return { type: 'DIVIDEND' }; // Treat interest as dividend income
+  // Bank Interest - now captured as INTEREST
+  if (upperDesc.includes('BANK INTEREST') || upperDesc.includes('INTEREST CREDIT')) {
+    return { type: 'INTEREST' };
   }
 
   // Funds Received = Deposit
@@ -210,6 +253,13 @@ function getField(data: Record<string, string>, ...possibleNames: string[]): str
 }
 
 /**
+ * Parse settlement date from Merrill format (MM/DD/YYYY).
+ */
+function parseSettlementDate(dateStr: string): Date | null {
+  return parseMerrillDate(dateStr);
+}
+
+/**
  * Validate a single Merrill transaction row.
  */
 export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTransactionValidation {
@@ -223,6 +273,7 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
 
   // Get fields (handling trailing spaces in headers)
   const tradeDate = getField(data, 'Trade Date', 'Trade Date ');
+  const settlementDateStr = getField(data, 'Settlement Date', 'Settlement Date ');
   const description = getField(data, 'Description');
   const symbolField = getField(data, 'Symbol/ CUSIP', 'Symbol/  CUSIP  ', 'Symbol');
   const quantity = getField(data, 'Quantity');
@@ -264,27 +315,41 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     });
   }
 
-  // For BUY/SELL, validate symbol
+  // Parse settlement date (optional)
+  const settlementDate = settlementDateStr ? parseSettlementDate(settlementDateStr) : null;
+
+  // Determine which transaction types require symbol
   const isBuySell = transactionType === 'BUY' || transactionType === 'SELL';
+  const isDrip = transactionType === 'DIVIDEND_REINVESTMENT';
+  const needsSymbol = isBuySell || isDrip || transactionType === 'DIVIDEND';
+
   const symbol = cleanSymbol(symbolField);
 
-  if (isBuySell) {
-    if (!symbol || !/^[A-Z0-9]{1,6}$/i.test(symbol)) {
-      errors.push({
-        row: row.rowNumber,
-        field: 'Symbol',
-        value: symbolField,
-        message: 'Invalid symbol. Must be 1-6 alphanumeric characters',
-      });
-    }
+  if (isBuySell && (!symbol || !/^[A-Z0-9]{1,6}$/i.test(symbol))) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'Symbol',
+      value: symbolField,
+      message: 'Invalid symbol. Must be 1-6 alphanumeric characters',
+    });
   }
 
-  // Skip dividends with no symbol (bank interest)
+  // DRIP needs a symbol
+  if (isDrip && (!symbol || !/^[A-Z0-9]{1,6}$/i.test(symbol))) {
+    errors.push({
+      row: row.rowNumber,
+      field: 'Symbol',
+      value: symbolField,
+      message: 'Invalid symbol for reinvestment. Must be 1-6 alphanumeric characters',
+    });
+  }
+
+  // Dividends need a symbol (INTEREST does not)
   if (transactionType === 'DIVIDEND' && !symbol) {
-    // Bank interest without a valid symbol - skip
+    // Dividend without a valid symbol - might be bank interest misclassified
     return {
       valid: false,
-      errors: [{ row: row.rowNumber, field: '', value: '', message: 'Bank interest without symbol - skipped' }],
+      errors: [{ row: row.rowNumber, field: '', value: '', message: 'Dividend without symbol - skipped' }],
     };
   }
 
@@ -325,17 +390,55 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     };
   }
 
-  // Build parsed transaction
+  // Build parsed transaction with trade tracking fields
   const parsed: ParsedPortfolioTransaction = {
-    symbol: isBuySell || transactionType === 'DIVIDEND' ? symbol : null,
+    symbol: needsSymbol ? symbol : null,
     transactionType,
-    quantity: isBuySell ? quantityValue : null,
-    pricePerShare: isBuySell ? priceValue : null,
-    totalAmount: Math.abs(amountValue),
+    quantity: null,
+    pricePerShare: null,
+    totalAmount: 0,
     fees: 0, // Merrill doesn't have separate fee columns in this format
     transactionDate,
-    notes: `Imported from Merrill Lynch: ${description.substring(0, 50)}`,
+    notes: '',
+    importSource: 'merrill_edge',
+    rawDescription: description,
+    settlementDate: settlementDate || undefined,
   };
+
+  // Handle different transaction types
+  if (isBuySell) {
+    parsed.quantity = quantityValue;
+    parsed.pricePerShare = priceValue;
+    // BUY: cash out (negative), SELL: cash in (positive)
+    // Merrill already has correct sign in Amount column
+    parsed.totalAmount = Math.abs(amountValue);
+    parsed.notes = `Imported from Merrill Edge: ${description.substring(0, 100)}`;
+    parsed.side = 'LONG'; // Default to long positions
+    parsed.tradeStatus = transactionType === 'BUY' ? 'OPEN' : undefined;
+  } else if (isDrip) {
+    // DIVIDEND_REINVESTMENT: dividend + automatic buy
+    // totalAmount = 0 (dividend and buy cancel out)
+    const dripDetails = txTypeResult.dripDetails;
+    if (dripDetails) {
+      parsed.quantity = dripDetails.reinvShares;
+      parsed.pricePerShare = dripDetails.reinvPrice;
+      parsed.notes = `Dividend: $${dripDetails.dividendAmount.toFixed(2)}`;
+    } else {
+      // Fall back to CSV values if DRIP parsing failed
+      parsed.quantity = quantityValue;
+      parsed.pricePerShare = priceValue;
+      parsed.notes = `DRIP: ${description.substring(0, 100)}`;
+    }
+    parsed.totalAmount = 0; // Net zero cash impact
+  } else if (transactionType === 'DIVIDEND' || transactionType === 'INTEREST') {
+    // Cash income
+    parsed.totalAmount = Math.abs(amountValue);
+    parsed.notes = `Imported from Merrill Edge: ${description.substring(0, 100)}`;
+  } else if (transactionType === 'DEPOSIT' || transactionType === 'WITHDRAW') {
+    // Cash movements
+    parsed.totalAmount = Math.abs(amountValue);
+    parsed.notes = `Imported from Merrill Edge: ${description.substring(0, 100)}`;
+  }
 
   return { valid: true, data: parsed, errors: [] };
 }

@@ -332,6 +332,17 @@ class ApiClient {
     },
 
     /**
+     * Delete multiple trades
+     */
+    bulkDelete: async (ids: string[], options?: RequestOptions): Promise<{ deletedCount: number }> => {
+      return this.request<{ deletedCount: number }>('/trades/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+        ...options,
+      });
+    },
+
+    /**
      * Get portfolio statistics
      */
     stats: async (options?: RequestOptions): Promise<PortfolioStats> => {

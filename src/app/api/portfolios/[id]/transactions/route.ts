@@ -7,7 +7,7 @@ import {
   PortfolioNotFoundError,
   InsufficientFundsError,
 } from '@/lib/portfolio/PortfolioService';
-import { PortfolioTransactionType } from '@/types/portfolio';
+import { PortfolioTransactionType, TransactionFilters } from '@/types/portfolio';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -17,10 +17,12 @@ interface RouteParams {
  * GET /api/portfolios/[id]/transactions - List transactions with optional filtering
  *
  * Query parameters:
- * - type: Filter by transaction type (BUY, SELL, DEPOSIT, WITHDRAW, DIVIDEND)
+ * - type: Filter by transaction type (BUY, SELL, DEPOSIT, WITHDRAW, DIVIDEND, DIVIDEND_REINVESTMENT, INTEREST)
+ * - types: Filter by multiple transaction types (comma-separated)
  * - symbol: Filter by asset symbol
  * - startDate: Filter transactions from this date (ISO string)
  * - endDate: Filter transactions until this date (ISO string)
+ * - includeReinvestments: Include DIVIDEND_REINVESTMENT transactions (default: true)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -44,8 +46,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Build filters
-    const filters: {
+    const filters: TransactionFilters & {
       transactionType?: PortfolioTransactionType;
+      transactionTypes?: PortfolioTransactionType[];
       symbol?: string;
       startDate?: Date;
       endDate?: Date;
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const typeParam = searchParams.get('type');
     if (typeParam) {
-      const validTypes = ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'DIVIDEND'];
+      const validTypes = ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'DIVIDEND', 'DIVIDEND_REINVESTMENT', 'INTEREST'];
       if (!validTypes.includes(typeParam)) {
         return NextResponse.json(
           {
@@ -64,6 +67,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         );
       }
       filters.transactionType = typeParam as PortfolioTransactionType;
+    }
+
+    // Support filtering by multiple types (comma-separated)
+    const typesParam = searchParams.get('types');
+    if (typesParam) {
+      const types = typesParam.split(',').map(t => t.trim());
+      const validTypes = ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'DIVIDEND', 'DIVIDEND_REINVESTMENT', 'INTEREST'];
+      const invalidTypes = types.filter(t => !validTypes.includes(t));
+      if (invalidTypes.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Invalid type(s): ${invalidTypes.join(', ')}. Must be one of: ${validTypes.join(', ')}`,
+          },
+          { status: 400 }
+        );
+      }
+      filters.transactionTypes = types as PortfolioTransactionType[];
+    }
+
+    // Include reinvestments filter
+    const includeReinvestments = searchParams.get('includeReinvestments');
+    if (includeReinvestments !== null) {
+      filters.includeReinvestments = includeReinvestments !== 'false';
     }
 
     const symbol = searchParams.get('symbol');

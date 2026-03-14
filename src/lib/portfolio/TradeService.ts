@@ -252,6 +252,56 @@ export class TradeService {
   }
 
   /**
+   * Deletes a trade by ID.
+   *
+   * @param tradeId - The ID of the trade to delete
+   * @param userId - The ID of the user (for authorization)
+   * @returns Promise resolving to true if deleted, false if not found
+   */
+  async deleteTrade(tradeId: string, userId: string): Promise<boolean> {
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(tradeId)) {
+      return false;
+    }
+
+    const query = `
+      DELETE FROM trades
+      WHERE id = $1::uuid AND user_id = $2
+      RETURNING id
+    `;
+
+    const result = await this.db.query(query, [tradeId, userId]);
+    return result.rows.length > 0;
+  }
+
+  /**
+   * Deletes multiple trades by IDs.
+   *
+   * @param tradeIds - Array of trade IDs to delete
+   * @param userId - The ID of the user (for authorization)
+   * @returns Promise resolving to the count of deleted trades
+   */
+  async deleteTrades(tradeIds: string[], userId: string): Promise<number> {
+    if (tradeIds.length === 0) return 0;
+
+    // Filter to only valid UUIDs to prevent SQL errors
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validIds = tradeIds.filter(id => uuidRegex.test(id));
+
+    if (validIds.length === 0) return 0;
+
+    const query = `
+      DELETE FROM trades
+      WHERE id = ANY($1::uuid[]) AND user_id = $2
+      RETURNING id
+    `;
+
+    const result = await this.db.query(query, [validIds, userId]);
+    return result.rows.length;
+  }
+
+  /**
    * Gets a single trade by ID.
    *
    * @param tradeId - The ID of the trade to retrieve

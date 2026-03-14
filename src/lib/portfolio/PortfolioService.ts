@@ -28,9 +28,15 @@ import {
   CreatePortfolioRequest,
   UpdatePortfolioRequest,
   CreateTransactionRequest,
+  UpdateTransactionRequest,
+  SellPositionRequest,
   TransactionFilters,
   PerformanceHistoryFilters,
   PortfolioDailyPerformance,
+  OpenPositionSummary,
+  TradePosition,
+  TradeSide,
+  TradeStatus,
 } from '@/types/portfolio';
 import type { ParsedHolding, HoldingsImportResult, CSVValidationError } from '@/types/csv';
 
@@ -252,18 +258,22 @@ export class PortfolioService {
     } else if (data.transactionType === 'SELL') {
       // SELL: cash comes in (positive)
       totalAmount = Math.abs(data.totalAmount) - (data.fees ?? 0);
-    } else if (data.transactionType === 'DEPOSIT' || data.transactionType === 'DIVIDEND') {
-      // DEPOSIT/DIVIDEND: cash comes in (positive)
+    } else if (data.transactionType === 'DEPOSIT' || data.transactionType === 'DIVIDEND' || data.transactionType === 'INTEREST') {
+      // DEPOSIT/DIVIDEND/INTEREST: cash comes in (positive)
       totalAmount = Math.abs(data.totalAmount);
     } else if (data.transactionType === 'WITHDRAW') {
       // WITHDRAW: cash goes out (negative)
       totalAmount = -Math.abs(data.totalAmount);
+    } else if (data.transactionType === 'DIVIDEND_REINVESTMENT') {
+      // DRIP: net zero cash impact (dividend + automatic buy cancel out)
+      totalAmount = 0;
     }
 
     // Pre-fetch sector info OUTSIDE the transaction (external API call)
     // This prevents holding the transaction open during slow API calls
     let sector: string | null = null;
-    if ((data.transactionType === 'BUY' || data.transactionType === 'SELL') && data.assetSymbol) {
+    const affectsHoldings = data.transactionType === 'BUY' || data.transactionType === 'SELL' || data.transactionType === 'DIVIDEND_REINVESTMENT';
+    if (affectsHoldings && data.assetSymbol) {
       sector = await this.fetchSectorForSymbol(data.assetSymbol);
     }
 
@@ -296,11 +306,14 @@ export class PortfolioService {
       const query = `
         INSERT INTO portfolio_transactions (
           portfolio_id, asset_symbol, transaction_type, quantity,
-          price_per_share, fees, total_amount, transaction_date, notes
+          price_per_share, fees, total_amount, transaction_date, notes,
+          side, trade_status, linked_trade_id, settlement_date, import_source, raw_description
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING id, portfolio_id, asset_symbol, transaction_type, quantity,
                   price_per_share, fees, total_amount, transaction_date, notes,
+                  side, trade_status, exit_price, exit_date, realized_pnl,
+                  linked_trade_id, settlement_date, import_source, raw_description,
                   created_at, updated_at
       `;
 
@@ -314,12 +327,19 @@ export class PortfolioService {
         totalAmount,
         data.transactionDate,
         data.notes ?? null,
+        data.side ?? null,
+        data.tradeStatus ?? null,
+        data.linkedTradeId ?? null,
+        data.settlementDate ?? null,
+        data.importSource ?? null,
+        data.rawDescription ?? null,
       ]);
 
       const transaction = this.mapRowToTransaction(result.rows[0]);
 
       // Update holdings cache if this affects holdings (within same transaction)
-      if (data.transactionType === 'BUY' || data.transactionType === 'SELL') {
+      const affectsHoldings = data.transactionType === 'BUY' || data.transactionType === 'SELL' || data.transactionType === 'DIVIDEND_REINVESTMENT';
+      if (affectsHoldings) {
         await this.updateHoldingsCache(data.portfolioId, data.assetSymbol!, client, sector);
       }
 
@@ -392,6 +412,8 @@ export class PortfolioService {
     let query = `
       SELECT id, portfolio_id, asset_symbol, transaction_type, quantity,
              price_per_share, fees, total_amount, transaction_date, notes,
+             side, trade_status, exit_price, exit_date, realized_pnl,
+             linked_trade_id, settlement_date, import_source, raw_description,
              created_at, updated_at
       FROM portfolio_transactions
       WHERE portfolio_id = $1
@@ -403,6 +425,14 @@ export class PortfolioService {
     if (filters?.transactionType) {
       query += ` AND transaction_type = $${paramIndex++}`;
       params.push(filters.transactionType);
+    }
+
+    // Filter by multiple transaction types
+    if (filters?.transactionTypes && filters.transactionTypes.length > 0) {
+      const placeholders = filters.transactionTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
+      query += ` AND transaction_type IN (${placeholders})`;
+      params.push(...filters.transactionTypes);
+      paramIndex += filters.transactionTypes.length;
     }
 
     if (filters?.symbol) {
@@ -420,10 +450,138 @@ export class PortfolioService {
       params.push(filters.endDate);
     }
 
+    // Filter by trade status
+    if (filters?.tradeStatus) {
+      query += ` AND trade_status = $${paramIndex++}`;
+      params.push(filters.tradeStatus);
+    }
+
+    // Exclude DIVIDEND_REINVESTMENT if requested
+    if (filters?.includeReinvestments === false) {
+      query += ` AND transaction_type != 'DIVIDEND_REINVESTMENT'`;
+    }
+
     query += ' ORDER BY transaction_date DESC';
 
     const result = await this.db.query(query, params);
     return result.rows.map((row: Record<string, unknown>) => this.mapRowToTransaction(row));
+  }
+
+  /**
+   * Gets a single transaction by ID.
+   */
+  async getTransactionById(transactionId: string): Promise<PortfolioTransaction | null> {
+    const query = `
+      SELECT id, portfolio_id, asset_symbol, transaction_type, quantity,
+             price_per_share, fees, total_amount, transaction_date, notes,
+             side, trade_status, exit_price, exit_date, realized_pnl,
+             linked_trade_id, settlement_date, import_source, raw_description,
+             created_at, updated_at
+      FROM portfolio_transactions
+      WHERE id = $1
+    `;
+
+    const result = await this.db.query(query, [transactionId]);
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return this.mapRowToTransaction(result.rows[0]);
+  }
+
+  /**
+   * Updates an existing transaction.
+   */
+  async updateTransaction(
+    transactionId: string,
+    data: UpdateTransactionRequest
+  ): Promise<PortfolioTransaction> {
+    const existing = await this.getTransactionById(transactionId);
+    if (!existing) {
+      throw new PortfolioValidationError('Transaction not found', 'id', 'NOT_FOUND');
+    }
+
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (data.transactionDate !== undefined) {
+      updates.push(`transaction_date = $${paramIndex++}`);
+      params.push(data.transactionDate);
+    }
+    if (data.quantity !== undefined) {
+      updates.push(`quantity = $${paramIndex++}`);
+      params.push(data.quantity);
+    }
+    if (data.pricePerShare !== undefined) {
+      updates.push(`price_per_share = $${paramIndex++}`);
+      params.push(data.pricePerShare);
+    }
+    if (data.fees !== undefined) {
+      updates.push(`fees = $${paramIndex++}`);
+      params.push(data.fees);
+    }
+    if (data.notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      params.push(data.notes);
+    }
+    if (data.side !== undefined) {
+      updates.push(`side = $${paramIndex++}`);
+      params.push(data.side);
+    }
+    if (data.tradeStatus !== undefined) {
+      updates.push(`trade_status = $${paramIndex++}`);
+      params.push(data.tradeStatus);
+    }
+    if (data.exitPrice !== undefined) {
+      updates.push(`exit_price = $${paramIndex++}`);
+      params.push(data.exitPrice);
+    }
+    if (data.exitDate !== undefined) {
+      updates.push(`exit_date = $${paramIndex++}`);
+      params.push(data.exitDate);
+    }
+    if (data.settlementDate !== undefined) {
+      updates.push(`settlement_date = $${paramIndex++}`);
+      params.push(data.settlementDate);
+    }
+
+    if (updates.length === 0) {
+      return existing;
+    }
+
+    params.push(transactionId);
+    const query = `
+      UPDATE portfolio_transactions
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, portfolio_id, asset_symbol, transaction_type, quantity,
+                price_per_share, fees, total_amount, transaction_date, notes,
+                side, trade_status, exit_price, exit_date, realized_pnl,
+                linked_trade_id, settlement_date, import_source, raw_description,
+                created_at, updated_at
+    `;
+
+    const result = await this.db.query(query, params);
+    return this.mapRowToTransaction(result.rows[0]);
+  }
+
+  /**
+   * Deletes a transaction.
+   */
+  async deleteTransaction(transactionId: string): Promise<void> {
+    const existing = await this.getTransactionById(transactionId);
+    if (!existing) {
+      throw new PortfolioValidationError('Transaction not found', 'id', 'NOT_FOUND');
+    }
+
+    await this.db.query('DELETE FROM portfolio_transactions WHERE id = $1', [transactionId]);
+
+    // Recalculate holdings if this was a BUY/SELL/DRIP transaction
+    const affectsHoldings = ['BUY', 'SELL', 'DIVIDEND_REINVESTMENT'].includes(existing.transactionType);
+    if (affectsHoldings && existing.assetSymbol) {
+      await this.updateHoldingsCache(existing.portfolioId, existing.assetSymbol);
+    }
   }
 
   // ============================================================================
@@ -806,12 +964,13 @@ export class PortfolioService {
       : (text: string, params?: unknown[]) => this.db.query(text, params);
 
     // Calculate current position from transactions
+    // Include DIVIDEND_REINVESTMENT as shares added to holdings
     const query = `
       SELECT
-        SUM(CASE WHEN transaction_type = 'BUY' THEN quantity ELSE 0 END) as total_bought,
+        SUM(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN quantity ELSE 0 END) as total_bought,
         SUM(CASE WHEN transaction_type = 'SELL' THEN quantity ELSE 0 END) as total_sold,
-        SUM(CASE WHEN transaction_type = 'BUY' THEN quantity * price_per_share ELSE 0 END) as total_cost,
-        MIN(CASE WHEN transaction_type = 'BUY' THEN transaction_date END) as first_purchase,
+        SUM(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN quantity * price_per_share ELSE 0 END) as total_cost,
+        MIN(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN transaction_date END) as first_purchase,
         MAX(transaction_date) as last_transaction
       FROM portfolio_transactions
       WHERE portfolio_id = $1 AND asset_symbol = $2
@@ -862,6 +1021,242 @@ export class PortfolioService {
       row.first_purchase,
       row.last_transaction,
     ]);
+  }
+
+  // ============================================================================
+  // Position Management & P&L Calculations
+  // ============================================================================
+
+  /**
+   * Gets open positions with aggregated buy/sell quantities.
+   * Uses the portfolio_open_positions view for performance.
+   */
+  async getOpenPositions(portfolioId: string): Promise<OpenPositionSummary[]> {
+    const query = `
+      SELECT
+        portfolio_id,
+        asset_symbol AS symbol,
+        SUM(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN quantity ELSE 0 END) AS total_bought,
+        SUM(CASE WHEN transaction_type = 'SELL' THEN quantity ELSE 0 END) AS total_sold,
+        SUM(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN quantity * price_per_share ELSE 0 END) AS total_cost,
+        MIN(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN transaction_date END) AS first_purchase_date,
+        MAX(transaction_date) AS last_transaction_date
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1 AND asset_symbol IS NOT NULL
+      GROUP BY portfolio_id, asset_symbol
+      HAVING SUM(CASE WHEN transaction_type IN ('BUY', 'DIVIDEND_REINVESTMENT') THEN quantity ELSE 0 END) -
+             SUM(CASE WHEN transaction_type = 'SELL' THEN quantity ELSE 0 END) > 0
+      ORDER BY asset_symbol
+    `;
+
+    const result = await this.db.query(query, [portfolioId]);
+    const positions: OpenPositionSummary[] = [];
+
+    for (const row of result.rows) {
+      const totalBought = parseFloat(row.total_bought) || 0;
+      const totalSold = parseFloat(row.total_sold) || 0;
+      const totalCost = parseFloat(row.total_cost) || 0;
+      const remainingShares = totalBought - totalSold;
+      const avgCostBasis = totalBought > 0 ? totalCost / totalBought : 0;
+
+      positions.push({
+        symbol: row.symbol as string,
+        portfolioId: row.portfolio_id as string,
+        totalShares: remainingShares,
+        averageCostBasis: avgCostBasis,
+        totalCostBasis: remainingShares * avgCostBasis,
+        firstPurchaseDate: new Date(row.first_purchase_date as string),
+        lastTransactionDate: new Date(row.last_transaction_date as string),
+      });
+    }
+
+    return positions;
+  }
+
+  /**
+   * Gets open positions enriched with current market prices and unrealized P&L.
+   */
+  async getOpenPositionsWithMarketData(portfolioId: string): Promise<OpenPositionSummary[]> {
+    const positions = await this.getOpenPositions(portfolioId);
+
+    if (positions.length === 0) {
+      return [];
+    }
+
+    // Fetch current prices for all positions
+    const symbols = positions.map(p => p.symbol);
+    let quotes: { symbol: string; price: number }[] = [];
+
+    try {
+      const quoteResults = await this.fmpProvider.getMultipleQuotes(symbols);
+      quotes = quoteResults.map(q => ({ symbol: q.symbol, price: q.price }));
+    } catch (error) {
+      console.error('Failed to fetch quotes for positions:', error);
+    }
+
+    const priceMap = new Map(quotes.map(q => [q.symbol, q.price]));
+
+    // Enrich positions with market data
+    return positions.map(position => {
+      const currentPrice = priceMap.get(position.symbol) || 0;
+      const marketValue = position.totalShares * currentPrice;
+      const unrealizedPnl = marketValue - position.totalCostBasis;
+      const unrealizedPnlPercent = position.totalCostBasis > 0
+        ? (unrealizedPnl / position.totalCostBasis) * 100
+        : 0;
+
+      return {
+        ...position,
+        currentPrice,
+        marketValue,
+        unrealizedPnl,
+        unrealizedPnlPercent,
+      };
+    });
+  }
+
+  /**
+   * Sells shares from an open position.
+   * Creates a SELL transaction and calculates realized P&L.
+   */
+  async sellPosition(
+    portfolioId: string,
+    request: SellPositionRequest
+  ): Promise<PortfolioTransaction> {
+    const portfolio = await this.getPortfolioById(portfolioId);
+    if (!portfolio) {
+      throw new PortfolioNotFoundError(portfolioId);
+    }
+
+    // Get current position
+    const positions = await this.getOpenPositions(portfolioId);
+    const position = positions.find(p => p.symbol === request.symbol.toUpperCase());
+
+    if (!position) {
+      throw new PortfolioValidationError(
+        `No open position found for ${request.symbol}`,
+        'symbol',
+        'NOT_FOUND'
+      );
+    }
+
+    // Determine quantity to sell
+    const quantityToSell = request.quantity ?? position.totalShares;
+    if (quantityToSell > position.totalShares) {
+      throw new PortfolioValidationError(
+        `Cannot sell ${quantityToSell} shares. Only ${position.totalShares} available.`,
+        'quantity',
+        'INSUFFICIENT_SHARES'
+      );
+    }
+
+    // Calculate realized P&L
+    const realizedPnl = this.calculateRealizedPnL(
+      position.averageCostBasis,
+      request.pricePerShare,
+      quantityToSell,
+      'LONG',
+      request.fees ?? 0
+    );
+
+    // Create SELL transaction
+    const totalAmount = quantityToSell * request.pricePerShare;
+    const transaction = await this.addTransaction({
+      portfolioId,
+      transactionType: 'SELL',
+      assetSymbol: request.symbol.toUpperCase(),
+      quantity: quantityToSell,
+      pricePerShare: request.pricePerShare,
+      totalAmount,
+      fees: request.fees ?? 0,
+      transactionDate: request.transactionDate,
+      notes: request.notes,
+      side: 'LONG',
+    });
+
+    // Update the transaction with realized P&L
+    await this.db.query(
+      `UPDATE portfolio_transactions SET realized_pnl = $1 WHERE id = $2`,
+      [realizedPnl, transaction.id]
+    );
+
+    return {
+      ...transaction,
+      realizedPnl,
+    };
+  }
+
+  /**
+   * Calculates realized P&L for a closed trade.
+   */
+  calculateRealizedPnL(
+    entryPrice: number,
+    exitPrice: number,
+    quantity: number,
+    side: TradeSide,
+    fees: number = 0
+  ): number {
+    if (side === 'SHORT') {
+      // Short: profit when price goes down
+      return (entryPrice - exitPrice) * quantity - fees;
+    } else {
+      // Long: profit when price goes up
+      return (exitPrice - entryPrice) * quantity - fees;
+    }
+  }
+
+  /**
+   * Calculates unrealized P&L for an open position.
+   */
+  calculateUnrealizedPnL(
+    costBasis: number,
+    currentPrice: number,
+    quantity: number,
+    side: TradeSide = 'LONG'
+  ): number {
+    if (side === 'SHORT') {
+      // Short: profit when price goes down
+      return (costBasis - currentPrice) * quantity;
+    } else {
+      // Long: profit when price goes up
+      return (currentPrice - costBasis) * quantity;
+    }
+  }
+
+  /**
+   * Gets trade positions from the unified transactions.
+   * Provides backwards compatibility with the old trade tracker view.
+   */
+  async getTradePositions(portfolioId: string): Promise<TradePosition[]> {
+    const query = `
+      SELECT
+        id, portfolio_id, asset_symbol AS symbol, side, trade_status AS status,
+        price_per_share AS entry_price, quantity, transaction_date AS entry_date,
+        exit_price, exit_date, realized_pnl, fees, notes, created_at
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1
+        AND transaction_type = 'BUY'
+        AND trade_status IS NOT NULL
+      ORDER BY transaction_date DESC
+    `;
+
+    const result = await this.db.query(query, [portfolioId]);
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      portfolioId: row.portfolio_id as string,
+      symbol: row.symbol as string,
+      side: (row.side as TradeSide) || 'LONG',
+      status: (row.status as TradeStatus) || 'OPEN',
+      entryPrice: parseFloat(row.entry_price as string),
+      quantity: parseFloat(row.quantity as string),
+      entryDate: new Date(row.entry_date as string),
+      exitPrice: row.exit_price !== null ? parseFloat(row.exit_price as string) : null,
+      exitDate: row.exit_date ? new Date(row.exit_date as string) : null,
+      fees: parseFloat(row.fees as string) || 0,
+      realizedPnl: row.realized_pnl !== null ? parseFloat(row.realized_pnl as string) : null,
+      notes: (row.notes as string) || null,
+      createdAt: new Date(row.created_at as string),
+    }));
   }
 
   // ============================================================================
@@ -1219,7 +1614,7 @@ export class PortfolioService {
       );
     }
 
-    const validTypes = ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'DIVIDEND'];
+    const validTypes = ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'DIVIDEND', 'DIVIDEND_REINVESTMENT', 'INTEREST'];
     if (!validTypes.includes(data.transactionType)) {
       throw new PortfolioValidationError(
         `transactionType must be one of: ${validTypes.join(', ')}`,
@@ -1265,6 +1660,30 @@ export class PortfolioService {
       }
     }
 
+    // DIVIDEND_REINVESTMENT needs symbol and quantity
+    if (data.transactionType === 'DIVIDEND_REINVESTMENT') {
+      if (!data.assetSymbol || typeof data.assetSymbol !== 'string') {
+        throw new PortfolioValidationError(
+          'assetSymbol is required for DIVIDEND_REINVESTMENT',
+          'assetSymbol',
+          'REQUIRED'
+        );
+      }
+
+      if (
+        data.quantity === undefined ||
+        data.quantity === null ||
+        typeof data.quantity !== 'number' ||
+        data.quantity <= 0
+      ) {
+        throw new PortfolioValidationError(
+          'quantity must be a positive number for DIVIDEND_REINVESTMENT',
+          'quantity',
+          'INVALID_VALUE'
+        );
+      }
+    }
+
     if (data.transactionType === 'DIVIDEND') {
       if (!data.assetSymbol || typeof data.assetSymbol !== 'string') {
         throw new PortfolioValidationError(
@@ -1275,14 +1694,16 @@ export class PortfolioService {
       }
     }
 
+    // INTEREST and DIVIDEND_REINVESTMENT can have totalAmount = 0
+    const allowZeroAmount = data.transactionType === 'INTEREST' || data.transactionType === 'DIVIDEND_REINVESTMENT';
     if (
       data.totalAmount === undefined ||
       data.totalAmount === null ||
       typeof data.totalAmount !== 'number' ||
-      data.totalAmount <= 0
+      (!allowZeroAmount && data.totalAmount <= 0)
     ) {
       throw new PortfolioValidationError(
-        'totalAmount must be a positive number',
+        allowZeroAmount ? 'totalAmount must be a non-negative number' : 'totalAmount must be a positive number',
         'totalAmount',
         'INVALID_VALUE'
       );
@@ -1328,6 +1749,16 @@ export class PortfolioService {
       notes: (row.notes as string) || undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
+      // Trade tracking fields
+      side: (row.side as TradeSide) || null,
+      tradeStatus: (row.trade_status as TradeStatus) || null,
+      exitPrice: row.exit_price !== null ? parseFloat(row.exit_price as string) : null,
+      exitDate: row.exit_date ? new Date(row.exit_date as string) : null,
+      realizedPnl: row.realized_pnl !== null ? parseFloat(row.realized_pnl as string) : null,
+      linkedTradeId: (row.linked_trade_id as string) || null,
+      settlementDate: row.settlement_date ? new Date(row.settlement_date as string) : null,
+      importSource: (row.import_source as string) || null,
+      rawDescription: (row.raw_description as string) || null,
     };
   }
 

@@ -37,6 +37,8 @@ const VALID_TRANSACTION_TYPES: PortfolioTransactionType[] = [
   'DEPOSIT',
   'WITHDRAW',
   'DIVIDEND',
+  'DIVIDEND_REINVESTMENT',
+  'INTEREST',
 ];
 
 /**
@@ -263,6 +265,50 @@ function validateTransaction(
     }
   }
 
+  // Validate and extract optional trade tracking fields
+  const side = t.side as 'LONG' | 'SHORT' | undefined;
+  if (side !== undefined && !['LONG', 'SHORT'].includes(side)) {
+    return {
+      valid: false,
+      error: {
+        row: index + 1,
+        field: 'side',
+        value: String(t.side),
+        message: 'Side must be LONG or SHORT',
+      },
+    };
+  }
+
+  const tradeStatus = t.tradeStatus as 'OPEN' | 'CLOSED' | undefined;
+  if (tradeStatus !== undefined && !['OPEN', 'CLOSED'].includes(tradeStatus)) {
+    return {
+      valid: false,
+      error: {
+        row: index + 1,
+        field: 'tradeStatus',
+        value: String(t.tradeStatus),
+        message: 'Trade status must be OPEN or CLOSED',
+      },
+    };
+  }
+
+  // Parse optional dates
+  let settlementDate: Date | undefined;
+  if (t.settlementDate) {
+    settlementDate = new Date(t.settlementDate as string | number | Date);
+    if (isNaN(settlementDate.getTime())) {
+      return {
+        valid: false,
+        error: {
+          row: index + 1,
+          field: 'settlementDate',
+          value: String(t.settlementDate),
+          message: 'Invalid settlement date format',
+        },
+      };
+    }
+  }
+
   // Build validated transaction
   const validatedTransaction: ParsedPortfolioTransaction = {
     symbol,
@@ -273,6 +319,13 @@ function validateTransaction(
     fees: fees as number,
     transactionDate: parsedDate,
     notes,
+    // Trade tracking fields
+    side,
+    tradeStatus,
+    linkedTradeId: t.linkedTradeId as string | undefined,
+    settlementDate,
+    importSource: t.importSource as string | undefined,
+    rawDescription: t.rawDescription as string | undefined,
   };
 
   return { valid: true, data: validatedTransaction };
@@ -446,6 +499,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               notes: tx.notes,
               // Skip cash/holdings validation for historical imports
               skipValidation: true,
+              // Trade tracking fields
+              side: tx.side,
+              tradeStatus: tx.tradeStatus,
+              linkedTradeId: tx.linkedTradeId,
+              settlementDate: tx.settlementDate ? new Date(tx.settlementDate) : undefined,
+              importSource: tx.importSource,
+              rawDescription: tx.rawDescription,
             },
             client // Pass the transaction client for atomicity
           );

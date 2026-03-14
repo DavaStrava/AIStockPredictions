@@ -30,6 +30,8 @@ export interface UsePortfolioStatsReturn {
   fetchTrades: (filters?: TradeFilters) => Promise<void>;
   createTrade: (data: CreateTradeRequest) => Promise<JournalTrade>;
   closeTrade: (tradeId: string, exitPrice: number) => Promise<JournalTrade>;
+  deleteTrade: (tradeId: string) => Promise<void>;
+  deleteTrades: (tradeIds: string[]) => Promise<number>;
   refreshStats: () => Promise<void>;
 }
 
@@ -79,6 +81,22 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
     },
   });
 
+  // Mutation for deleting a single trade
+  const deleteTradeMutation = useMutation({
+    mutationFn: (tradeId: string) => api.trades.delete(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trades.all });
+    },
+  });
+
+  // Mutation for deleting multiple trades
+  const deleteTradesMutation = useMutation({
+    mutationFn: (tradeIds: string[]) => api.trades.bulkDelete(tradeIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trades.all });
+    },
+  });
+
   /**
    * Fetches trades with optional filters.
    * Triggers a refetch of the trades query with new filters.
@@ -117,6 +135,24 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
   };
 
   /**
+   * Deletes a trade.
+   * @param tradeId - ID of the trade to delete
+   */
+  const deleteTrade = async (tradeId: string): Promise<void> => {
+    await deleteTradeMutation.mutateAsync(tradeId);
+  };
+
+  /**
+   * Deletes multiple trades.
+   * @param tradeIds - IDs of the trades to delete
+   * @returns The count of deleted trades
+   */
+  const deleteTrades = async (tradeIds: string[]): Promise<number> => {
+    const result = await deleteTradesMutation.mutateAsync(tradeIds);
+    return result.deletedCount;
+  };
+
+  /**
    * Refreshes portfolio statistics.
    */
   const refreshStats = async (): Promise<void> => {
@@ -129,6 +165,8 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
     statsQuery.error?.message ||
     createTradeMutation.error?.message ||
     closeTradeMutation.error?.message ||
+    deleteTradeMutation.error?.message ||
+    deleteTradesMutation.error?.message ||
     null;
 
   return {
@@ -140,6 +178,8 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
     fetchTrades,
     createTrade,
     closeTrade,
+    deleteTrade,
+    deleteTrades,
     refreshStats,
   };
 }

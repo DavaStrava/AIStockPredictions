@@ -9,7 +9,17 @@
 // Enums
 // ============================================================================
 
-export type PortfolioTransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW' | 'DIVIDEND';
+export type PortfolioTransactionType =
+  | 'BUY'
+  | 'SELL'
+  | 'DEPOSIT'
+  | 'WITHDRAW'
+  | 'DIVIDEND'
+  | 'DIVIDEND_REINVESTMENT'
+  | 'INTEREST';
+
+export type TradeSide = 'LONG' | 'SHORT';
+export type TradeStatus = 'OPEN' | 'CLOSED';
 
 // ============================================================================
 // Core Models
@@ -31,6 +41,7 @@ export interface Portfolio {
 
 /**
  * Represents a single transaction within a portfolio.
+ * Extended to support trade tracking with P&L calculations.
  */
 export interface PortfolioTransaction {
   id: string;
@@ -45,6 +56,57 @@ export interface PortfolioTransaction {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Trade tracking fields (unified from trades table)
+  side?: TradeSide | null; // LONG or SHORT
+  tradeStatus?: TradeStatus | null; // OPEN or CLOSED
+  exitPrice?: number | null; // Price at which position was closed
+  exitDate?: Date | null; // Date position was closed
+  realizedPnl?: number | null; // Profit/loss for closed trades
+  linkedTradeId?: string | null; // Reference to related transaction (e.g., SELL refs BUY)
+  settlementDate?: Date | null; // T+1 or T+2 settlement date
+  importSource?: string | null; // Source of import (merrill_edge, fidelity, manual)
+  rawDescription?: string | null; // Original description from CSV import
+}
+
+/**
+ * Represents an open or closed trade position for P&L tracking.
+ * This is a backwards-compatible view that mirrors the old JournalTrade interface.
+ */
+export interface TradePosition {
+  id: string;
+  portfolioId: string;
+  symbol: string;
+  side: TradeSide;
+  status: TradeStatus;
+  entryPrice: number;
+  quantity: number;
+  entryDate: Date;
+  exitPrice: number | null;
+  exitDate: Date | null;
+  fees: number;
+  realizedPnl: number | null;
+  unrealizedPnl?: number | null; // Calculated with current price
+  currentPrice?: number | null; // Current market price
+  notes: string | null;
+  createdAt: Date;
+}
+
+/**
+ * Summary statistics for open positions.
+ */
+export interface OpenPositionSummary {
+  symbol: string;
+  portfolioId: string;
+  totalShares: number;
+  averageCostBasis: number;
+  totalCostBasis: number;
+  firstPurchaseDate: Date;
+  lastTransactionDate: Date;
+  currentPrice?: number;
+  marketValue?: number;
+  unrealizedPnl?: number;
+  unrealizedPnlPercent?: number;
 }
 
 /**
@@ -230,6 +292,42 @@ export interface CreateTransactionRequest {
   notes?: string;
   /** Skip cash/holdings validation - use for historical imports where transactions already occurred */
   skipValidation?: boolean;
+
+  // Trade tracking fields
+  side?: TradeSide; // LONG or SHORT (defaults to LONG for BUY)
+  tradeStatus?: TradeStatus; // OPEN or CLOSED (defaults to OPEN for BUY)
+  linkedTradeId?: string; // Reference to related transaction
+  settlementDate?: Date; // Settlement date
+  importSource?: string; // Source of import
+  rawDescription?: string; // Original description from CSV
+}
+
+/**
+ * Request to update an existing transaction.
+ */
+export interface UpdateTransactionRequest {
+  transactionDate?: Date;
+  quantity?: number;
+  pricePerShare?: number;
+  fees?: number;
+  notes?: string;
+  side?: TradeSide;
+  tradeStatus?: TradeStatus;
+  exitPrice?: number;
+  exitDate?: Date;
+  settlementDate?: Date;
+}
+
+/**
+ * Request to sell shares from an open position.
+ */
+export interface SellPositionRequest {
+  symbol: string;
+  quantity?: number; // If not specified, sells all shares
+  pricePerShare: number;
+  fees?: number;
+  transactionDate: Date;
+  notes?: string;
 }
 
 /**
@@ -244,9 +342,12 @@ export interface UpdateHoldingTargetRequest {
  */
 export interface TransactionFilters {
   transactionType?: PortfolioTransactionType;
+  transactionTypes?: PortfolioTransactionType[]; // Filter by multiple types
   symbol?: string;
   startDate?: Date;
   endDate?: Date;
+  tradeStatus?: TradeStatus; // Filter by trade status
+  includeReinvestments?: boolean; // Include DIVIDEND_REINVESTMENT (default: true)
 }
 
 /**

@@ -208,3 +208,53 @@ export async function GET(
     return createErrorResponse(error, 'Failed to fetch trade', 500);
   }
 }
+
+/**
+ * DELETE /api/trades/[id] - Delete a trade
+ *
+ * Requirements: 10.7
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`trades:id:delete:${clientId}`, {
+    maxRequests: 30,
+    windowMs: 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn);
+  }
+
+  try {
+    const { id } = await params;
+    const db = getDatabase();
+    const fmpProvider = getFMPProvider();
+    const tradeService = new TradeService(db, fmpProvider);
+
+    // Get authenticated user
+    const userId = await getDemoUserId();
+
+    // Delete the trade (authorization handled by service)
+    const deleted = await tradeService.deleteTrade(id, userId);
+
+    if (!deleted) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Trade not found: ${id}`,
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Trade deleted successfully',
+    });
+  } catch (error) {
+    return createErrorResponse(error, 'Failed to delete trade', 500);
+  }
+}

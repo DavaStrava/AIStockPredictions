@@ -48,31 +48,29 @@ export function TradeTracker() {
     fetchTrades,
     createTrade,
     closeTrade,
+    deleteTrades,
   } = usePortfolioStats();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
 
-  const handleCloseTrade = async (tradeId: string) => {
-    // Find the trade to get a reasonable default exit price
-    const trade = trades.find(t => t.id === tradeId);
-    if (!trade) return;
-
-    // Prompt for exit price (in a real app, this would be in the table component)
-    const exitPriceStr = window.prompt('Enter exit price:', trade.entryPrice.toString());
-    if (!exitPriceStr) return;
-
-    const exitPrice = parseFloat(exitPriceStr);
-    if (isNaN(exitPrice) || exitPrice <= 0) {
-      alert('Please enter a valid positive price');
-      return;
-    }
-
+  const handleCloseTrade = async (tradeId: string, exitPrice: number, _quantity: number) => {
+    // Note: quantity parameter is available for future partial sell support
+    // Currently the API closes the entire position
     try {
       await closeTrade(tradeId, exitPrice);
     } catch (err) {
-      console.error('Failed to close trade:', err);
-      alert(err instanceof Error ? err.message : 'Failed to close trade');
+      console.error('Failed to sell position:', err);
+      alert(err instanceof Error ? err.message : 'Failed to sell position');
+    }
+  };
+
+  const handleDeleteTrades = async (tradeIds: string[]) => {
+    try {
+      await deleteTrades(tradeIds);
+    } catch (err) {
+      console.error('Failed to delete trades:', err);
+      throw err; // Re-throw to let the table component handle the error UI
     }
   };
 
@@ -123,8 +121,8 @@ export function TradeTracker() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Realized P&L</p>
             <p className={`text-xl font-bold ${
-              (stats.totalRealizedPnl ?? 0) >= 0 
-                ? 'text-green-600 dark:text-green-400' 
+              (stats.totalRealizedPnl ?? 0) >= 0
+                ? 'text-green-600 dark:text-green-400'
                 : 'text-red-600 dark:text-red-400'
             }`}>
               {formatCurrency(stats.totalRealizedPnl)}
@@ -133,8 +131,8 @@ export function TradeTracker() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Unrealized P&L</p>
             <p className={`text-xl font-bold ${
-              (stats.totalUnrealizedPnl ?? 0) >= 0 
-                ? 'text-green-600 dark:text-green-400' 
+              (stats.totalUnrealizedPnl ?? 0) >= 0
+                ? 'text-green-600 dark:text-green-400'
                 : 'text-red-600 dark:text-red-400'
             }`}>
               {formatCurrency(stats.totalUnrealizedPnl)}
@@ -186,7 +184,7 @@ export function TradeTracker() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            {status === 'ALL' ? 'All Trades' : status === 'OPEN' ? 'Open' : 'Closed'}
+            {status === 'ALL' ? 'All Trades' : status === 'OPEN' ? 'Open' : 'Sold'}
             {status === 'OPEN' && ` (${trades.filter(t => t.status === 'OPEN').length})`}
             {status === 'CLOSED' && ` (${trades.filter(t => t.status === 'CLOSED').length})`}
           </button>
@@ -198,6 +196,7 @@ export function TradeTracker() {
         <TradeLogTable
           trades={filteredTrades}
           onCloseTrade={handleCloseTrade}
+          onDeleteTrades={handleDeleteTrades}
           loading={loading}
         />
       </div>

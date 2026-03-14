@@ -20,6 +20,7 @@ import {
   PortfolioHealthResult,
   CreateTransactionRequest,
   PortfolioTransactionType,
+  OpenPositionSummary,
 } from '@/types/portfolio';
 
 interface UsePortfolioOptions {
@@ -33,6 +34,7 @@ interface PortfolioState {
   summary: PortfolioSummary | null;
   holdings: HoldingWithMarketData[];
   transactions: PortfolioTransaction[];
+  positions: OpenPositionSummary[];
   allocation: SectorAllocation[];
   history: BenchmarkDataPoint[];
   rebalanceSuggestions: RebalanceSuggestion[];
@@ -53,6 +55,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     summary: null,
     holdings: [],
     transactions: [],
+    positions: [],
     allocation: [],
     history: [],
     rebalanceSuggestions: [],
@@ -155,6 +158,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
       summary: null,
       holdings: [],
       transactions: [],
+      positions: [],
       allocation: [],
       history: [],
       rebalanceSuggestions: [],
@@ -331,8 +335,172 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
   }, []);
 
   // ============================================================================
+  // Positions Operations
+  // ============================================================================
+
+  const fetchPositions = useCallback(async (portfolioId: string) => {
+    try {
+      const response = await fetch(`/api/portfolios/${portfolioId}/positions`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch positions');
+      }
+
+      setState((prev) => ({ ...prev, positions: data.data }));
+      return data.data as OpenPositionSummary[];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch positions';
+      setState((prev) => ({ ...prev, error: message }));
+      throw error;
+    }
+  }, []);
+
+  const sellPosition = useCallback(
+    async (symbol: string, quantity: number, pricePerShare: number) => {
+      let portfolioId: string | null = null;
+      setState((prev) => {
+        portfolioId = prev.selectedPortfolioId;
+        return prev;
+      });
+
+      if (!portfolioId) {
+        throw new Error('No portfolio selected');
+      }
+
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const response = await fetch(
+          `/api/portfolios/${portfolioId}/positions/${symbol}/sell`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity, pricePerShare }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to sell position');
+        }
+
+        // Refresh data
+        await Promise.all([
+          fetchSummary(portfolioId),
+          fetchHoldings(portfolioId),
+          fetchTransactions(portfolioId),
+          fetchPositions(portfolioId),
+        ]);
+
+        setState((prev) => ({ ...prev, loading: false }));
+        return data.data as PortfolioTransaction;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to sell position';
+        setState((prev) => ({ ...prev, loading: false, error: message }));
+        throw error;
+      }
+    },
+    [fetchSummary, fetchHoldings, fetchTransactions, fetchPositions]
+  );
+
+  // ============================================================================
   // Transaction Operations
   // ============================================================================
+
+  const editTransaction = useCallback(
+    async (txnId: string, updates: Partial<PortfolioTransaction>) => {
+      let portfolioId: string | null = null;
+      setState((prev) => {
+        portfolioId = prev.selectedPortfolioId;
+        return prev;
+      });
+
+      if (!portfolioId) {
+        throw new Error('No portfolio selected');
+      }
+
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const response = await fetch(
+          `/api/portfolios/${portfolioId}/transactions/${txnId}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to update transaction');
+        }
+
+        // Refresh data
+        await Promise.all([
+          fetchSummary(portfolioId),
+          fetchHoldings(portfolioId),
+          fetchTransactions(portfolioId),
+        ]);
+
+        setState((prev) => ({ ...prev, loading: false }));
+        return data.data as PortfolioTransaction;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update transaction';
+        setState((prev) => ({ ...prev, loading: false, error: message }));
+        throw error;
+      }
+    },
+    [fetchSummary, fetchHoldings, fetchTransactions]
+  );
+
+  const deleteTransaction = useCallback(
+    async (txnId: string) => {
+      let portfolioId: string | null = null;
+      setState((prev) => {
+        portfolioId = prev.selectedPortfolioId;
+        return prev;
+      });
+
+      if (!portfolioId) {
+        throw new Error('No portfolio selected');
+      }
+
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const response = await fetch(
+          `/api/portfolios/${portfolioId}/transactions/${txnId}`,
+          {
+            method: 'DELETE',
+          }
+        );
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to delete transaction');
+        }
+
+        // Refresh data
+        await Promise.all([
+          fetchSummary(portfolioId),
+          fetchHoldings(portfolioId),
+          fetchTransactions(portfolioId),
+        ]);
+
+        setState((prev) => ({ ...prev, loading: false }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete transaction';
+        setState((prev) => ({ ...prev, loading: false, error: message }));
+        throw error;
+      }
+    },
+    [fetchSummary, fetchHoldings, fetchTransactions]
+  );
 
   const addTransaction = useCallback(
     async (transaction: Omit<CreateTransactionRequest, 'portfolioId'>) => {
@@ -436,6 +604,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
         fetchSummary(state.selectedPortfolioId),
         fetchHoldings(state.selectedPortfolioId),
         fetchTransactions(state.selectedPortfolioId),
+        fetchPositions(state.selectedPortfolioId),
         fetchAllocation(state.selectedPortfolioId),
       ]);
 
@@ -449,6 +618,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     fetchSummary,
     fetchHoldings,
     fetchTransactions,
+    fetchPositions,
     fetchAllocation,
   ]);
 
@@ -498,6 +668,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     fetchSummary,
     fetchHoldings,
     fetchTransactions,
+    fetchPositions,
     fetchAllocation,
     fetchHistory,
     fetchRebalanceSuggestions,
@@ -506,7 +677,12 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
 
     // Transaction operations
     addTransaction,
+    editTransaction,
+    deleteTransaction,
     updateHoldingTarget,
+
+    // Position operations
+    sellPosition,
 
     // Utility
     clearError: () => setState((prev) => ({ ...prev, error: null })),
