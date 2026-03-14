@@ -20,8 +20,9 @@ const TradeTracker = lazy(() => import('@/components/trading-journal/TradeTracke
 const PortfolioManager = lazy(() =>
   import('@/components/portfolio').then(mod => ({ default: mod.PortfolioManager }))
 );
+const TermsGlossaryPage = lazy(() => import('@/components/TermsGlossaryPage'));
 
-type ActiveTab = 'dashboard' | 'watchlists' | 'trades' | 'portfolio';
+type ActiveTab = 'dashboard' | 'watchlists' | 'trades' | 'portfolio' | 'glossary';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -101,6 +102,16 @@ export default function Home() {
             >
               Portfolio
             </button>
+            <button
+              onClick={() => setActiveTab('glossary')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'glossary'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Financial Terms
+            </button>
           </nav>
         </div>
       </header>
@@ -130,6 +141,13 @@ export default function Home() {
             <Suspense fallback={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><PortfolioSkeleton /></div>}>
               <PortfolioManager />
             </Suspense>
+          )}
+          {activeTab === 'glossary' && (
+            <ResponsiveContainer variant="wide">
+              <Suspense fallback={<div className="animate-pulse h-96 bg-gray-200 dark:bg-gray-700 rounded-lg" />}>
+                <TermsGlossaryPage />
+              </Suspense>
+            </ResponsiveContainer>
           )}
         </ResponsiveLayoutErrorBoundary>
       </main>

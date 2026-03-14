@@ -569,7 +569,6 @@ export interface PredictionCardProps {
   prediction: PredictionResult;
   onSelect: (symbol: string) => void;
   onRemove: (symbol: string) => void;
-  onLogTrade: (symbol: string, predictionId?: string) => void;
 }
 
 /** Props for PredictionsGrid component */
@@ -577,7 +576,6 @@ export interface PredictionsGridProps {
   predictions: PredictionResult[];
   onSelectStock: (symbol: string) => void;
   onRemoveStock: (symbol: string) => void;
-  onLogTrade: (symbol: string, predictionId?: string) => void;
 }
 
 /** Props for DetailedAnalysisPanel component */
@@ -586,6 +584,7 @@ export interface DetailedAnalysisPanelProps {
   analysis: TechnicalAnalysisResult;
   priceData: PriceData[];
   onClose: () => void;
+  onLogTrade: (symbol: string, predictionId?: string) => void;
 }
 
 // ============================================================================

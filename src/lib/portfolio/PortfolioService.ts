@@ -885,6 +885,23 @@ export class PortfolioService {
     const holdingsValue = holdingsWithMarket.reduce((sum, h) => sum + h.marketValue, 0);
     const totalEquity = holdingsValue + cashBalance;
 
+    // Debug logging for portfolio metrics verification
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PortfolioService] Summary Calculation:', {
+        portfolioId,
+        cashBalance: cashBalance.toFixed(2),
+        holdingsValue: holdingsValue.toFixed(2),
+        totalEquity: totalEquity.toFixed(2),
+        holdingsCount: holdingsWithMarket.length,
+        topHoldings: holdingsWithMarket.slice(0, 5).map(h => ({
+          symbol: h.symbol,
+          quantity: h.quantity,
+          currentPrice: h.currentPrice,
+          marketValue: h.marketValue.toFixed(2)
+        }))
+      });
+    }
+
     const dayChange = holdingsWithMarket.reduce((sum, h) => sum + h.dayChange, 0);
     const previousEquity = totalEquity - dayChange;
     const dayChangePercent = previousEquity > 0 ? (dayChange / previousEquity) * 100 : 0;
@@ -898,6 +915,16 @@ export class PortfolioService {
     `;
     const depositsResult = await this.db.query(depositsQuery, [portfolioId]);
     const netDeposits = parseFloat(depositsResult.rows[0].net_deposits) || 0;
+
+    // Debug logging for net deposits
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PortfolioService] Net Deposits Calculation:', {
+        portfolioId,
+        netDeposits: netDeposits.toFixed(2),
+        totalReturn: (totalEquity - netDeposits).toFixed(2),
+        totalReturnPercent: netDeposits > 0 ? ((totalEquity - netDeposits) / netDeposits * 100).toFixed(2) + '%' : 'N/A'
+      });
+    }
 
     const totalReturn = totalEquity - netDeposits;
     const totalReturnPercent = netDeposits > 0 ? (totalReturn / netDeposits) * 100 : 0;

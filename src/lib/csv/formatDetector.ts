@@ -47,7 +47,7 @@ export function detectCSVFormat(content: string): CSVFormatDetectionResult {
   if (firstLine.includes('Exported on:')) {
     return {
       format: 'merrill_transactions',
-      headerRowIndex: 5, // Headers are on row 6 (0-indexed: 5)
+      headerRowIndex: 4, // Headers are on row 5 (0-indexed: 4)
       dataStartIndex: 8, // Data starts at row 9 (0-indexed: 8)
       confidence: 0.95,
     };

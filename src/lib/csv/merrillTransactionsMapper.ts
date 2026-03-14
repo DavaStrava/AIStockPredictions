@@ -73,28 +73,80 @@ function parseNumber(value: string): number {
 }
 
 /**
+ * Transaction type result with skip flag for rows to ignore.
+ */
+interface TransactionTypeResult {
+  type: PortfolioTransactionType | null;
+  skip?: boolean;
+  reason?: string;
+}
+
+/**
  * Extract transaction type from Description field.
  */
-function parseTransactionType(description: string): PortfolioTransactionType | null {
+function parseTransactionType(description: string): TransactionTypeResult {
   const upperDesc = description.toUpperCase();
 
-  if (upperDesc.startsWith('PURCHASE') || upperDesc.includes('PURCHASE')) {
-    return 'BUY';
-  }
-  if (upperDesc.startsWith('SALE') || upperDesc.includes('SALE')) {
-    return 'SELL';
-  }
-  if (upperDesc.includes('DIVIDEND') || upperDesc.includes('DIV')) {
-    return 'DIVIDEND';
-  }
-  if (upperDesc.includes('DEPOSIT') || upperDesc.includes('TRANSFER IN')) {
-    return 'DEPOSIT';
-  }
-  if (upperDesc.includes('WITHDRAW') || upperDesc.includes('TRANSFER OUT')) {
-    return 'WITHDRAW';
+  // Skip reinvestment transactions (DRIP) - the dividend is already captured separately
+  if (upperDesc.includes('REINVESTMENT')) {
+    return { type: null, skip: true, reason: 'Reinvestment (DRIP) - skipped' };
   }
 
-  return null;
+  // Skip stock dividends with $0 amount (like stock splits)
+  if (upperDesc.includes('STOCK DIVIDEND DUE BILL')) {
+    return { type: null, skip: true, reason: 'Stock dividend due bill - skipped' };
+  }
+
+  // Skip exchange/corporate action rows (stock conversions)
+  if (upperDesc.startsWith('EXCHANGE')) {
+    return { type: null, skip: true, reason: 'Exchange/corporate action - skipped' };
+  }
+
+  // Skip fractional share sales from DRIP cleanup
+  if (upperDesc.includes('FRAC SHR') || upperDesc.includes('FRACTIONAL SHARE')) {
+    return { type: null, skip: true, reason: 'Fractional share cleanup - skipped' };
+  }
+
+  // Purchase = BUY
+  if (upperDesc.startsWith('PURCHASE') || upperDesc.includes('PURCHASE')) {
+    return { type: 'BUY' };
+  }
+
+  // Sale = SELL (but not fractional share sales from DRIP)
+  if (upperDesc.startsWith('SALE') || upperDesc.includes('SALE')) {
+    return { type: 'SELL' };
+  }
+
+  // Dividend (including foreign dividend, but not stock dividend or reinvestment)
+  if (
+    (upperDesc.includes('DIVIDEND') || upperDesc.includes('DIV')) &&
+    !upperDesc.includes('REINV') &&
+    !upperDesc.includes('STOCK DIVIDEND')
+  ) {
+    return { type: 'DIVIDEND' };
+  }
+
+  // Bank Interest
+  if (upperDesc.includes('BANK INTEREST')) {
+    return { type: 'DIVIDEND' }; // Treat interest as dividend income
+  }
+
+  // Funds Received = Deposit
+  if (upperDesc.includes('FUNDS RECEIVED')) {
+    return { type: 'DEPOSIT' };
+  }
+
+  // Generic deposit/transfer in
+  if (upperDesc.includes('DEPOSIT') || upperDesc.includes('TRANSFER IN')) {
+    return { type: 'DEPOSIT' };
+  }
+
+  // Withdrawal
+  if (upperDesc.includes('WITHDRAWAL') || upperDesc.includes('TRANSFER OUT')) {
+    return { type: 'WITHDRAW' };
+  }
+
+  return { type: null };
 }
 
 /**
@@ -104,14 +156,25 @@ function cleanSymbol(symbolField: string): string {
   // Remove quotes and extra spaces
   const cleaned = symbolField.replace(/"/g, '').trim();
 
-  // If it looks like a ticker symbol (1-5 letters), use it
-  if (/^[A-Z]{1,5}$/.test(cleaned.toUpperCase())) {
+  // Skip pure numeric CUSIPs (bank interest uses these)
+  if (/^\d+$/.test(cleaned)) {
+    return '';
+  }
+
+  // If it looks like a ticker symbol (1-6 letters/numbers), use it
+  // Extended to 6 chars for symbols like GOOGL, TSTXX
+  if (/^[A-Z]{1,6}$/.test(cleaned.toUpperCase())) {
+    return cleaned.toUpperCase();
+  }
+
+  // Handle symbols with numbers like "USBPRH"
+  if (/^[A-Z0-9]{1,6}$/i.test(cleaned)) {
     return cleaned.toUpperCase();
   }
 
   // Otherwise, try to extract the ticker from the start
-  const match = cleaned.match(/^([A-Z]{1,5})/i);
-  return match ? match[1].toUpperCase() : cleaned.toUpperCase();
+  const match = cleaned.match(/^([A-Z]{1,6})/i);
+  return match ? match[1].toUpperCase() : '';
 }
 
 /**
@@ -172,7 +235,17 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
   }
 
   // Parse transaction type
-  const transactionType = parseTransactionType(description);
+  const txTypeResult = parseTransactionType(description);
+
+  // Skip transactions that should be ignored
+  if (txTypeResult.skip) {
+    return {
+      valid: false,
+      errors: [{ row: row.rowNumber, field: '', value: '', message: txTypeResult.reason || 'Skipped' }],
+    };
+  }
+
+  const transactionType = txTypeResult.type;
   if (!transactionType) {
     return {
       valid: false,
@@ -196,14 +269,23 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
   const symbol = cleanSymbol(symbolField);
 
   if (isBuySell) {
-    if (!symbol || !/^[A-Z]{1,5}$/.test(symbol)) {
+    if (!symbol || !/^[A-Z0-9]{1,6}$/i.test(symbol)) {
       errors.push({
         row: row.rowNumber,
         field: 'Symbol',
         value: symbolField,
-        message: 'Invalid symbol. Must be 1-5 uppercase letters',
+        message: 'Invalid symbol. Must be 1-6 alphanumeric characters',
       });
     }
+  }
+
+  // Skip dividends with no symbol (bank interest)
+  if (transactionType === 'DIVIDEND' && !symbol) {
+    // Bank interest without a valid symbol - skip
+    return {
+      valid: false,
+      errors: [{ row: row.rowNumber, field: '', value: '', message: 'Bank interest without symbol - skipped' }],
+    };
   }
 
   // Parse numeric values

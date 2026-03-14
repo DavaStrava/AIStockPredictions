@@ -103,7 +103,6 @@ export default function StockDashboard() {
               predictions={predictions}
               onSelectStock={fetchDetailedAnalysis}
               onRemoveStock={removeTile}
-              onLogTrade={openTradeModal}
             />
 
             {/* Detailed analysis panel */}
@@ -113,6 +112,7 @@ export default function StockDashboard() {
                 analysis={analysis}
                 priceData={priceData}
                 onClose={clearAnalysis}
+                onLogTrade={openTradeModal}
               />
             )}
           </div>

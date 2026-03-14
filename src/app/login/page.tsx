@@ -2,19 +2,19 @@
 
 /**
  * Login Page
- * 
+ *
  * Social authentication with Google (and optionally GitHub).
  * Redirects to dashboard after successful login.
- * 
+ *
  * In demo mode (without Supabase config), redirects to main app.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient, isSupabaseConfigured } from '@/lib/auth/supabase-client';
 import { TrendingUp, Chrome, Github, Loader2, LineChart, Shield, Smartphone, FlaskConical } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -188,6 +188,22 @@ export default function LoginPage() {
         &copy; {new Date().getFullYear()} AI Stock Predictions. All rights reserved.
       </footer>
     </div>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginContent />
+    </Suspense>
   );
 }
 

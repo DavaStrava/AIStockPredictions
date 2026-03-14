@@ -430,20 +430,25 @@ export function searchTerms(query: string): TermDefinition[] {
   if (!query || typeof query !== 'string' || query.trim().length === 0) {
     return [];
   }
-  
+
   // Normalize query to lowercase for case-insensitive matching
   const lowerQuery = query.toLowerCase().trim();
-  
+
   // Use functional programming approach for clean, readable search logic
+  // Search across all meaningful text fields for comprehensive results
   return Object.values(FINANCIAL_TERMS).filter(term =>
     // Search in term name (e.g., "RSI (Relative Strength Index)")
     term.term.toLowerCase().includes(lowerQuery) ||
     // Search in short definition (e.g., "momentum oscillator")
     term.shortDefinition.toLowerCase().includes(lowerQuery) ||
+    // Search in detailed definition for in-depth concept matching
+    term.detailedDefinition.toLowerCase().includes(lowerQuery) ||
+    // Search in trading signals for actionable insight matching
+    term.tradingSignals.toLowerCase().includes(lowerQuery) ||
+    // Search in interpretation for understanding-focused queries
+    term.interpretation.toLowerCase().includes(lowerQuery) ||
     // Search in category (e.g., "technical", "portfolio")
     term.category.toLowerCase().includes(lowerQuery)
-    // Note: Could extend to search detailed definitions, examples, etc.
-    // but that might return too many results for short queries
   );
 }
 

@@ -17,7 +17,6 @@ export const PredictionCard = memo(function PredictionCard({
   prediction,
   onSelect,
   onRemove,
-  onLogTrade,
 }: PredictionCardProps) {
   const { getDirectionColor, getDirectionBg } = usePredictionStyles();
 
@@ -70,17 +69,6 @@ export const PredictionCard = memo(function PredictionCard({
         </div>
       </div>
 
-      {/* Log Trade button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onLogTrade(prediction.symbol);
-        }}
-        className="w-full px-3 py-2 text-responsive-body-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        title={`Log a trade for ${prediction.symbol}`}
-      >
-        Log Trade
-      </button>
     </div>
   );
 });

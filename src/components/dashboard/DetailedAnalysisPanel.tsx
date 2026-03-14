@@ -9,11 +9,9 @@
 import { DetailedAnalysisPanelProps } from '@/types/components';
 import { useIndicatorFiltering } from './hooks/useIndicatorFiltering';
 import { inferMarketContext } from '@/lib/technical-analysis/explanations';
-import SimpleStockChart from '../SimpleStockChart';
 import AdvancedStockChart from '../AdvancedStockChart';
 import PerformanceMetrics from '../PerformanceMetrics';
 import AIInsights from '../AIInsights';
-import TermsGlossary from '../TermsGlossary';
 import CollapsibleSection from '../CollapsibleSection';
 import TechnicalIndicatorExplanations from '../TechnicalIndicatorExplanations';
 
@@ -22,6 +20,7 @@ export function DetailedAnalysisPanel({
   analysis,
   priceData,
   onClose,
+  onLogTrade,
 }: DetailedAnalysisPanelProps) {
   const { getLatestSignals } = useIndicatorFiltering();
 
@@ -60,16 +59,6 @@ export function DetailedAnalysisPanel({
         <AdvancedStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
       </CollapsibleSection>
 
-      {/* Simple Chart Overview */}
-      <CollapsibleSection
-        title="Quick Price Overview"
-        subtitle="Simple price visualization and key metrics"
-        icon="📊"
-        defaultExpanded={false}
-      >
-        <SimpleStockChart symbol={selectedStock} priceData={priceData} analysis={analysis} />
-      </CollapsibleSection>
-
       {/* AI-Powered Insights */}
       <CollapsibleSection
         title="AI-Powered Insights"
@@ -100,8 +89,17 @@ export function DetailedAnalysisPanel({
         />
       </CollapsibleSection>
 
-      {/* Terms & Definitions Glossary */}
-      <TermsGlossary />
+      {/* Log Trade Action Button */}
+      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => onLogTrade(selectedStock)}
+          className="w-full px-4 py-3 text-responsive-body font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          title={`Log a trade for ${selectedStock}`}
+        >
+          <span>📝</span>
+          Log Trade for {selectedStock}
+        </button>
+      </div>
     </div>
   );
 }

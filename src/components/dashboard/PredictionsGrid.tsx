@@ -13,7 +13,6 @@ export function PredictionsGrid({
   predictions,
   onSelectStock,
   onRemoveStock,
-  onLogTrade,
 }: PredictionsGridProps) {
   return (
     <ResponsiveGrid
@@ -32,7 +31,6 @@ export function PredictionsGrid({
           prediction={prediction}
           onSelect={onSelectStock}
           onRemove={onRemoveStock}
-          onLogTrade={onLogTrade}
         />
       ))}
     </ResponsiveGrid>

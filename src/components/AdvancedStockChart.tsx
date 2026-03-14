@@ -368,6 +368,20 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
     const firstPrice = filteredData[0]?.close || 0;
     const totalReturn = ((currentPrice - firstPrice) / firstPrice) * 100;
 
+    // Calculate key metrics for the header
+    const highPrice = Math.max(...filteredData.map(d => d.high));
+    const lowPrice = Math.min(...filteredData.map(d => d.low));
+    const latestVolume = filteredData[filteredData.length - 1]?.volume || 0;
+    const avgVolume = filteredData.reduce((sum, d) => sum + d.volume, 0) / filteredData.length;
+
+    // Format volume for display
+    const formatVolume = (vol: number): string => {
+        if (vol >= 1_000_000_000) return `${(vol / 1_000_000_000).toFixed(2)}B`;
+        if (vol >= 1_000_000) return `${(vol / 1_000_000).toFixed(2)}M`;
+        if (vol >= 1_000) return `${(vol / 1_000).toFixed(1)}K`;
+        return vol.toString();
+    };
+
     const renderChart = () => {
         // Add defensive check
         if (!chartData || chartData.length === 0) {
@@ -510,19 +524,52 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
 
     return (
         <div className="space-y-6">
+            {/* Key Metrics Header */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 rounded-lg p-4 border border-blue-100 dark:border-gray-700">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* Price and Change */}
+                    <div className="flex items-baseline gap-4">
+                        <div>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Current Price</span>
+                            <div className="text-2xl font-bold text-foreground">${currentPrice.toFixed(2)}</div>
+                        </div>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${totalReturn >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                            <span className={`text-lg font-semibold ${totalReturn >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {totalReturn >= 0 ? '↑' : '↓'} {Math.abs(totalReturn).toFixed(2)}%
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">({selectedTimeRange})</span>
+                        </div>
+                    </div>
+
+                    {/* Key Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <span className="text-gray-500 dark:text-gray-400 block">High</span>
+                            <span className="font-semibold text-green-600 dark:text-green-400">${highPrice.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span className="text-gray-500 dark:text-gray-400 block">Low</span>
+                            <span className="font-semibold text-red-600 dark:text-red-400">${lowPrice.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span className="text-gray-500 dark:text-gray-400 block">Volume</span>
+                            <span className="font-semibold text-foreground">{formatVolume(latestVolume)}</span>
+                        </div>
+                        <div>
+                            <span className="text-gray-500 dark:text-gray-400 block">Avg Vol</span>
+                            <span className="font-semibold text-foreground">{formatVolume(avgVolume)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Chart Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                        {symbol} - Advanced Chart Analysis
+                        {symbol} - Chart Analysis
                     </h3>
                     <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">
-                            Total Return:
-                            <span className={`ml-1 font-medium ${totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
-                            </span>
-                        </span>
                         <span className="text-gray-600 dark:text-gray-400">
                             Data Points: {filteredData.length}
                         </span>
