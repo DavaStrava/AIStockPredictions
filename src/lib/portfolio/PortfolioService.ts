@@ -343,6 +343,19 @@ export class PortfolioService {
         await this.updateHoldingsCache(data.portfolioId, data.assetSymbol!, client, sector);
       }
 
+      // Auto-close matching BUY trades when a SELL is imported
+      if (data.transactionType === 'SELL' && data.assetSymbol && data.quantity && data.pricePerShare) {
+        await this.autoCloseOpenTrades(
+          data.portfolioId,
+          data.assetSymbol,
+          data.quantity,
+          data.pricePerShare,
+          data.transactionDate,
+          transaction.id,
+          client
+        );
+      }
+
       return transaction;
     };
 
@@ -353,6 +366,85 @@ export class PortfolioService {
     }
 
     return this.db.transaction(executeInsert);
+  }
+
+  /**
+   * Auto-closes open BUY trades when a SELL is processed (FIFO method).
+   * Updates the BUY transactions with exit details and calculates realized P&L.
+   */
+  private async autoCloseOpenTrades(
+    portfolioId: string,
+    symbol: string,
+    quantitySold: number,
+    sellPrice: number,
+    sellDate: Date,
+    sellTransactionId: string,
+    client: PoolClient
+  ): Promise<void> {
+    // Find all OPEN BUY transactions for this symbol, ordered by date (FIFO)
+    const openBuysQuery = `
+      SELECT id, quantity, price_per_share, fees,
+             COALESCE(quantity, 0) - COALESCE(
+               (SELECT SUM(pt2.quantity)
+                FROM portfolio_transactions pt2
+                WHERE pt2.linked_trade_id = portfolio_transactions.id
+                AND pt2.transaction_type = 'SELL'),
+               0
+             ) AS remaining_quantity
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1
+        AND asset_symbol = $2
+        AND transaction_type = 'BUY'
+        AND trade_status = 'OPEN'
+      ORDER BY transaction_date ASC
+      FOR UPDATE
+    `;
+
+    const openBuysResult = await client.query(openBuysQuery, [portfolioId, symbol.toUpperCase()]);
+
+    let remainingToClose = quantitySold;
+
+    for (const buyTx of openBuysResult.rows) {
+      if (remainingToClose <= 0) break;
+
+      const buyId = buyTx.id as string;
+      const buyQuantity = parseFloat(buyTx.quantity as string) || 0;
+      const buyPrice = parseFloat(buyTx.price_per_share as string) || 0;
+      const remainingInBuy = parseFloat(buyTx.remaining_quantity as string) || buyQuantity;
+
+      if (remainingInBuy <= 0) continue;
+
+      // Determine how much of this BUY to close
+      const quantityToClose = Math.min(remainingToClose, remainingInBuy);
+      const isFullyClosing = quantityToClose >= remainingInBuy;
+
+      // Calculate realized P&L for this portion (LONG position: profit when price goes up)
+      const realizedPnl = (sellPrice - buyPrice) * quantityToClose;
+
+      if (isFullyClosing) {
+        // Fully close this BUY transaction
+        const updateQuery = `
+          UPDATE portfolio_transactions
+          SET trade_status = 'CLOSED',
+              exit_price = $1,
+              exit_date = $2,
+              realized_pnl = COALESCE(realized_pnl, 0) + $3,
+              linked_trade_id = $4
+          WHERE id = $5
+        `;
+        await client.query(updateQuery, [sellPrice, sellDate, realizedPnl, sellTransactionId, buyId]);
+      } else {
+        // Partially close - update realized P&L but keep status as OPEN
+        const updateQuery = `
+          UPDATE portfolio_transactions
+          SET realized_pnl = COALESCE(realized_pnl, 0) + $1
+          WHERE id = $2
+        `;
+        await client.query(updateQuery, [realizedPnl, buyId]);
+      }
+
+      remainingToClose -= quantityToClose;
+    }
   }
 
   /**
@@ -1225,38 +1317,49 @@ export class PortfolioService {
 
   /**
    * Gets trade positions from the unified transactions.
-   * Provides backwards compatibility with the old trade tracker view.
+   * Includes both BUY (entries) and SELL (exits) transactions for complete trade history.
    */
   async getTradePositions(portfolioId: string): Promise<TradePosition[]> {
     const query = `
       SELECT
         id, portfolio_id, asset_symbol AS symbol, side, trade_status AS status,
+        transaction_type,
         price_per_share AS entry_price, quantity, transaction_date AS entry_date,
         exit_price, exit_date, realized_pnl, fees, notes, created_at
       FROM portfolio_transactions
       WHERE portfolio_id = $1
-        AND transaction_type = 'BUY'
+        AND transaction_type IN ('BUY', 'SELL')
         AND trade_status IS NOT NULL
       ORDER BY transaction_date DESC
     `;
 
     const result = await this.db.query(query, [portfolioId]);
-    return result.rows.map((row: Record<string, unknown>) => ({
-      id: row.id as string,
-      portfolioId: row.portfolio_id as string,
-      symbol: row.symbol as string,
-      side: (row.side as TradeSide) || 'LONG',
-      status: (row.status as TradeStatus) || 'OPEN',
-      entryPrice: parseFloat(row.entry_price as string),
-      quantity: parseFloat(row.quantity as string),
-      entryDate: new Date(row.entry_date as string),
-      exitPrice: row.exit_price !== null ? parseFloat(row.exit_price as string) : null,
-      exitDate: row.exit_date ? new Date(row.exit_date as string) : null,
-      fees: parseFloat(row.fees as string) || 0,
-      realizedPnl: row.realized_pnl !== null ? parseFloat(row.realized_pnl as string) : null,
-      notes: (row.notes as string) || null,
-      createdAt: new Date(row.created_at as string),
-    }));
+    return result.rows.map((row: Record<string, unknown>) => {
+      const transactionType = row.transaction_type as string;
+      const isSell = transactionType === 'SELL';
+      const pricePerShare = parseFloat(row.entry_price as string);
+
+      return {
+        id: row.id as string,
+        portfolioId: row.portfolio_id as string,
+        symbol: row.symbol as string,
+        side: (row.side as TradeSide) || 'LONG',
+        // SELL transactions are always considered CLOSED
+        status: isSell ? 'CLOSED' : ((row.status as TradeStatus) || 'OPEN'),
+        // For SELL, entry_price is actually the sell price
+        entryPrice: isSell ? 0 : pricePerShare,
+        quantity: parseFloat(row.quantity as string),
+        entryDate: new Date(row.entry_date as string),
+        // For SELL transactions, use the price_per_share as exit_price
+        exitPrice: isSell ? pricePerShare : (row.exit_price !== null ? parseFloat(row.exit_price as string) : null),
+        exitDate: isSell ? new Date(row.entry_date as string) : (row.exit_date ? new Date(row.exit_date as string) : null),
+        fees: parseFloat(row.fees as string) || 0,
+        realizedPnl: row.realized_pnl !== null ? parseFloat(row.realized_pnl as string) : null,
+        notes: (row.notes as string) || null,
+        createdAt: new Date(row.created_at as string),
+        transactionType, // Include this for UI differentiation
+      };
+    });
   }
 
   // ============================================================================

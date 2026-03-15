@@ -1,23 +1,23 @@
 /**
  * Merrill Lynch Transactions CSV Mapper
  *
- * Maps Merrill Lynch transaction CSV format to portfolio transactions.
+ * Maps Merrill Lynch/Edge transaction CSV format to portfolio transactions.
  *
- * Format structure:
+ * Format structure (may vary slightly):
  * - Row 1: "Exported on: 02/02/2026 12:07 AM ET"
- * - Rows 2-5: Metadata
- * - Row 6: Empty quotes
- * - Row 7: Headers with trailing spaces
- * - Row 8+: Data rows
+ * - Rows 2-4: Metadata
+ * - Row 5: Headers with trailing spaces
+ * - Rows 6-8: Empty rows and filter text
+ * - Row 9+: Data rows (first row with date pattern)
  *
- * Headers (with trailing spaces):
- * "Trade Date ","Settlement Date ","Description","Type","Symbol/ CUSIP ","Quantity","Price","Amount"," "
+ * Headers (with trailing spaces, may include Account column):
+ * "Trade Date ","Settlement Date ","Account","Description","Type","Symbol/ CUSIP ","Quantity","Price","Amount"," "
  *
  * Parsing rules:
- * - Skip first 5 rows (metadata) and row 7 (blank data row)
+ * - Format detector finds actual data start dynamically
  * - Headers have trailing spaces - trim all values
  * - Date format: MM/DD/YYYY (quoted)
- * - Transaction type from Description: "Purchase" -> BUY, "Sale" -> SELL
+ * - Transaction type from Description: "Purchase" -> BUY, "Sale" -> SELL, "Pending Sale" -> SELL
  * - Symbol: Extract from "Symbol/ CUSIP" column
  * - Quantity: Absolute value (negative = SELL indicator)
  * - Price: Strip $ and commas
@@ -254,9 +254,12 @@ function getField(data: Record<string, string>, ...possibleNames: string[]): str
 
 /**
  * Parse settlement date from Merrill format (MM/DD/YYYY).
+ * Handles "Pending" text in settlement dates like "03/16/2026 Pending"
  */
 function parseSettlementDate(dateStr: string): Date | null {
-  return parseMerrillDate(dateStr);
+  // Remove "Pending" text if present
+  const cleaned = dateStr.replace(/\s*Pending\s*/i, '').trim();
+  return parseMerrillDate(cleaned);
 }
 
 /**
@@ -285,8 +288,8 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     return { valid: false, errors: [{ row: row.rowNumber, field: '', value: '', message: 'Empty row - skipped' }] };
   }
 
-  // Parse transaction type
-  const txTypeResult = parseTransactionType(description);
+  // Parse transaction type from description first
+  let txTypeResult = parseTransactionType(description);
 
   // Skip transactions that should be ignored
   if (txTypeResult.skip) {
@@ -294,6 +297,25 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
       valid: false,
       errors: [{ row: row.rowNumber, field: '', value: '', message: txTypeResult.reason || 'Skipped' }],
     };
+  }
+
+  // Fallback: Use Amount sign to determine BUY/SELL when Description is ambiguous
+  // In Merrill Edge: negative Amount = cash out = BUY, positive Amount = cash in = SELL
+  const amountValueForDetection = parseNumber(amount);
+  if (!txTypeResult.type && symbol && quantity) {
+    const symbolValue = cleanSymbol(symbolField);
+    const quantityValue = parseNumber(quantity);
+
+    // If we have a valid symbol and quantity, use Amount sign to determine transaction type
+    if (symbolValue && Math.abs(quantityValue) > 0) {
+      if (amountValueForDetection < 0) {
+        // Negative amount = cash out = BUY
+        txTypeResult = { type: 'BUY' };
+      } else if (amountValueForDetection > 0) {
+        // Positive amount = cash in = SELL
+        txTypeResult = { type: 'SELL' };
+      }
+    }
   }
 
   const transactionType = txTypeResult.type;
@@ -414,7 +436,9 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     parsed.totalAmount = Math.abs(amountValue);
     parsed.notes = `Imported from Merrill Edge: ${description.substring(0, 100)}`;
     parsed.side = 'LONG'; // Default to long positions
-    parsed.tradeStatus = transactionType === 'BUY' ? 'OPEN' : undefined;
+    // Mark both BUY and SELL as trades for tracking
+    // BUY starts as OPEN, SELL will trigger auto-close of matching BUYs
+    parsed.tradeStatus = transactionType === 'BUY' ? 'OPEN' : 'CLOSED';
   } else if (isDrip) {
     // DIVIDEND_REINVESTMENT: dividend + automatic buy
     // totalAmount = 0 (dividend and buy cancel out)

@@ -90,6 +90,7 @@ export interface TradePosition {
   currentPrice?: number | null; // Current market price
   notes: string | null;
   createdAt: Date;
+  transactionType?: string; // 'BUY' or 'SELL' for UI differentiation
 }
 
 /**
