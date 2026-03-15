@@ -179,8 +179,8 @@ export function PortfolioManager() {
   );
 
   const handleSellPosition = useCallback(
-    async (symbol: string, quantity: number, pricePerShare: number) => {
-      await sellPosition(symbol, quantity, pricePerShare);
+    async (symbol: string, quantity: number, pricePerShare: number, transactionDate?: Date) => {
+      await sellPosition(symbol, quantity, pricePerShare, transactionDate);
     },
     [sellPosition]
   );

@@ -21,13 +21,14 @@ import { formatCurrency, formatNumber, formatPercent } from '@/lib/formatters';
 interface PositionsPanelProps {
   positions: OpenPositionSummary[];
   loading: boolean;
-  onSellPosition?: (symbol: string, quantity: number, pricePerShare: number) => Promise<void>;
+  onSellPosition?: (symbol: string, quantity: number, pricePerShare: number, transactionDate?: Date) => Promise<void>;
 }
 
 interface SellModalState {
   position: OpenPositionSummary;
   quantity: string;
   pricePerShare: string;
+  transactionDate: string;
 }
 
 export function PositionsPanel({
@@ -67,11 +68,15 @@ export function PositionsPanel({
       return;
     }
 
+    const transactionDate = sellModal.transactionDate
+      ? new Date(sellModal.transactionDate)
+      : new Date();
+
     setIsSelling(true);
     setSellError(null);
 
     try {
-      await onSellPosition(sellModal.position.symbol, quantity, price);
+      await onSellPosition(sellModal.position.symbol, quantity, price, transactionDate);
       setSellModal(null);
     } catch (error) {
       setSellError(error instanceof Error ? error.message : 'Failed to sell position');
@@ -215,13 +220,16 @@ export function PositionsPanel({
                     {/* Sell button */}
                     {onSellPosition && (
                       <button
-                        onClick={() =>
+                        onClick={() => {
+                          const now = new Date();
+                          const dateStr = now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
                           setSellModal({
                             position,
                             quantity: position.totalShares.toString(),
                             pricePerShare: position.currentPrice?.toString() || '',
-                          })
-                        }
+                            transactionDate: dateStr,
+                          });
+                        }}
                         className="px-3 py-1.5 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-lg hover:bg-rose-600/30 transition-colors text-sm font-medium"
                       >
                         Sell
@@ -326,6 +334,23 @@ export function PositionsPanel({
                   onChange={(e) =>
                     setSellModal((prev) =>
                       prev ? { ...prev, pricePerShare: e.target.value } : null
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Transaction Date */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Transaction Date
+                </label>
+                <input
+                  type="datetime-local"
+                  value={sellModal.transactionDate}
+                  onChange={(e) =>
+                    setSellModal((prev) =>
+                      prev ? { ...prev, transactionDate: e.target.value } : null
                     )
                   }
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"

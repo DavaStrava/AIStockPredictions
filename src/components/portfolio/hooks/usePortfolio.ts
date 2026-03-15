@@ -347,8 +347,10 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
         throw new Error(data.error || 'Failed to fetch positions');
       }
 
-      setState((prev) => ({ ...prev, positions: data.data }));
-      return data.data as OpenPositionSummary[];
+      // API returns { positions, summary } - extract positions array
+      const positions = data.data.positions || data.data;
+      setState((prev) => ({ ...prev, positions }));
+      return positions as OpenPositionSummary[];
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch positions';
       setState((prev) => ({ ...prev, error: message }));
@@ -357,7 +359,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
   }, []);
 
   const sellPosition = useCallback(
-    async (symbol: string, quantity: number, pricePerShare: number) => {
+    async (symbol: string, quantity: number, pricePerShare: number, transactionDate?: Date) => {
       let portfolioId: string | null = null;
       setState((prev) => {
         portfolioId = prev.selectedPortfolioId;
@@ -376,7 +378,11 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity, pricePerShare }),
+            body: JSON.stringify({
+              quantity,
+              pricePerShare,
+              transactionDate: (transactionDate || new Date()).toISOString(),
+            }),
           }
         );
 
