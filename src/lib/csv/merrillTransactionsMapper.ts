@@ -305,8 +305,10 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
   }
 
   // For stock trades (has symbol and quantity), use quantity sign to determine BUY/SELL
-  // This overrides any description-based detection for Purchase/Sale
-  if (symbolValue && rawQuantityValue !== 0) {
+  // This overrides description-based detection for Purchase/Sale
+  // But don't override other transaction types like DIVIDEND_REINVESTMENT, DIVIDEND, etc.
+  const isStockTradeType = txTypeResult.type === 'BUY' || txTypeResult.type === 'SELL' || txTypeResult.type === null;
+  if (isStockTradeType && symbolValue && rawQuantityValue !== 0) {
     if (rawQuantityValue > 0) {
       // Positive quantity = BUY
       txTypeResult = { type: 'BUY' };
