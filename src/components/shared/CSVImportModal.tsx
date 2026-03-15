@@ -120,9 +120,12 @@ export function CSVImportModal({
         }
 
         // Parse CSV with detected format
+        // dataSkipRows = rows to skip after header before data starts
+        const dataSkipRows = detection.dataStartIndex - detection.headerRowIndex - 1;
         const parsed = parseCSV(content, {
           skipRows: detection.headerRowIndex,
           headerRowIndex: 0,
+          dataSkipRows: dataSkipRows > 0 ? dataSkipRows : 0,
           trimValues: true,
         });
 
@@ -201,6 +204,11 @@ export function CSVImportModal({
         step: 'result',
         loading: false,
       }));
+
+      // Call onSuccess immediately after successful import to refresh data
+      if (result.success) {
+        onSuccess();
+      }
     } catch (error) {
       setState((prev) => ({
         ...prev,
@@ -208,7 +216,7 @@ export function CSVImportModal({
         error: error instanceof Error ? error.message : 'Import failed',
       }));
     }
-  }, [importType, portfolioId, state.validData]);
+  }, [importType, portfolioId, state.validData, onSuccess]);
 
   const handleBack = useCallback(() => {
     setState((prev) => {
@@ -566,23 +574,132 @@ function mapTradeData(
       result = mapTradeRows(parsed.rows);
       break;
     case 'merrill_transactions':
-      // Convert Merrill transactions to trades (Purchase -> LONG OPEN)
+      // Convert Merrill transactions to trades with BUY/SELL matching
       const portfolioResult = mapMerrillTransactionRows(parsed.rows);
-      const trades: ParsedTrade[] = portfolioResult.transactions
-        .filter((t) => t.transactionType === 'BUY' && t.symbol && t.quantity && t.pricePerShare)
-        .map((t) => ({
-          symbol: t.symbol!,
-          side: 'LONG' as const,
-          status: 'OPEN' as const,
-          entryPrice: t.pricePerShare!,
-          quantity: t.quantity!,
-          entryDate: t.transactionDate,
-          exitPrice: null,
-          exitDate: null,
-          fees: t.fees,
-          realizedPnl: null,
-          notes: t.notes || null,
-        }));
+
+      // Filter to only BUY and SELL transactions with valid data
+      const buyTrades = portfolioResult.transactions.filter(
+        (t) => t.transactionType === 'BUY' && t.symbol && t.quantity && t.pricePerShare
+      );
+      const sellTrades = portfolioResult.transactions.filter(
+        (t) => t.transactionType === 'SELL' && t.symbol && t.quantity && t.pricePerShare
+      );
+
+      // Sort both by date (oldest first)
+      buyTrades.sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+      sellTrades.sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+
+      // Track open buys per symbol (FIFO queue)
+      const openBuysPerSymbol = new Map<string, typeof buyTrades>();
+
+      // Process all buys first to build the queue
+      for (const buy of buyTrades) {
+        const symbol = buy.symbol!;
+        if (!openBuysPerSymbol.has(symbol)) {
+          openBuysPerSymbol.set(symbol, []);
+        }
+        openBuysPerSymbol.get(symbol)!.push(buy);
+      }
+
+      const trades: ParsedTrade[] = [];
+
+      // Process sells by matching against open buys (FIFO)
+      for (const sell of sellTrades) {
+        const symbol = sell.symbol!;
+        const openBuys = openBuysPerSymbol.get(symbol);
+
+        if (openBuys && openBuys.length > 0) {
+          // Match with oldest open buy (FIFO)
+          const matchedBuy = openBuys.shift()!;
+
+          // Create a CLOSED trade with entry from BUY and exit from SELL
+          const entryPrice = matchedBuy.pricePerShare!;
+          const exitPrice = sell.pricePerShare!;
+          const quantity = Math.min(matchedBuy.quantity!, sell.quantity!);
+          const fees = (matchedBuy.fees || 0) + (sell.fees || 0);
+          const realizedPnl = (exitPrice - entryPrice) * quantity - fees;
+
+          trades.push({
+            symbol,
+            side: 'LONG' as const,
+            status: 'CLOSED' as const,
+            entryPrice,
+            quantity,
+            entryDate: matchedBuy.transactionDate,
+            exitPrice,
+            exitDate: sell.transactionDate,
+            fees,
+            realizedPnl,
+            notes: `Matched: ${matchedBuy.notes || ''} → ${sell.notes || ''}`.substring(0, 200) || null,
+          });
+
+          // Handle partial fills: if buy had more shares, put remainder back
+          const remainingBuyQty = matchedBuy.quantity! - quantity;
+          if (remainingBuyQty > 0) {
+            openBuys.unshift({
+              ...matchedBuy,
+              quantity: remainingBuyQty,
+            });
+          }
+
+          // Handle partial fills: if sell had more shares than matched buy
+          let remainingSellQty = sell.quantity! - quantity;
+          while (remainingSellQty > 0 && openBuys.length > 0) {
+            const nextBuy = openBuys.shift()!;
+            const matchQty = Math.min(nextBuy.quantity!, remainingSellQty);
+            const nextEntryPrice = nextBuy.pricePerShare!;
+            const nextFees = (nextBuy.fees || 0) + ((sell.fees || 0) * (matchQty / sell.quantity!));
+            const nextPnl = (exitPrice - nextEntryPrice) * matchQty - nextFees;
+
+            trades.push({
+              symbol,
+              side: 'LONG' as const,
+              status: 'CLOSED' as const,
+              entryPrice: nextEntryPrice,
+              quantity: matchQty,
+              entryDate: nextBuy.transactionDate,
+              exitPrice,
+              exitDate: sell.transactionDate,
+              fees: nextFees,
+              realizedPnl: nextPnl,
+              notes: `Matched: ${nextBuy.notes || ''} → ${sell.notes || ''}`.substring(0, 200) || null,
+            });
+
+            remainingSellQty -= matchQty;
+            const nextRemainingBuyQty = nextBuy.quantity! - matchQty;
+            if (nextRemainingBuyQty > 0) {
+              openBuys.unshift({
+                ...nextBuy,
+                quantity: nextRemainingBuyQty,
+              });
+            }
+          }
+        }
+        // If no matching buy found, the sell is ignored (can't close a position we don't have)
+      }
+
+      // Add remaining open buys as OPEN trades
+      for (const [symbol, openBuys] of openBuysPerSymbol) {
+        for (const buy of openBuys) {
+          trades.push({
+            symbol,
+            side: 'LONG' as const,
+            status: 'OPEN' as const,
+            entryPrice: buy.pricePerShare!,
+            quantity: buy.quantity!,
+            entryDate: buy.transactionDate,
+            exitPrice: null,
+            exitDate: null,
+            fees: buy.fees || 0,
+            realizedPnl: null,
+            notes: buy.notes || null,
+          });
+        }
+      }
+
+      // Sort final trades by entry date for consistent ordering
+      trades.sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
+
       result = { trades, errors: portfolioResult.errors };
       break;
     default:

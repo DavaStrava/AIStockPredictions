@@ -292,6 +292,7 @@ export interface CreateTradeRequest {
   side: TradeSide;
   entryPrice: number;
   quantity: number;
+  entryDate?: Date;
   fees?: number;
   notes?: string;
   predictionId?: string;

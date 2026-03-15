@@ -20,6 +20,8 @@ export interface CSVParseOptions {
   skipRows?: number;
   /** Header row index (0-based, after skipRows applied) */
   headerRowIndex?: number;
+  /** Skip N rows after the header row before starting data (default: 0) */
+  dataSkipRows?: number;
   /** Trim whitespace from values */
   trimValues?: boolean;
   /** Maximum rows to parse (for preview) */
@@ -96,6 +98,7 @@ export function parseCSV(content: string, options: CSVParseOptions = {}): CSVPar
     delimiter = ',',
     skipRows = 0,
     headerRowIndex = 0,
+    dataSkipRows = 0,
     trimValues = true,
     maxRows,
   } = options;
@@ -123,7 +126,7 @@ export function parseCSV(content: string, options: CSVParseOptions = {}): CSVPar
 
   // Parse data rows
   const rows: CSVParsedRow[] = [];
-  const dataStartIndex = headerRowIndex + 1;
+  const dataStartIndex = headerRowIndex + 1 + dataSkipRows;
   const effectiveMaxRows = maxRows !== undefined ? dataStartIndex + maxRows : lines.length;
 
   for (let i = dataStartIndex; i < Math.min(lines.length, effectiveMaxRows); i++) {

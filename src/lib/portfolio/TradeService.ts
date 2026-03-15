@@ -137,8 +137,8 @@ export class TradeService {
     this.validateCreateTradeRequest(data);
 
     const query = `
-      INSERT INTO trades (user_id, symbol, side, status, entry_price, quantity, fees, notes, prediction_id)
-      VALUES ($1, $2, $3, 'OPEN', $4, $5, $6, $7, $8)
+      INSERT INTO trades (user_id, symbol, side, status, entry_price, quantity, entry_date, fees, notes, prediction_id)
+      VALUES ($1, $2, $3, 'OPEN', $4, $5, $6, $7, $8, $9)
       RETURNING id, user_id, symbol, side, status, entry_price, quantity, entry_date,
                 exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
     `;
@@ -149,6 +149,7 @@ export class TradeService {
       data.side,
       data.entryPrice,
       data.quantity,
+      data.entryDate ?? new Date(),
       data.fees ?? 0,
       data.notes ?? null,
       data.predictionId ?? null,
@@ -210,12 +211,13 @@ export class TradeService {
    * @param tradeId - The ID of the trade to close
    * @param exitPrice - The exit price for the trade
    * @param client - Optional PoolClient for external transaction control (batch imports)
+   * @param exitDate - Optional exit date (defaults to current timestamp)
    * @returns Promise resolving to the updated trade
    * @throws TradeNotFoundError if trade doesn't exist
    * @throws TradeStateError if trade is already closed
    * @throws TradeValidationError if exitPrice is invalid
    */
-  async closeTrade(tradeId: string, exitPrice: number, client?: PoolClient): Promise<JournalTrade> {
+  async closeTrade(tradeId: string, exitPrice: number, client?: PoolClient, exitDate?: Date): Promise<JournalTrade> {
     // Validate exit price
     if (typeof exitPrice !== 'number' || !isFinite(exitPrice) || exitPrice <= 0) {
       throw new TradeValidationError('Exit price must be a positive number', 'exitPrice', 'INVALID_VALUE');
@@ -237,13 +239,13 @@ export class TradeService {
 
     const query = `
       UPDATE trades
-      SET status = 'CLOSED', exit_price = $1, exit_date = CURRENT_TIMESTAMP, realized_pnl = $2, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $3
+      SET status = 'CLOSED', exit_price = $1, exit_date = $2, realized_pnl = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
       RETURNING id, user_id, symbol, side, status, entry_price, quantity, entry_date,
                 exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
     `;
 
-    const params = [exitPrice, realizedPnl, tradeId];
+    const params = [exitPrice, exitDate ?? new Date(), realizedPnl, tradeId];
     const result = client
       ? await client.query(query, params)
       : await this.db.query(query, params);

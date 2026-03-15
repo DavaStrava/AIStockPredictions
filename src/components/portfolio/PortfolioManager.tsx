@@ -185,10 +185,11 @@ export function PortfolioManager() {
     [sellPosition]
   );
 
-  // Lazy-load 90-day history when summary tab is selected
+  // Lazy-load 90-day history when summary or performance tab is selected
   // Re-fetches when portfolio changes to avoid showing stale data
   useEffect(() => {
-    if (activeTab === 'summary' && selectedPortfolioId && historyLoadedForRef.current !== selectedPortfolioId) {
+    const needsHistory = activeTab === 'summary' || activeTab === 'performance';
+    if (needsHistory && selectedPortfolioId && historyLoadedForRef.current !== selectedPortfolioId) {
       historyLoadedForRef.current = selectedPortfolioId;
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

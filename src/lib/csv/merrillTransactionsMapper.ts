@@ -288,7 +288,12 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     return { valid: false, errors: [{ row: row.rowNumber, field: '', value: '', message: 'Empty row - skipped' }] };
   }
 
-  // Parse transaction type from description first
+  // Parse quantity first - this determines BUY vs SELL for stock trades
+  // Positive quantity = BUY, Negative quantity = SELL
+  const rawQuantityValue = parseNumber(quantity);
+  const symbolValue = cleanSymbol(symbolField);
+
+  // Parse transaction type from description for non-stock transactions
   let txTypeResult = parseTransactionType(description);
 
   // Skip transactions that should be ignored
@@ -299,22 +304,15 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     };
   }
 
-  // Fallback: Use Amount sign to determine BUY/SELL when Description is ambiguous
-  // In Merrill Edge: negative Amount = cash out = BUY, positive Amount = cash in = SELL
-  const amountValueForDetection = parseNumber(amount);
-  if (!txTypeResult.type && symbol && quantity) {
-    const symbolValue = cleanSymbol(symbolField);
-    const quantityValue = parseNumber(quantity);
-
-    // If we have a valid symbol and quantity, use Amount sign to determine transaction type
-    if (symbolValue && Math.abs(quantityValue) > 0) {
-      if (amountValueForDetection < 0) {
-        // Negative amount = cash out = BUY
-        txTypeResult = { type: 'BUY' };
-      } else if (amountValueForDetection > 0) {
-        // Positive amount = cash in = SELL
-        txTypeResult = { type: 'SELL' };
-      }
+  // For stock trades (has symbol and quantity), use quantity sign to determine BUY/SELL
+  // This overrides any description-based detection for Purchase/Sale
+  if (symbolValue && rawQuantityValue !== 0) {
+    if (rawQuantityValue > 0) {
+      // Positive quantity = BUY
+      txTypeResult = { type: 'BUY' };
+    } else if (rawQuantityValue < 0) {
+      // Negative quantity = SELL
+      txTypeResult = { type: 'SELL' };
     }
   }
 

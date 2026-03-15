@@ -99,17 +99,13 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
 
   /**
    * Fetches trades with optional filters.
-   * Triggers a refetch of the trades query with new filters.
+   * Invalidates all trade queries and triggers a refetch.
    */
-  const fetchTrades = async (newFilters?: TradeFilters): Promise<void> => {
-    // If filters changed, invalidate and refetch
-    if (newFilters !== filters) {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.trades.list(newFilters),
-      });
-    } else {
-      await tradesQuery.refetch();
-    }
+  const fetchTrades = async (_newFilters?: TradeFilters): Promise<void> => {
+    // Invalidate all trade queries (list and stats) to ensure fresh data
+    await queryClient.invalidateQueries({ queryKey: queryKeys.trades.all });
+    // Explicitly refetch the current query to update the UI immediately
+    await tradesQuery.refetch();
   };
 
   /**

@@ -45,10 +45,22 @@ export function detectCSVFormat(content: string): CSVFormatDetectionResult {
   // Check for Merrill Transactions format
   // First row contains "Exported on:"
   if (firstLine.includes('Exported on:')) {
+    // Find the actual data start by looking for the first row with a date pattern
+    // after the headers. Headers are on row 5 (index 4).
+    // Rows 6-8 (indices 5-7) contain empty rows and filter text.
+    let dataStart = 8; // Default: row 9 (0-indexed: 8)
+    for (let i = 5; i < Math.min(15, lines.length); i++) {
+      const line = lines[i] || '';
+      // Data rows start with a quoted date like "03/13/2026"
+      if (/^"?\d{2}\/\d{2}\/\d{4}"?/.test(line.trim())) {
+        dataStart = i;
+        break;
+      }
+    }
     return {
       format: 'merrill_transactions',
       headerRowIndex: 4, // Headers are on row 5 (0-indexed: 4)
-      dataStartIndex: 8, // Data starts at row 9 (0-indexed: 8)
+      dataStartIndex: dataStart, // Dynamically detected data start
       confidence: 0.95,
     };
   }

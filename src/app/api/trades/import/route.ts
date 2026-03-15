@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         const trade = sortedTrades[i];
 
         try {
-          // Create the trade
+          // Create the trade with the actual entry date from CSV
           const createdTrade = await tradeService.createTrade(
             {
               userId,
@@ -79,18 +79,20 @@ export async function POST(request: NextRequest) {
               side: trade.side,
               entryPrice: trade.entryPrice,
               quantity: trade.quantity,
+              entryDate: new Date(trade.entryDate),
               fees: trade.fees,
               notes: trade.notes || undefined,
             },
             client // Pass the transaction client for atomicity
           );
 
-          // If trade has exit data, close it
+          // If trade has exit data, close it with the actual exit date from CSV
           if (trade.status === 'CLOSED' && trade.exitPrice && trade.exitDate) {
             await tradeService.closeTrade(
               createdTrade.id,
               trade.exitPrice,
-              client // Pass the transaction client for atomicity
+              client, // Pass the transaction client for atomicity
+              new Date(trade.exitDate) // Pass the actual exit date
             );
           }
 
