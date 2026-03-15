@@ -59,12 +59,15 @@ export class DatabaseMigrator {
    */
   private loadMigrations(): Migration[] {
     const migrations: Migration[] = [];
-    
-    // For now, we'll manually define migrations
-    // In a real application, you might scan the directory
+
+    // All migration files in order
     const migrationFiles = [
       '001_initial_schema.sql',
       '002_trades_schema.sql',
+      '003_portfolio_schema.sql',
+      '004_agent_analysis_schema.sql',
+      '005_unified_transactions.sql',
+      '006_fix_trade_status.sql',
     ];
 
     for (const filename of migrationFiles) {
