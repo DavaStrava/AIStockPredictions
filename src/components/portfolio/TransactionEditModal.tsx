@@ -29,13 +29,13 @@ export function TransactionEditModal({
 }: TransactionEditModalProps) {
   const [formData, setFormData] = useState({
     transactionDate: formatDateForInput(transaction.transactionDate),
-    quantity: transaction.quantity?.toString() || '',
-    pricePerShare: transaction.pricePerShare?.toString() || '',
-    fees: transaction.fees?.toString() || '0',
+    quantity: transaction.quantity != null ? transaction.quantity.toString() : '',
+    pricePerShare: transaction.pricePerShare != null ? transaction.pricePerShare.toString() : '',
+    fees: transaction.fees != null ? transaction.fees.toString() : '0',
     notes: transaction.notes || '',
     side: transaction.side || 'LONG',
     tradeStatus: transaction.tradeStatus || 'OPEN',
-    exitPrice: transaction.exitPrice?.toString() || '',
+    exitPrice: transaction.exitPrice != null ? transaction.exitPrice.toString() : '',
     exitDate: transaction.exitDate ? formatDateForInput(transaction.exitDate) : '',
     settlementDate: transaction.settlementDate ? formatDateForInput(transaction.settlementDate) : '',
   });

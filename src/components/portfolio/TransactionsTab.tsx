@@ -312,7 +312,7 @@ export function TransactionsTab({
                         {txn.totalAmount >= 0 ? '+' : ''}
                         {formatCurrency(txn.totalAmount)}
                       </p>
-                      {txn.quantity !== null && txn.pricePerShare !== null && (
+                      {txn.quantity != null && txn.pricePerShare != null && (
                         <p className="text-sm text-slate-500">
                           {formatNumber(txn.quantity)} @ {formatCurrency(txn.pricePerShare)}
                         </p>

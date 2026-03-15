@@ -13,6 +13,10 @@ export function formatCurrency(value: number): string {
 
 /** Format number with appropriate decimal places (up to 8 for fractional shares). */
 export function formatNumber(value: number): string {
+  // Handle edge cases
+  if (!isFinite(value) || isNaN(value)) {
+    return '0';
+  }
   // For whole numbers or very close to whole, show no decimals
   if (Math.abs(value - Math.round(value)) < 0.0001) {
     return new Intl.NumberFormat('en-US', {
