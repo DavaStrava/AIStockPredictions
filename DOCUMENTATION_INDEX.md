@@ -1,6 +1,6 @@
 # 📚 Documentation Index
 
-**Last Updated:** 2026-02-17 (After Portfolio Import Scripts Update)
+**Last Updated:** 2026-03-14 (After Unified Transactions System)
 **Status:** All docs synced and up to date
 
 ---
@@ -258,18 +258,21 @@ AIStockPredictions/
 ---
 
 ### **scripts/README.md**
-**Purpose:** Portfolio import scripts documentation
-**Audience:** Importing brokerage data
-**Time to read:** 10 minutes
+**Purpose:** Portfolio import scripts and transactions API documentation
+**Audience:** Importing brokerage data, managing transactions
+**Time to read:** 15 minutes
 **Covers:**
 - `reconcile-portfolio.ts` - Analyze and prepare import data
 - `import-merrill-portfolio.ts` - Import to database
-- Complete workflow for Merrill Lynch imports
+- Complete workflow for Merrill Lynch/Edge imports
 - CSV format specifications
-- API import alternative
+- **Unified Transactions System** - All transaction types (BUY, SELL, DIVIDEND, DIVIDEND_REINVESTMENT, INTEREST, DEPOSIT, WITHDRAW)
+- **Positions API** - Open positions with unrealized P&L
+- **Sell functionality** - Selling shares with realized P&L calculation
+- **Transaction editing** - Updating transaction details and trade motivation
 - Troubleshooting guide
 
-**When to use:** Importing portfolio data from brokerage exports
+**When to use:** Importing portfolio data, managing transactions, viewing positions
 
 ---
 
@@ -331,6 +334,12 @@ AIStockPredictions/
 3. Run: `npx tsx scripts/reconcile-portfolio.ts` to analyze
 4. Run: `npx tsx scripts/import-merrill-portfolio.ts` to import
 
+### **"I want to manage portfolio transactions and positions"**
+1. Read: `scripts/README.md` → API Reference section
+2. Use `/api/portfolios/{id}/transactions` for transaction CRUD
+3. Use `/api/portfolios/{id}/positions` to view open positions with P&L
+4. Use sell endpoint to close positions with realized P&L tracking
+
 ---
 
 ## 📊 Documentation Coverage Matrix
@@ -342,15 +351,15 @@ AIStockPredictions/
 | **Middleware** | docs/MIGRATION_EXAMPLE.md | docs/API_MIDDLEWARE_GUIDE.md | docs/MIDDLEWARE_REFACTORING_SUMMARY.md |
 | **Code Quality** | docs/PHASE_1_2_MIGRATION_SUMMARY.md | docs/PHASE_1_2_CODE_REVIEW.md | docs/PREVENTING_BREAKING_CHANGES.md |
 | **Project Planning** | REFACTORING_PLAN.md (Overview) | REFACTORING_PLAN.md (Phases) | REFACTORING_PLAN.md (Full) |
-| **Portfolio Import** | scripts/README.md (Workflow) | scripts/README.md (Full) | API docs + source code |
+| **Portfolio/Transactions** | scripts/README.md (Workflow) | scripts/README.md (API Reference) | Source code (PortfolioService.ts) |
 
 ---
 
 ## 🔄 Documentation Sync Status
 
 ### **Last Updated**
-- All documents: 2026-01-31
-- Last commit: feat: Add comprehensive CI/CD pipeline and test infrastructure
+- All documents: 2026-03-14
+- Last commit: fix: Code review improvements for transactions system
 - Git status: ✅ All committed, no pending changes
 
 ### **Version Consistency**
@@ -491,6 +500,6 @@ ls src/__tests__/api/*.test.ts
 
 ---
 
-**Last Sync:** 2026-02-17
+**Last Sync:** 2026-03-14
 **Next Review:** As needed
 **Status:** 📚 Complete and comprehensive

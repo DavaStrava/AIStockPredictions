@@ -1,6 +1,6 @@
 # Portfolio Import Scripts
 
-Scripts for importing portfolio data from brokerage exports (currently supporting Merrill Lynch).
+Scripts for importing portfolio data from brokerage exports (currently supporting Merrill Lynch/Merrill Edge).
 
 ## Prerequisites
 
@@ -145,7 +145,7 @@ Expected structure:
 ## Data Validation
 
 The import process validates:
-- Transaction types: `BUY`, `SELL`, `DEPOSIT`, `WITHDRAW`, `DIVIDEND`
+- Transaction types: `BUY`, `SELL`, `DEPOSIT`, `WITHDRAW`, `DIVIDEND`, `DIVIDEND_REINVESTMENT`, `INTEREST`
 - Required fields per transaction type
 - Numeric values (quantity, price, amount)
 - Date formats
@@ -156,9 +156,29 @@ Security limits:
 - Maximum 500 characters for notes
 - Maximum 10 characters for symbols
 
-## API Alternative
+## Transaction Types
 
-For programmatic imports, use the REST API:
+| Type | Description | Required Fields |
+|------|-------------|-----------------|
+| `BUY` | Stock purchase | symbol, quantity, pricePerShare, totalAmount |
+| `SELL` | Stock sale | symbol, quantity, pricePerShare, totalAmount |
+| `DIVIDEND` | Cash dividend payment | symbol, totalAmount |
+| `DIVIDEND_REINVESTMENT` | Dividend reinvested in shares (DRIP) | symbol, quantity, pricePerShare |
+| `INTEREST` | Interest payment | totalAmount |
+| `DEPOSIT` | Cash deposit | totalAmount |
+| `WITHDRAW` | Cash withdrawal | totalAmount |
+
+### Dividend Reinvestment (DRIP)
+
+For DRIP transactions from Merrill Edge, the parser extracts:
+- `REINV AMT $X.XX` → stored in notes as "Dividend: $X.XX"
+- `REINV PRICE $X.XX` → pricePerShare
+- `REINV SHRS X.XXXX` → quantity
+- `totalAmount` is set to `0` (dividend and purchase cancel out for cash purposes)
+
+## API Reference
+
+### Import Transactions
 
 ```bash
 POST /api/portfolios/{id}/transactions/import
@@ -171,10 +191,13 @@ Content-Type: application/json
       "symbol": "AAPL",
       "quantity": 10,
       "pricePerShare": 150.00,
-      "totalAmount": 1500.00,
+      "totalAmount": -1500.00,
       "fees": 0,
       "transactionDate": "2024-01-15T00:00:00.000Z",
-      "notes": "Optional note"
+      "settlementDate": "2024-01-17",
+      "notes": "Trade motivation/rationale",
+      "side": "LONG",
+      "rawDescription": "Original brokerage description"
     }
   ]
 }
@@ -189,3 +212,75 @@ Response:
   "errors": []
 }
 ```
+
+### Edit Transaction
+
+```bash
+PUT /api/portfolios/{id}/transactions/{txnId}
+Content-Type: application/json
+
+{
+  "transactionDate": "2024-01-15T10:30:00.000Z",
+  "quantity": 15,
+  "pricePerShare": 148.50,
+  "fees": 4.95,
+  "notes": "Updated trade notes",
+  "side": "LONG",
+  "tradeStatus": "CLOSED",
+  "exitPrice": 165.00,
+  "exitDate": "2024-02-15T14:00:00.000Z"
+}
+```
+
+### Delete Transaction
+
+```bash
+DELETE /api/portfolios/{id}/transactions/{txnId}
+```
+
+### Get Open Positions
+
+```bash
+GET /api/portfolios/{id}/positions
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "positions": [
+      {
+        "symbol": "AAPL",
+        "totalShares": 25,
+        "averageCostBasis": 149.25,
+        "totalCostBasis": 3731.25,
+        "currentPrice": 175.00,
+        "marketValue": 4375.00,
+        "unrealizedPnl": 643.75,
+        "unrealizedPnlPercent": 17.25
+      }
+    ],
+    "summary": {
+      "totalCostBasis": 3731.25,
+      "totalMarketValue": 4375.00,
+      "totalUnrealizedPnl": 643.75
+    }
+  }
+}
+```
+
+### Sell Position
+
+```bash
+POST /api/portfolios/{id}/positions/{symbol}/sell
+Content-Type: application/json
+
+{
+  "quantity": 10,
+  "pricePerShare": 175.00,
+  "transactionDate": "2024-03-14T10:00:00.000Z"
+}
+```
+
+Response includes realized P&L calculation based on average cost basis.
