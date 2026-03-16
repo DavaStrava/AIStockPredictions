@@ -17,11 +17,17 @@ import {
   JournalTrade,
   TradeWithPnL,
   CreateTradeRequest,
+  UpdateTradeRequest,
   TradeFilters,
   PortfolioStats,
   TradeSide,
   TradeStatus,
 } from '@/types/models';
+
+/**
+ * Maximum length for trade notes field
+ */
+const MAX_NOTES_LENGTH = 5000;
 
 /**
  * Custom error class for trade validation errors.
@@ -250,6 +256,68 @@ export class TradeService {
       ? await client.query(query, params)
       : await this.db.query(query, params);
 
+    return this.mapRowToTrade(result.rows[0]);
+  }
+
+  /**
+   * Updates a trade's editable fields (notes, fees).
+   * Does not allow changing core trade data like symbol, entry price, or quantity.
+   *
+   * @param tradeId - The ID of the trade to update
+   * @param updates - The fields to update
+   * @returns Promise resolving to the updated JournalTrade
+   * @throws TradeNotFoundError if trade doesn't exist
+   */
+  async updateTrade(tradeId: string, updates: UpdateTradeRequest): Promise<JournalTrade> {
+    // Get the existing trade
+    const existingTrade = await this.getTradeById(tradeId);
+    if (!existingTrade) {
+      throw new TradeNotFoundError(tradeId);
+    }
+
+    // Build dynamic update query based on provided fields
+    const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
+    const params: (string | number | null)[] = [];
+    let paramIndex = 1;
+
+    if (updates.notes !== undefined) {
+      if (updates.notes !== null && typeof updates.notes === 'string' && updates.notes.length > MAX_NOTES_LENGTH) {
+        throw new TradeValidationError(
+          `Notes cannot exceed ${MAX_NOTES_LENGTH} characters`,
+          'notes',
+          'MAX_LENGTH_EXCEEDED'
+        );
+      }
+      setClauses.push(`notes = $${paramIndex}`);
+      params.push(updates.notes);
+      paramIndex++;
+    }
+
+    if (updates.fees !== undefined) {
+      if (typeof updates.fees !== 'number' || !isFinite(updates.fees) || updates.fees < 0) {
+        throw new TradeValidationError('Fees must be a non-negative number', 'fees', 'INVALID_VALUE');
+      }
+      setClauses.push(`fees = $${paramIndex}`);
+      params.push(updates.fees);
+      paramIndex++;
+    }
+
+    // If no fields to update, return existing trade
+    if (params.length === 0) {
+      return existingTrade;
+    }
+
+    params.push(tradeId);
+
+    const query = `
+      UPDATE trades
+      SET ${setClauses.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, user_id, symbol, side, status, entry_price, quantity, entry_date,
+                exit_price, exit_date, fees, realized_pnl, notes, prediction_id, created_at, updated_at
+    `;
+
+    const result = await this.db.query(query, params);
     return this.mapRowToTrade(result.rows[0]);
   }
 

@@ -43,7 +43,12 @@ async function authorizeTradeAccess(
  * PATCH /api/trades/[id] - Update or close a trade
  *
  * Request body:
- * - exitPrice: Exit price for closing the trade (required for closing)
+ * - exitPrice: Exit price for closing the trade (triggers close operation)
+ * - notes: Trade notes/motivation (for general updates)
+ * - fees: Trade fees (for general updates)
+ *
+ * If exitPrice is provided, the trade will be closed.
+ * Otherwise, notes/fees will be updated.
  *
  * Requirements: 10.3, 10.5, 10.6
  */
@@ -64,7 +69,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { exitPrice } = body;
+    const { exitPrice, notes, fees } = body;
 
     const db = getDatabase();
     const fmpProvider = getFMPProvider();
@@ -94,21 +99,24 @@ export async function PATCH(
       );
     }
 
-    // Currently only supporting closing trades via PATCH
-    // exitPrice is required for closing
-    if (exitPrice === undefined || exitPrice === null) {
+    let trade;
+
+    // If exitPrice is provided, close the trade
+    if (exitPrice !== undefined && exitPrice !== null) {
+      trade = await tradeService.closeTrade(id, exitPrice);
+    } else if (notes !== undefined || fees !== undefined) {
+      // Otherwise, update notes/fees
+      trade = await tradeService.updateTrade(id, { notes, fees });
+    } else {
       return NextResponse.json(
         {
           success: false,
-          error: 'exitPrice is required to close a trade',
-          field: 'exitPrice',
-          code: 'REQUIRED',
+          error: 'No valid update fields provided. Use exitPrice to close, or notes/fees to update.',
+          code: 'NO_FIELDS',
         },
         { status: 400 }
       );
     }
-
-    const trade = await tradeService.closeTrade(id, exitPrice);
 
     return NextResponse.json({
       success: true,

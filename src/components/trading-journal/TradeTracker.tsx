@@ -48,6 +48,7 @@ export function TradeTracker() {
     fetchTrades,
     createTrade,
     closeTrade,
+    updateTrade,
     deleteTrades,
   } = usePortfolioStats();
 
@@ -83,6 +84,15 @@ export function TradeTracker() {
     setFilterStatus(status);
     const filters: TradeFilters = status === 'ALL' ? {} : { status };
     fetchTrades(filters);
+  };
+
+  const handleEditTrade = async (tradeId: string, notes: string) => {
+    try {
+      await updateTrade(tradeId, { notes });
+    } catch (err) {
+      console.error('Failed to update trade:', err);
+      throw err; // Re-throw to let the modal component handle the error UI
+    }
   };
 
   const filteredTrades = filterStatus === 'ALL'
@@ -197,6 +207,7 @@ export function TradeTracker() {
           trades={filteredTrades}
           onCloseTrade={handleCloseTrade}
           onDeleteTrades={handleDeleteTrades}
+          onEditTrade={handleEditTrade}
           loading={loading}
         />
       </div>

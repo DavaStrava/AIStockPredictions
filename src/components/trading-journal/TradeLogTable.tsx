@@ -12,6 +12,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { TradeWithPnL } from '@/types/models';
 import { TradeRow } from './TradeRow';
+import { TradeEditModal } from './TradeEditModal';
 
 export type SortColumn =
   | 'symbol'
@@ -29,6 +30,7 @@ export interface TradeLogTableProps {
   trades: TradeWithPnL[];
   onCloseTrade: (tradeId: string, exitPrice: number, quantity: number) => void;
   onDeleteTrades: (tradeIds: string[]) => Promise<void>;
+  onEditTrade?: (tradeId: string, notes: string) => Promise<void>;
   loading?: boolean;
 }
 
@@ -47,6 +49,7 @@ export function TradeLogTable({
   trades,
   onCloseTrade,
   onDeleteTrades,
+  onEditTrade,
   loading = false,
 }: TradeLogTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('entryDate');
@@ -57,6 +60,7 @@ export function TradeLogTable({
   const [closeError, setCloseError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<TradeWithPnL | null>(null);
 
   const handleSort = useCallback((column: SortColumn) => {
     if (sortColumn === column) {
@@ -216,6 +220,21 @@ export function TradeLogTable({
     }
   };
 
+  // Edit handlers
+  const handleEditClick = useCallback((trade: TradeWithPnL) => {
+    setEditingTrade(trade);
+  }, []);
+
+  const handleEditClose = useCallback(() => {
+    setEditingTrade(null);
+  }, []);
+
+  const handleEditSave = useCallback(async (tradeId: string, notes: string) => {
+    if (onEditTrade) {
+      await onEditTrade(tradeId, notes);
+    }
+  }, [onEditTrade]);
+
   const allSelected = sortedTrades.length > 0 && selectedIds.size === sortedTrades.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < sortedTrades.length;
 
@@ -341,11 +360,20 @@ export function TradeLogTable({
                 onCloseConfirm={handleCloseConfirm}
                 onClosePriceChange={setClosePrice}
                 onCloseQuantityChange={setCloseQuantity}
+                onEditClick={onEditTrade ? handleEditClick : undefined}
               />
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      <TradeEditModal
+        isOpen={editingTrade !== null}
+        trade={editingTrade}
+        onClose={handleEditClose}
+        onSave={handleEditSave}
+      />
     </div>
   );
 }

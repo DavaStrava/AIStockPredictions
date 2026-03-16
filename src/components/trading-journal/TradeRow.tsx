@@ -22,6 +22,7 @@ interface TradeRowProps {
   onCloseConfirm: (tradeId: string) => void;
   onClosePriceChange: (value: string) => void;
   onCloseQuantityChange: (value: string) => void;
+  onEditClick?: (trade: TradeWithPnL) => void;
 }
 
 /**
@@ -88,6 +89,7 @@ export const TradeRow = memo(function TradeRow({
   onCloseConfirm,
   onClosePriceChange,
   onCloseQuantityChange,
+  onEditClick,
 }: TradeRowProps) {
   const pnl = getTradeDisplayPnL(trade);
   const pnlLabel = getPnLLabel(trade);
@@ -159,62 +161,76 @@ export const TradeRow = memo(function TradeRow({
         {formatDate(trade.entryDate)}
       </td>
       <td className="px-4 py-3">
-        {trade.status === 'OPEN' && (
-          <>
-            {isClosing ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={closePrice}
-                    onChange={(e) => onClosePriceChange(e.target.value)}
-                    placeholder="Sell price"
-                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-foreground"
-                    aria-label="Sell price"
-                  />
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    max={trade.quantity}
-                    value={closeQuantity}
-                    onChange={(e) => onCloseQuantityChange(e.target.value)}
-                    placeholder="Qty"
-                    className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-foreground"
-                    aria-label="Sell quantity"
-                  />
-                  <button
-                    onClick={() => onCloseConfirm(trade.id)}
-                    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    onClick={onCloseCancel}
-                    className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                  >
-                    ✕
-                  </button>
+        <div className="flex items-center gap-2">
+          {/* Edit button - always visible */}
+          {onEditClick && (
+            <button
+              onClick={() => onEditClick(trade)}
+              className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+              title={trade.notes ? 'Edit notes' : 'Add notes'}
+            >
+              {trade.notes ? '📝' : '➕'}
+            </button>
+          )}
+
+          {/* Sell button - only for OPEN trades */}
+          {trade.status === 'OPEN' && (
+            <>
+              {isClosing ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={closePrice}
+                      onChange={(e) => onClosePriceChange(e.target.value)}
+                      placeholder="Sell price"
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-foreground"
+                      aria-label="Sell price"
+                    />
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      max={trade.quantity}
+                      value={closeQuantity}
+                      onChange={(e) => onCloseQuantityChange(e.target.value)}
+                      placeholder="Qty"
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-foreground"
+                      aria-label="Sell quantity"
+                    />
+                    <button
+                      onClick={() => onCloseConfirm(trade.id)}
+                      className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={onCloseCancel}
+                      className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    Max: {trade.quantity} shares
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  Max: {trade.quantity} shares
-                </span>
-              </div>
-            ) : (
-              <button
-                onClick={() => onCloseClick(trade.id)}
-                className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
-              >
-                Sell Position
-              </button>
-            )}
-            {closeError && isClosing && (
-              <p className="text-xs text-red-500 mt-1">{closeError}</p>
-            )}
-          </>
-        )}
+              ) : (
+                <button
+                  onClick={() => onCloseClick(trade.id)}
+                  className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
+                >
+                  Sell Position
+                </button>
+              )}
+              {closeError && isClosing && (
+                <p className="text-xs text-red-500 mt-1">{closeError}</p>
+              )}
+            </>
+          )}
+        </div>
       </td>
     </tr>
   );

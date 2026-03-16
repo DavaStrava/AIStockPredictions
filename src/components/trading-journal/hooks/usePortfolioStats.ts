@@ -9,7 +9,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, CreateTradeRequest } from '@/lib/api/client';
+import { api, CreateTradeRequest, UpdateTradeRequest } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-client';
 import type {
   TradeWithPnL,
@@ -30,6 +30,7 @@ export interface UsePortfolioStatsReturn {
   fetchTrades: (filters?: TradeFilters) => Promise<void>;
   createTrade: (data: CreateTradeRequest) => Promise<JournalTrade>;
   closeTrade: (tradeId: string, exitPrice: number) => Promise<JournalTrade>;
+  updateTrade: (tradeId: string, data: Omit<UpdateTradeRequest, 'exitPrice'>) => Promise<JournalTrade>;
   deleteTrade: (tradeId: string) => Promise<void>;
   deleteTrades: (tradeIds: string[]) => Promise<number>;
   refreshStats: () => Promise<void>;
@@ -77,6 +78,16 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
       api.trades.close(tradeId, exitPrice),
     onSuccess: () => {
       // Invalidate and refetch trades and stats after closing
+      queryClient.invalidateQueries({ queryKey: queryKeys.trades.all });
+    },
+  });
+
+  // Mutation for updating trades (notes, fees)
+  const updateTradeMutation = useMutation({
+    mutationFn: ({ tradeId, data }: { tradeId: string; data: Omit<UpdateTradeRequest, 'exitPrice'> }) =>
+      api.trades.update(tradeId, data),
+    onSuccess: () => {
+      // Invalidate and refetch trades after update
       queryClient.invalidateQueries({ queryKey: queryKeys.trades.all });
     },
   });
@@ -131,6 +142,19 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
   };
 
   /**
+   * Updates a trade (notes, fees).
+   * @param tradeId - ID of the trade to update
+   * @param data - Update data (notes, fees)
+   * @returns The updated trade
+   */
+  const updateTrade = async (
+    tradeId: string,
+    data: Omit<UpdateTradeRequest, 'exitPrice'>
+  ): Promise<JournalTrade> => {
+    return updateTradeMutation.mutateAsync({ tradeId, data });
+  };
+
+  /**
    * Deletes a trade.
    * @param tradeId - ID of the trade to delete
    */
@@ -161,6 +185,7 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
     statsQuery.error?.message ||
     createTradeMutation.error?.message ||
     closeTradeMutation.error?.message ||
+    updateTradeMutation.error?.message ||
     deleteTradeMutation.error?.message ||
     deleteTradesMutation.error?.message ||
     null;
@@ -174,6 +199,7 @@ export function usePortfolioStats(filters?: TradeFilters): UsePortfolioStatsRetu
     fetchTrades,
     createTrade,
     closeTrade,
+    updateTrade,
     deleteTrade,
     deleteTrades,
     refreshStats,
