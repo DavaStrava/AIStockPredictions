@@ -426,6 +426,44 @@ describe('Merrill Transactions Mapper', () => {
       const result = validateMerrillTransactionRow(row);
       expect(result.valid).toBe(true);
     });
+
+    it('should use Quantity sign over Description when they conflict', () => {
+      // Description says "Purchase" but Quantity is negative = SELL
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'Trade Date': '01/15/2026',
+          'Description': 'Purchase APPLE INC',
+          'Symbol/ CUSIP': 'AAPL',
+          'Quantity': '-10',
+          'Price': '$150.00',
+          'Amount': '$1,500.00',
+        },
+      };
+
+      const result = validateMerrillTransactionRow(row);
+      expect(result.valid).toBe(true);
+      expect(result.data?.transactionType).toBe('SELL');
+    });
+
+    it('should fall back to Description when Quantity is zero', () => {
+      const row: CSVParsedRow = {
+        rowNumber: 1,
+        data: {
+          'Trade Date': '01/15/2026',
+          'Description': 'Purchase APPLE INC',
+          'Symbol/ CUSIP': 'AAPL',
+          'Quantity': '0',
+          'Price': '$150.00',
+          'Amount': '-$1,500.00',
+        },
+      };
+
+      const result = validateMerrillTransactionRow(row);
+      // Falls back to description-based detection, but quantity validation fails
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'Quantity')).toBe(true);
+    });
   });
 });
 

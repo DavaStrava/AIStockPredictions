@@ -17,9 +17,9 @@
  * - Format detector finds actual data start dynamically
  * - Headers have trailing spaces - trim all values
  * - Date format: MM/DD/YYYY (quoted)
- * - Transaction type from Description: "Purchase" -> BUY, "Sale" -> SELL, "Pending Sale" -> SELL
+ * - Transaction type: Determined by Quantity sign (positive = BUY, negative = SELL)
  * - Symbol: Extract from "Symbol/ CUSIP" column
- * - Quantity: Absolute value (negative = SELL indicator)
+ * - Quantity: Sign determines direction (positive = BUY, negative = SELL)
  * - Price: Strip $ and commas
  * - Stop at summary row ("Total activity from...")
  */
@@ -288,11 +288,11 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     return { valid: false, errors: [{ row: row.rowNumber, field: '', value: '', message: 'Empty row - skipped' }] };
   }
 
-  // Parse Amount to determine BUY vs SELL for stock trades
-  // In Merrill CSVs: Quantity is always positive, Amount sign determines direction:
-  // - Negative Amount = BUY (cash going out)
-  // - Positive Amount = SELL (cash coming in)
-  const rawAmountValue = parseNumber(amount);
+  // Parse Quantity to determine BUY vs SELL for stock trades
+  // In Merrill CSVs: Quantity sign determines direction:
+  // - Positive Quantity = BUY
+  // - Negative Quantity = SELL
+  const rawQuantityValue = parseNumber(quantity);
   const symbolValue = cleanSymbol(symbolField);
 
   // Parse transaction type from description for non-stock transactions
@@ -306,16 +306,16 @@ export function validateMerrillTransactionRow(row: CSVParsedRow): PortfolioTrans
     };
   }
 
-  // For stock trades (has symbol and amount), use Amount sign to determine BUY/SELL
+  // For stock trades (has symbol and quantity), use Quantity sign to determine BUY/SELL
   // This overrides description-based detection for Purchase/Sale
   // But don't override other transaction types like DIVIDEND_REINVESTMENT, DIVIDEND, etc.
   const isStockTradeType = txTypeResult.type === 'BUY' || txTypeResult.type === 'SELL' || txTypeResult.type === null;
-  if (isStockTradeType && symbolValue && rawAmountValue !== 0) {
-    if (rawAmountValue < 0) {
-      // Negative amount = BUY (cash out)
+  if (isStockTradeType && symbolValue && rawQuantityValue !== 0) {
+    if (rawQuantityValue > 0) {
+      // Positive quantity = BUY
       txTypeResult = { type: 'BUY' };
-    } else if (rawAmountValue > 0) {
-      // Positive amount = SELL (cash in)
+    } else if (rawQuantityValue < 0) {
+      // Negative quantity = SELL
       txTypeResult = { type: 'SELL' };
     }
   }

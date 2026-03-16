@@ -577,20 +577,23 @@ function mapTradeData(
       // Convert Merrill transactions to trades with BUY/SELL matching
       const portfolioResult = mapMerrillTransactionRows(parsed.rows);
 
-      // Filter to only BUY and SELL transactions with valid data
-      const buyTrades = portfolioResult.transactions.filter(
-        (t) => t.transactionType === 'BUY' && t.symbol && t.quantity && t.pricePerShare
-      );
-      const sellTrades = portfolioResult.transactions.filter(
-        (t) => t.transactionType === 'SELL' && t.symbol && t.quantity && t.pricePerShare
-      );
+      // Type with pre-computed timestamp for performance
+      type TxWithTimestamp = ParsedPortfolioTransaction & { _timestamp: number };
 
-      // Sort both by date (oldest first)
-      buyTrades.sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
-      sellTrades.sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+      // Filter and add pre-computed timestamps to avoid repeated Date parsing
+      const buyTrades: TxWithTimestamp[] = portfolioResult.transactions
+        .filter((t) => t.transactionType === 'BUY' && t.symbol && t.quantity && t.pricePerShare)
+        .map((t) => ({ ...t, _timestamp: new Date(t.transactionDate).getTime() }));
+      const sellTrades: TxWithTimestamp[] = portfolioResult.transactions
+        .filter((t) => t.transactionType === 'SELL' && t.symbol && t.quantity && t.pricePerShare)
+        .map((t) => ({ ...t, _timestamp: new Date(t.transactionDate).getTime() }));
+
+      // Sort both by timestamp (oldest first)
+      buyTrades.sort((a, b) => a._timestamp - b._timestamp);
+      sellTrades.sort((a, b) => a._timestamp - b._timestamp);
 
       // Track open buys per symbol (FIFO queue)
-      const openBuysPerSymbol = new Map<string, typeof buyTrades>();
+      const openBuysPerSymbol = new Map<string, TxWithTimestamp[]>();
 
       // Process all buys first to build the queue
       for (const buy of buyTrades) {
@@ -604,13 +607,23 @@ function mapTradeData(
       const trades: ParsedTrade[] = [];
 
       // Process sells by matching against open buys (FIFO)
+      // Only match BUYs that occurred BEFORE the SELL date (can't sell before buying)
       for (const sell of sellTrades) {
         const symbol = sell.symbol!;
         const openBuys = openBuysPerSymbol.get(symbol);
+        const sellDate = sell._timestamp;
 
         if (openBuys && openBuys.length > 0) {
-          // Match with oldest open buy (FIFO)
-          const matchedBuy = openBuys.shift()!;
+          // Find the first BUY that occurred before this SELL (FIFO, respecting chronology)
+          const eligibleBuyIndex = openBuys.findIndex((buy) => buy._timestamp <= sellDate);
+
+          if (eligibleBuyIndex === -1) {
+            // No BUY occurred before this SELL - skip this sell (can't close a position we don't have yet)
+            continue;
+          }
+
+          // Remove the matched buy from the queue
+          const matchedBuy = openBuys.splice(eligibleBuyIndex, 1)[0];
 
           // Create a CLOSED trade with entry from BUY and exit from SELL
           const entryPrice = matchedBuy.pricePerShare!;
@@ -633,10 +646,10 @@ function mapTradeData(
             notes: `Matched: ${matchedBuy.notes || ''} → ${sell.notes || ''}`.substring(0, 200) || null,
           });
 
-          // Handle partial fills: if buy had more shares, put remainder back
+          // Handle partial fills: if buy had more shares, put remainder back at the same position
           const remainingBuyQty = matchedBuy.quantity! - quantity;
           if (remainingBuyQty > 0) {
-            openBuys.unshift({
+            openBuys.splice(eligibleBuyIndex, 0, {
               ...matchedBuy,
               quantity: remainingBuyQty,
             });
@@ -644,8 +657,16 @@ function mapTradeData(
 
           // Handle partial fills: if sell had more shares than matched buy
           let remainingSellQty = sell.quantity! - quantity;
-          while (remainingSellQty > 0 && openBuys.length > 0) {
-            const nextBuy = openBuys.shift()!;
+          while (remainingSellQty > 0) {
+            // Find next eligible buy (must be before sell date)
+            const nextEligibleIndex = openBuys.findIndex((buy) => buy._timestamp <= sellDate);
+
+            if (nextEligibleIndex === -1) {
+              // No more eligible buys - remaining sell quantity is orphaned
+              break;
+            }
+
+            const nextBuy = openBuys.splice(nextEligibleIndex, 1)[0];
             const matchQty = Math.min(nextBuy.quantity!, remainingSellQty);
             const nextEntryPrice = nextBuy.pricePerShare!;
             const nextFees = (nextBuy.fees || 0) + ((sell.fees || 0) * (matchQty / sell.quantity!));
@@ -668,7 +689,7 @@ function mapTradeData(
             remainingSellQty -= matchQty;
             const nextRemainingBuyQty = nextBuy.quantity! - matchQty;
             if (nextRemainingBuyQty > 0) {
-              openBuys.unshift({
+              openBuys.splice(nextEligibleIndex, 0, {
                 ...nextBuy,
                 quantity: nextRemainingBuyQty,
               });
@@ -679,10 +700,10 @@ function mapTradeData(
       }
 
       // Add remaining open buys as OPEN trades
-      for (const [symbol, openBuys] of openBuysPerSymbol) {
+      for (const [, openBuys] of openBuysPerSymbol) {
         for (const buy of openBuys) {
           trades.push({
-            symbol,
+            symbol: buy.symbol!,
             side: 'LONG' as const,
             status: 'OPEN' as const,
             entryPrice: buy.pricePerShare!,
