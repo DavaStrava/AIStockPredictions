@@ -19,7 +19,7 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 │  │  │ StockDashboard│  │ WatchlistMgr │  │ MarketIndicesSidebar    │  │   │
 │  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │   │
 │  │  ┌──────────────┐  ┌──────────────┐                                │   │
-│  │  │ TradeTracker │  │PortfolioMgr │                                 │   │
+│  │  │PortfolioMgr  │  │TermsGlossary│                                 │   │
 │  │  └──────────────┘  └──────────────┘                                │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -162,13 +162,12 @@ src/
 │   ├── Watchlists
 │   │   └── WatchlistManager.tsx
 │   │
-│   ├── Trading Journal
-│   │   ├── TradeTracker.tsx         # Main trade tracking interface
-│   │   ├── TradeEntryModal.tsx      # Trade entry form
-│   │   ├── TradeLogTable.tsx        # Trade history table
+│   ├── Trading Journal (shared components)
+│   │   ├── TradeEntryModal.tsx      # Trade entry form (used by StockDashboard)
+│   │   ├── TradeLogTable.tsx        # Trade history table (used by TradesTab)
 │   │   └── hooks/usePortfolioStats.ts
 │   │
-│   ├── Portfolio Investment Tracker   # ✅ NEW
+│   ├── Portfolio Investment Tracker   # Unified with Trade Tracking
 │   │   ├── PortfolioManager.tsx     # Main portfolio interface
 │   │   ├── PortfolioSummaryCard.tsx # Equity, cash, day change stats
 │   │   ├── HoldingsDataGrid.tsx     # Holdings table with market data
@@ -520,36 +519,36 @@ Multiple CSS files with potential overlap:
 
 ---
 
-## 9. ✅ Trading Journal Feature (Completed December 29, 2025)
+## 9. ✅ Trading Journal Feature (Merged into Portfolio - March 2026)
 
-### Implementation Status
+### Status: MERGED INTO PORTFOLIO MANAGER
 
-The Trading Journal & P&L Tracker feature is fully implemented:
+The Trading Journal has been unified with the Portfolio Investment Tracker. Trade tracking is now available through the Portfolio Manager's **Transactions** and **Trades** tabs.
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| Database Schema | ✅ Complete | `src/lib/database/migrations/002_trades_schema.sql` |
-| Type Definitions | ✅ Complete | `src/types/models.ts` |
-| TradeService | ✅ Complete | `src/lib/portfolio/TradeService.ts` |
-| API Routes | ✅ Complete | `src/app/api/trades/` |
-| usePortfolioStats Hook | ✅ Complete | `src/components/trading-journal/hooks/` |
-| TradeEntryModal | ✅ Complete | `src/components/trading-journal/` |
-| TradeLogTable | ✅ Complete | `src/components/trading-journal/` |
-| Property Tests | ✅ Complete | Various `__tests__/` directories |
-| StockDashboard Integration | ✅ Complete | `src/components/StockDashboard.tsx` |
+**Key Changes:**
+- Standalone `TradeTracker.tsx` component removed from main navigation
+- Trade functionality consolidated into `PortfolioManager` component
+- Shared components (`TradeEntryModal`, `TradeLogTable`) retained in `trading-journal/` folder
+- Legacy `/api/trades` endpoints still available for backwards compatibility
 
-### Implemented Capabilities
+### Current Trade Tracking Location
 
-- **Trade Logging**: Create trades with symbol, side (LONG/SHORT), entry price, quantity, fees, notes
-- **Trade Closure**: Close open trades with exit price, automatic P&L calculation
-- **P&L Calculations**: 
-  - Realized P&L: `(exitPrice - entryPrice) × quantity - fees` (LONG)
-  - Unrealized P&L: Uses current market price from FMP API
-- **Portfolio Statistics**: Win rate, average win/loss, total P&L, best/worst trade
-- **Trade Filtering**: By status, symbol, date range
-- **Dashboard Integration**: "Log Trade" button on prediction cards for quick trade entry
+| Feature | Location |
+|---------|----------|
+| View trades | Portfolio Manager → Trades tab |
+| Add transactions | Portfolio Manager → Transactions tab |
+| Quick trade entry | StockDashboard → "Log Trade" button |
+| Trade statistics | Portfolio Manager → Trades tab (stats cards) |
 
-### API Endpoints
+### Retained Components
+
+| Component | Purpose | Used By |
+|-----------|---------|---------|
+| `TradeEntryModal` | Quick trade entry from dashboard | `StockDashboard.tsx` |
+| `TradeLogTable` | Display trades with close/edit actions | `TradesTab.tsx` |
+| `usePortfolioStats` | Calculate trade statistics | `useTradingModal.ts` |
+
+### Legacy API Endpoints (Still Available)
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -558,21 +557,6 @@ The Trading Journal & P&L Tracker feature is fully implemented:
 | `/api/trades/[id]` | GET | Get single trade |
 | `/api/trades/[id]` | PATCH | Close/update trade |
 | `/api/trades/stats` | GET | Portfolio statistics |
-
-### Error Handling
-
-The trading journal API endpoints include comprehensive error handling:
-
-| HTTP Status | Condition | Resolution |
-|-------------|-----------|------------|
-| 400 | Invalid input data | Check request body for validation errors |
-| 404 | Trade not found | Verify trade ID exists |
-| 503 | Database unavailable | Run `npm run db:setup` |
-| 503 | Missing tables | Run `npm run db:migrate` |
-| 503 | Auth service unavailable | Check database configuration |
-| 500 | Unexpected error | Check server logs |
-
-Full specification available in `.kiro/specs/trading-journal/`.
 
 ---
 
@@ -764,11 +748,7 @@ page.tsx
 │   │   └── MarketIndicesSidebar
 │   └── MarketIndexAnalysis (modal)
 ├── WatchlistManager (supports useMockData prop)
-├── TradeTracker                          # Trading Journal
-│   ├── TradeEntryModal
-│   ├── TradeLogTable
-│   └── usePortfolioStats hook
-├── PortfolioManager (uses usePortfolio hook)  # ✅ NEW
+├── PortfolioManager (uses usePortfolio hook)  # Unified with Trade Tracking
 │   ├── PortfolioSummaryCard
 │   ├── HoldingsDataGrid
 │   ├── TransactionModal
@@ -817,6 +797,6 @@ page.tsx
 
 ---
 
-*Document Version: 1.1*
-*Last Updated: January 2, 2026*
+*Document Version: 1.2*
+*Last Updated: March 16, 2026*
 *Author: System Architecture Review*

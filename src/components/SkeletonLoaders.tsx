@@ -392,56 +392,6 @@ export const WatchlistSkeleton = () => {
 };
 
 /**
- * Trade Tracker Skeleton
- * Matches the dimensions of trade tracker
- */
-export const TradeTrackerSkeleton = () => {
-  return (
-    <div className="space-y-6" data-testid="trade-tracker-skeleton">
-      {/* Header with stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <SkeletonElement className="h-4 w-24 mb-2" />
-            <SkeletonElement className="h-8 w-20" />
-          </div>
-        ))}
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex justify-between items-center">
-        <SkeletonElement className="h-8 w-48" />
-        <SkeletonElement className="h-10 w-36" />
-      </div>
-
-      {/* Trade log table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-        {/* Table header */}
-        <div className="flex gap-4 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          {['Symbol', 'Side', 'Entry', 'Exit', 'Qty', 'P&L', 'Status', 'Actions'].map((_, i) => (
-            <SkeletonElement key={i} className="h-4 w-20" />
-          ))}
-        </div>
-
-        {/* Table rows */}
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
-            <SkeletonElement className="h-5 w-16" />
-            <SkeletonElement className="h-5 w-14 rounded-full" />
-            <SkeletonElement className="h-5 w-20" />
-            <SkeletonElement className="h-5 w-20" />
-            <SkeletonElement className="h-5 w-12" />
-            <SkeletonElement className="h-5 w-24" />
-            <SkeletonElement className="h-5 w-16 rounded-full" />
-            <SkeletonElement className="h-5 w-20" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-/**
  * Portfolio Manager Skeleton
  * Matches the dimensions of portfolio manager
  */

@@ -9,20 +9,18 @@ import { setupGlobalErrorHandling, checkMemoryUsage } from '@/lib/error-monitori
 import {
   DashboardSkeleton,
   WatchlistSkeleton,
-  TradeTrackerSkeleton,
   PortfolioSkeleton
 } from '@/components/SkeletonLoaders';
 
 // Lazy load heavy tab components for better initial bundle size
 const StockDashboard = lazy(() => import('@/components/StockDashboard'));
 const WatchlistManager = lazy(() => import('@/components/WatchlistManager'));
-const TradeTracker = lazy(() => import('@/components/trading-journal/TradeTracker'));
 const PortfolioManager = lazy(() =>
   import('@/components/portfolio').then(mod => ({ default: mod.PortfolioManager }))
 );
 const TermsGlossaryPage = lazy(() => import('@/components/TermsGlossaryPage'));
 
-type ActiveTab = 'dashboard' | 'watchlists' | 'trades' | 'portfolio' | 'glossary';
+type ActiveTab = 'dashboard' | 'watchlists' | 'portfolio' | 'glossary';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -83,16 +81,6 @@ export default function Home() {
               Watchlists
             </button>
             <button
-              onClick={() => setActiveTab('trades')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'trades'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Trade Tracker
-            </button>
-            <button
               onClick={() => setActiveTab('portfolio')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'portfolio'
@@ -127,13 +115,6 @@ export default function Home() {
             <ResponsiveContainer variant="wide">
               <Suspense fallback={<WatchlistSkeleton />}>
                 <WatchlistManager useMockData={true} />
-              </Suspense>
-            </ResponsiveContainer>
-          )}
-          {activeTab === 'trades' && (
-            <ResponsiveContainer variant="wide">
-              <Suspense fallback={<TradeTrackerSkeleton />}>
-                <TradeTracker />
               </Suspense>
             </ResponsiveContainer>
           )}
