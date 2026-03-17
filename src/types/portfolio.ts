@@ -427,6 +427,37 @@ export interface PortfolioHealthResult {
   holdingsSkipped: number;
 }
 
+// ============================================================================
+// Trade Tracker Types (Integrated into Portfolio)
+// ============================================================================
+
+/**
+ * Statistics for trade tracking within a portfolio.
+ * Used by the Trades tab to display P&L metrics.
+ */
+export interface TradeStats {
+  totalRealizedPnl: number;
+  totalUnrealizedPnl: number;
+  totalTrades: number;
+  openTrades: number;
+  closedTrades: number;
+  winRate: number | null; // Percentage of profitable closed trades
+  avgWin: number | null; // Average profit on winning trades
+  avgLoss: number | null; // Average loss on losing trades
+  bestTrade: number | null; // Highest realized P&L
+  worstTrade: number | null; // Lowest realized P&L
+}
+
+/**
+ * Trade position with P&L calculations for display in Trades tab.
+ * Extends TradePosition with unrealized P&L from current market prices.
+ */
+export interface TradeWithPnLDisplay extends TradePosition {
+  unrealizedPnl: number | null;
+  currentPrice: number | null;
+  pnlPercent: number | null; // Total return percentage
+}
+
 
 
 

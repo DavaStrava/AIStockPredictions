@@ -27,6 +27,7 @@ import {
   Trash2,
   BarChart3,
   DollarSign,
+  TrendingUp,
 } from 'lucide-react';
 import { usePortfolio } from './hooks/usePortfolio';
 import { PortfolioSummaryCard } from './PortfolioSummaryCard';
@@ -40,10 +41,11 @@ import { HealthDashboard } from './HealthDashboard';
 import { DividendsTab } from './DividendsTab';
 import { TransactionsTab } from './TransactionsTab';
 import { PositionsPanel } from './PositionsPanel';
+import { TradesTab } from './TradesTab';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { PortfolioTransactionType, PortfolioTransaction } from '@/types/portfolio';
 
-type TabId = 'summary' | 'holdings' | 'positions' | 'health' | 'dividends' | 'transactions' | 'allocation' | 'performance';
+type TabId = 'summary' | 'holdings' | 'positions' | 'trades' | 'health' | 'dividends' | 'transactions' | 'allocation' | 'performance';
 
 interface Tab {
   id: TabId;
@@ -55,6 +57,7 @@ const TABS: Tab[] = [
   { id: 'summary', label: 'Summary', icon: <BarChart3 className="w-4 h-4" /> },
   { id: 'holdings', label: 'Holdings', icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'positions', label: 'Positions', icon: <Briefcase className="w-4 h-4" /> },
+  { id: 'trades', label: 'Trades', icon: <TrendingUp className="w-4 h-4" /> },
   { id: 'health', label: 'Health Score', icon: <Activity className="w-4 h-4" /> },
   { id: 'dividends', label: 'Dividends', icon: <DollarSign className="w-4 h-4" /> },
   { id: 'transactions', label: 'Transactions', icon: <List className="w-4 h-4" /> },
@@ -75,6 +78,10 @@ export function PortfolioManager() {
     history,
     healthData,
     healthLoading,
+    // Trade Tracker state
+    trades,
+    tradeStats,
+    tradesLoading,
     loading,
     error,
     selectPortfolio,
@@ -87,6 +94,10 @@ export function PortfolioManager() {
     sellPosition,
     fetchHistory,
     fetchHealth,
+    // Trade Tracker methods
+    fetchTrades,
+    fetchTradeStats,
+    refreshTrades,
     refreshPortfolioData,
     clearError,
   } = usePortfolio({ autoFetch: true, refreshInterval: 60000 });
@@ -101,6 +112,8 @@ export function PortfolioManager() {
 
   // Track which portfolio's history has been loaded to avoid stale data on portfolio switch
   const historyLoadedForRef = useRef<string | null>(null);
+  // Track which portfolio's trades have been loaded to avoid stale data on portfolio switch
+  const tradesLoadedForRef = useRef<string | null>(null);
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -203,6 +216,58 @@ export function PortfolioManager() {
       fetchHealth(selectedPortfolioId);
     }
   }, [activeTab, selectedPortfolioId, healthData, healthLoading, fetchHealth]);
+
+  // Lazy-load trades data when trades tab is selected
+  // Re-fetches when portfolio changes to avoid showing stale data
+  useEffect(() => {
+    if (activeTab === 'trades' && selectedPortfolioId && tradesLoadedForRef.current !== selectedPortfolioId) {
+      tradesLoadedForRef.current = selectedPortfolioId;
+      refreshTrades(selectedPortfolioId);
+    }
+  }, [activeTab, selectedPortfolioId, refreshTrades]);
+
+  // Trade handlers
+  const handleCloseTrade = useCallback(
+    async (tradeId: string, exitPrice: number, quantity: number) => {
+      // Find the trade to get symbol
+      const trade = trades.find((t) => t.id === tradeId);
+      if (trade && selectedPortfolioId) {
+        await sellPosition(trade.symbol, quantity, exitPrice);
+      }
+    },
+    [trades, selectedPortfolioId, sellPosition]
+  );
+
+  const handleEditTrade = useCallback(
+    async (tradeId: string, notes: string) => {
+      await editTransaction(tradeId, { notes });
+    },
+    [editTransaction]
+  );
+
+  const handleDeleteTrades = useCallback(
+    async (tradeIds: string[]) => {
+      const errors: string[] = [];
+      for (const id of tradeIds) {
+        try {
+          await deleteTransaction(id);
+        } catch (error) {
+          console.error(`Failed to delete trade ${id}:`, error);
+          errors.push(id);
+        }
+      }
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} trade(s). Please try again.`);
+      }
+    },
+    [deleteTransaction]
+  );
+
+  const handleRefreshTrades = useCallback(() => {
+    if (selectedPortfolioId) {
+      refreshTrades(selectedPortfolioId);
+    }
+  }, [selectedPortfolioId, refreshTrades]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -372,6 +437,18 @@ export function PortfolioManager() {
               positions={positions}
               loading={loading}
               onSellPosition={handleSellPosition}
+            />
+          )}
+
+          {activeTab === 'trades' && (
+            <TradesTab
+              trades={trades}
+              stats={tradeStats}
+              loading={tradesLoading}
+              onCloseTrade={handleCloseTrade}
+              onEditTrade={handleEditTrade}
+              onDeleteTrades={handleDeleteTrades}
+              onRefresh={handleRefreshTrades}
             />
           )}
 

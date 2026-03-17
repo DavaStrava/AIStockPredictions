@@ -21,7 +21,10 @@ import {
   CreateTransactionRequest,
   PortfolioTransactionType,
   OpenPositionSummary,
+  TradeStats,
+  TradeStatus,
 } from '@/types/portfolio';
+import { TradeWithPnL } from '@/types/models';
 
 interface UsePortfolioOptions {
   autoFetch?: boolean;
@@ -40,6 +43,10 @@ interface PortfolioState {
   rebalanceSuggestions: RebalanceSuggestion[];
   healthData: PortfolioHealthResult | null;
   healthLoading: boolean;
+  // Trade Tracker state
+  trades: TradeWithPnL[];
+  tradeStats: TradeStats | null;
+  tradesLoading: boolean;
   loading: boolean;
   error: string | null;
 }
@@ -61,6 +68,10 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     rebalanceSuggestions: [],
     healthData: null,
     healthLoading: false,
+    // Trade Tracker state
+    trades: [],
+    tradeStats: null,
+    tradesLoading: false,
     loading: false,
     error: null,
   });
@@ -163,6 +174,9 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
       history: [],
       rebalanceSuggestions: [],
       healthData: null,
+      // Reset trades state
+      trades: [],
+      tradeStats: null,
     }));
   }, []);
 
@@ -333,6 +347,64 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
       throw error;
     }
   }, []);
+
+  // ============================================================================
+  // Trade Tracker Operations
+  // ============================================================================
+
+  const fetchTrades = useCallback(
+    async (portfolioId: string, filters?: { status?: TradeStatus }) => {
+      setState((prev) => ({ ...prev, tradesLoading: true }));
+      try {
+        const params = new URLSearchParams();
+        if (filters?.status) params.set('status', filters.status);
+
+        const url = `/api/portfolios/${portfolioId}/trades${params.toString() ? `?${params}` : ''}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch trades');
+        }
+
+        setState((prev) => ({ ...prev, trades: data.data, tradesLoading: false }));
+        return data.data as TradeWithPnL[];
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch trades';
+        setState((prev) => ({ ...prev, tradesLoading: false, error: message }));
+        throw error;
+      }
+    },
+    []
+  );
+
+  const fetchTradeStats = useCallback(async (portfolioId: string) => {
+    try {
+      const response = await fetch(`/api/portfolios/${portfolioId}/trades/stats`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch trade stats');
+      }
+
+      setState((prev) => ({ ...prev, tradeStats: data.data }));
+      return data.data as TradeStats;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch trade stats';
+      setState((prev) => ({ ...prev, error: message }));
+      throw error;
+    }
+  }, []);
+
+  const refreshTrades = useCallback(
+    async (portfolioId: string) => {
+      await Promise.all([
+        fetchTrades(portfolioId),
+        fetchTradeStats(portfolioId),
+      ]);
+    },
+    [fetchTrades, fetchTradeStats]
+  );
 
   // ============================================================================
   // Positions Operations
@@ -680,6 +752,11 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
     fetchRebalanceSuggestions,
     fetchHealth,
     refreshPortfolioData,
+
+    // Trade Tracker operations
+    fetchTrades,
+    fetchTradeStats,
+    refreshTrades,
 
     // Transaction operations
     addTransaction,

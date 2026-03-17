@@ -37,6 +37,7 @@ import {
   TradePosition,
   TradeSide,
   TradeStatus,
+  TradeStats,
 } from '@/types/portfolio';
 import type { ParsedHolding, HoldingsImportResult, CSVValidationError } from '@/types/csv';
 
@@ -1359,6 +1360,193 @@ export class PortfolioService {
         createdAt: new Date(row.created_at as string),
         transactionType, // Include this for UI differentiation
       };
+    });
+  }
+
+  // ============================================================================
+  // Trade Tracker Integration (Trades Tab)
+  // ============================================================================
+
+  /**
+   * Gets trade transactions (BUY/SELL with trade tracking fields).
+   * Used by the Trades tab to display trade history.
+   *
+   * @param portfolioId - The portfolio ID
+   * @param filters - Optional filters for trade status
+   */
+  async getTradeTransactions(
+    portfolioId: string,
+    filters?: { status?: TradeStatus }
+  ): Promise<TradePosition[]> {
+    let query = `
+      SELECT
+        id, portfolio_id, asset_symbol AS symbol, side, trade_status AS status,
+        transaction_type,
+        price_per_share AS entry_price, quantity, transaction_date AS entry_date,
+        exit_price, exit_date, realized_pnl, fees, notes, created_at
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1
+        AND transaction_type = 'BUY'
+        AND side IS NOT NULL
+        AND trade_status IS NOT NULL
+    `;
+
+    const params: unknown[] = [portfolioId];
+    let paramIndex = 2;
+
+    if (filters?.status) {
+      query += ` AND trade_status = $${paramIndex++}`;
+      params.push(filters.status);
+    }
+
+    query += ' ORDER BY transaction_date DESC';
+
+    const result = await this.db.query(query, params);
+
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      portfolioId: row.portfolio_id as string,
+      symbol: row.symbol as string,
+      side: (row.side as TradeSide) || 'LONG',
+      status: (row.status as TradeStatus) || 'OPEN',
+      entryPrice: parseFloat(row.entry_price as string),
+      quantity: parseFloat(row.quantity as string),
+      entryDate: new Date(row.entry_date as string),
+      exitPrice: row.exit_price !== null ? parseFloat(row.exit_price as string) : null,
+      exitDate: row.exit_date ? new Date(row.exit_date as string) : null,
+      fees: parseFloat(row.fees as string) || 0,
+      realizedPnl: row.realized_pnl !== null ? parseFloat(row.realized_pnl as string) : null,
+      notes: (row.notes as string) || null,
+      createdAt: new Date(row.created_at as string),
+    }));
+  }
+
+  /**
+   * Gets trade statistics for a portfolio.
+   * Calculates realized/unrealized P&L, win rate, avg win/loss.
+   *
+   * @param portfolioId - The portfolio ID
+   */
+  async getTradeStats(portfolioId: string): Promise<TradeStats> {
+    // Get aggregated stats from closed trades
+    const statsQuery = `
+      SELECT
+        COALESCE(SUM(CASE WHEN trade_status = 'CLOSED' THEN realized_pnl ELSE 0 END), 0) AS total_realized_pnl,
+        COUNT(*) FILTER (WHERE trade_status IS NOT NULL) AS total_trades,
+        COUNT(*) FILTER (WHERE trade_status = 'OPEN') AS open_trades,
+        COUNT(*) FILTER (WHERE trade_status = 'CLOSED') AS closed_trades,
+        COUNT(*) FILTER (WHERE trade_status = 'CLOSED' AND realized_pnl > 0) AS winning_trades,
+        AVG(realized_pnl) FILTER (WHERE trade_status = 'CLOSED' AND realized_pnl > 0) AS avg_win,
+        AVG(realized_pnl) FILTER (WHERE trade_status = 'CLOSED' AND realized_pnl < 0) AS avg_loss,
+        MAX(realized_pnl) FILTER (WHERE trade_status = 'CLOSED') AS best_trade,
+        MIN(realized_pnl) FILTER (WHERE trade_status = 'CLOSED') AS worst_trade
+      FROM portfolio_transactions
+      WHERE portfolio_id = $1
+        AND transaction_type = 'BUY'
+        AND side IS NOT NULL
+    `;
+
+    const statsResult = await this.db.query(statsQuery, [portfolioId]);
+    const stats = statsResult.rows[0];
+
+    const closedTrades = parseInt(stats.closed_trades) || 0;
+    const winningTrades = parseInt(stats.winning_trades) || 0;
+    const winRate = closedTrades > 0 ? (winningTrades / closedTrades) * 100 : null;
+
+    // Calculate unrealized P&L from open trades
+    let totalUnrealizedPnl = 0;
+    const openTrades = await this.getTradeTransactions(portfolioId, { status: 'OPEN' });
+
+    if (openTrades.length > 0) {
+      // Fetch current prices for open positions
+      const symbols = [...new Set(openTrades.map(t => t.symbol))];
+      try {
+        const quotes = await this.fmpProvider.getMultipleQuotes(symbols);
+        const priceMap = new Map(quotes.map(q => [q.symbol, q.price]));
+
+        for (const trade of openTrades) {
+          const currentPrice = priceMap.get(trade.symbol) || 0;
+          if (currentPrice > 0) {
+            const unrealizedPnl = this.calculateUnrealizedPnL(
+              trade.entryPrice,
+              currentPrice,
+              trade.quantity,
+              trade.side
+            );
+            totalUnrealizedPnl += unrealizedPnl;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch prices for unrealized P&L:', error);
+      }
+    }
+
+    return {
+      totalRealizedPnl: parseFloat(stats.total_realized_pnl) || 0,
+      totalUnrealizedPnl,
+      totalTrades: parseInt(stats.total_trades) || 0,
+      openTrades: parseInt(stats.open_trades) || 0,
+      closedTrades,
+      winRate,
+      avgWin: stats.avg_win !== null ? parseFloat(stats.avg_win) : null,
+      avgLoss: stats.avg_loss !== null ? parseFloat(stats.avg_loss) : null,
+      bestTrade: stats.best_trade !== null ? parseFloat(stats.best_trade) : null,
+      worstTrade: stats.worst_trade !== null ? parseFloat(stats.worst_trade) : null,
+    };
+  }
+
+  /**
+   * Gets trades with current prices and unrealized P&L for display.
+   * Enriches open trades with real-time market data.
+   *
+   * @param portfolioId - The portfolio ID
+   * @param filters - Optional filters for trade status
+   */
+  async getTradePositionsWithPnL(
+    portfolioId: string,
+    filters?: { status?: TradeStatus }
+  ): Promise<TradePosition[]> {
+    const trades = await this.getTradeTransactions(portfolioId, filters);
+
+    if (trades.length === 0) {
+      return [];
+    }
+
+    // Get unique symbols from open trades for price lookup
+    const openTrades = trades.filter(t => t.status === 'OPEN');
+    const symbols = [...new Set(openTrades.map(t => t.symbol))];
+
+    let priceMap = new Map<string, number>();
+
+    if (symbols.length > 0) {
+      try {
+        const quotes = await this.fmpProvider.getMultipleQuotes(symbols);
+        priceMap = new Map(quotes.map(q => [q.symbol, q.price]));
+      } catch (error) {
+        console.error('Failed to fetch prices for trades:', error);
+      }
+    }
+
+    // Enrich trades with unrealized P&L
+    return trades.map(trade => {
+      if (trade.status === 'OPEN') {
+        const currentPrice = priceMap.get(trade.symbol) || 0;
+        const unrealizedPnl = currentPrice > 0
+          ? this.calculateUnrealizedPnL(
+              trade.entryPrice,
+              currentPrice,
+              trade.quantity,
+              trade.side
+            )
+          : null;
+
+        return {
+          ...trade,
+          currentPrice: currentPrice || undefined,
+          unrealizedPnl,
+        };
+      }
+      return trade;
     });
   }
 
