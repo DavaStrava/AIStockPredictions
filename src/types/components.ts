@@ -105,11 +105,13 @@ export interface LLMInsight {
   content: string;
   confidence: number;
   provider: 'openai' | 'bedrock' | 'cached';
+  generatedAt?: string;
   metadata: {
     indicators_used?: string[];
     timeframe?: string;
     data_quality?: 'high' | 'medium' | 'low';
     market_conditions?: string;
+    position_held?: boolean;
     [key: string]: unknown;
   };
 }

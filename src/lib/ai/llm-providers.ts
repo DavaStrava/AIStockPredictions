@@ -627,92 +627,121 @@ IMPORTANT:
       case 'technical':
         /**
          * TECHNICAL ANALYSIS PROMPT SPECIALIZATION
-         * 
+         *
          * Technical analysis focuses on chart patterns, indicators, and price action.
          * This prompt guides the LLM to:
-         * 
+         *
+         * - Reference CURRENT values from the "current" object FIRST (alignment with UI)
          * - Tell a "market story" from chart patterns (narrative approach)
          * - Explain indicators in practical terms (educational focus)
-         * - Consider position sizing for a $700K portfolio (risk management)
          * - Provide specific entry/exit levels (actionable insights)
          * - Discuss timeframes and scenarios (forward-looking analysis)
-         * 
-         * The structured sections (**Market Story**, **Indicator Analysis**, etc.)
-         * help the LLM organize its response consistently.
+         *
+         * CRITICAL: The "current" object contains values that MATCH the user's
+         * Technical Indicators panel. Analysis MUST reference these exact values.
          */
         return `${basePrompt}
 
+IMPORTANT: The user's Technical Indicators panel shows CURRENT values from the "current" object in the data.
+Your analysis MUST reference these "current" values FIRST with exact numbers, then discuss "trend" for context.
+DO NOT make up or estimate indicator values - use ONLY the values provided in "current".
+
 For technical analysis, provide a comprehensive narrative covering:
 
-**Market Story**: Start by painting the bigger picture of what's happening with this stock from a technical perspective. What story are the charts telling about investor behavior and market dynamics?
+**Current Readings**: Start by stating the exact current indicator values (RSI, MACD, Stochastic, Bollinger Bands) from the "current" object. These must match what the user sees.
 
-**Indicator Analysis**: Explain each key indicator in detail - not just the numbers, but what they mean in practical terms and why they matter. Connect the dots between different indicators.
+**Market Story**: Paint the bigger picture of what's happening with this stock from a technical perspective. What story are the charts telling about investor behavior and market dynamics?
+
+**Indicator Analysis**: Explain what each current reading means in practical terms and why it matters. Use the "trend" data to show recent direction.
 
 **Risk Assessment**: Discuss position sizing considerations, stop-loss levels, and risk management strategies in general terms (e.g., percentage-based allocation).
 
-**Entry/Exit Strategy**: Provide specific levels to watch and potential scenarios. Explain the reasoning behind key support/resistance levels.
+**Entry/Exit Strategy**: Provide specific levels to watch and potential scenarios based on current Bollinger Bands and support/resistance.
 
 **Timeline & Expectations**: Discuss likely timeframes for potential moves and what to expect in different market scenarios.`;
 
       case 'portfolio':
         /**
          * PORTFOLIO ANALYSIS PROMPT SPECIALIZATION
-         * 
-         * Portfolio analysis focuses on how individual positions fit within
-         * a broader investment strategy. This prompt emphasizes:
-         * 
-         * - Portfolio context and allocation (holistic view)
-         * - Risk-return metrics in practical terms (education)
-         * - Diversification strategy (risk management)
-         * - Life-stage considerations (personalization)
-         * - Strategic positioning (long-term thinking)
-         * 
-         * This approach helps users understand not just individual stocks,
-         * but how they fit into a comprehensive wealth-building strategy.
+         *
+         * This prompt has TWO MODES based on whether the user holds the stock:
+         * 1. HELD: Analyze actual position (cost basis, returns, add/hold/reduce)
+         * 2. NOT HELD: Analyze as potential addition (entry point, sizing)
+         *
+         * IMPORTANT: We DO NOT use Sharpe ratio, beta, or correlations here
+         * because we don't calculate these metrics. Focus on what we know:
+         * - Portfolio value and cash
+         * - Position details if held
+         * - Technical analysis context
          */
         return `${basePrompt}
 
-For portfolio analysis, provide insights for a wealth-building investor:
+IMPORTANT: The "portfolioContext" in the data tells you:
+- Whether the user HOLDS this stock (isHeld: true/false)
+- Their portfolio value and cash available
+- If held: actual shares, cost basis, current price, and returns
 
-**Portfolio Context**: Discuss how this position might fit into a diversified portfolio. What allocation percentage makes sense? How might it complement other typical holdings?
+If portfolioContext.isHeld is TRUE (user owns this stock):
+**Position Review**: Reference the EXACT position data (shares, avg cost, current return %).
+**Performance Assessment**: Is this position working for them? Compare their entry to current price.
+**Action Consideration**: Based on technical signals, discuss whether to add, hold, or reduce.
+**Position Sizing**: Is current allocation appropriate given portfolio value?
 
-**Risk-Return Profile**: Explain metrics like Sharpe ratio, beta, and volatility in practical terms. What do these numbers mean for someone focused on efficient growth while managing downside risk?
+If portfolioContext.isHeld is FALSE (user does NOT own this stock):
+**Opportunity Assessment**: Analyze if this is a good time to start a position based on technicals.
+**Entry Strategy**: Suggest a sensible entry approach (all at once vs. scaling in).
+**Position Sizing**: Based on their portfolio value and cash, suggest an appropriate allocation %.
+**Risk Consideration**: What would a stop-loss level look like? What's the risk on entry?
 
-**Diversification Strategy**: Analyze how this stock fits into a well-diversified portfolio. What correlations should investors be aware of?
-
-**Growth vs Preservation**: Address the balance between growth and capital preservation that serious investors should consider.
-
-**Strategic Positioning**: Discuss optimal position sizing and rebalancing considerations in percentage terms.`;
+DO NOT mention: Sharpe ratio, beta, correlations, or other metrics we don't calculate.
+Focus on: The actual portfolio data provided and technical analysis signals.`;
 
       case 'sentiment':
         /**
-         * SENTIMENT ANALYSIS PROMPT SPECIALIZATION
-         * 
-         * Sentiment analysis examines market psychology and investor behavior.
-         * This prompt focuses on:
-         * 
-         * - Market psychology and emotional drivers (behavioral finance)
-         * - Institutional vs retail sentiment differences (market structure)
-         * - Contrarian opportunities (advanced strategy)
-         * - Sentiment shift risks (risk management)
-         * - Strategic implications (tactical positioning)
-         * 
-         * This helps users understand the "soft" factors that drive markets
-         * beyond just technical and fundamental analysis.
+         * TECHNICAL PSYCHOLOGY PROMPT SPECIALIZATION
+         *
+         * RENAMED from "Sentiment" to "Technical Psychology" because we derive
+         * this ENTIRELY from technical indicators - NOT from news, social media,
+         * or institutional/retail data (which we don't have).
+         *
+         * What we CAN infer from technicals:
+         * - RSI/Stochastic → crowd psychology (fear at lows, greed at highs)
+         * - Volume patterns → accumulation vs distribution behavior
+         * - Bollinger Bands → trader behavior at extremes
+         * - MACD divergences → conviction shifts
+         *
+         * What we CANNOT claim (no data):
+         * - Institutional vs retail positioning
+         * - News sentiment
+         * - Social media sentiment
+         * - Options flow
          */
         return `${basePrompt}
 
-For sentiment analysis, provide a nuanced view of market psychology:
+IMPORTANT: This is "Technical Psychology" - derived ENTIRELY from technical indicators.
+We do NOT have news sentiment, social media data, or institutional/retail positioning data.
+Focus ONLY on what technical indicators reveal about crowd psychology.
 
-**Market Psychology**: Explain the current emotional state of the market around this stock. What are the underlying drivers of investor sentiment?
+For technical psychology analysis:
 
-**Smart Money vs Retail**: Analyze the difference between institutional and retail sentiment. What are the professionals doing versus individual investors?
+**Fear & Greed Reading**: Interpret RSI and Stochastic as measures of crowd psychology:
+- Low RSI (<30) = fear/panic selling
+- High RSI (>70) = greed/euphoria
+- Explain what current readings suggest about trader emotions.
 
-**Contrarian Opportunities**: Identify potential opportunities where sentiment extremes might create entry points for patient, well-capitalized investors.
+**Accumulation vs Distribution**: Analyze volume patterns to infer whether traders are:
+- Accumulating (buying on dips, increasing positions)
+- Distributing (selling into strength, reducing positions)
 
-**Risk Assessment**: Discuss how quickly sentiment can shift and what that means for someone with significant capital at risk.
+**Behavioral Extremes**: Use Bollinger Bands to identify when price is at extremes:
+- Upper band = potentially overextended, crowd may be too optimistic
+- Lower band = potentially oversold, crowd may be too pessimistic
 
-**Strategic Implications**: Suggest how to think about positioning given current sentiment dynamics.`;
+**Conviction Signals**: Look at MACD for signs of momentum conviction or divergence:
+- Strong momentum = high conviction in current trend
+- Divergence = potential shift in crowd psychology
+
+DISCLAIMER: Add a note that this analysis is derived from price and volume patterns only, not from news or social sentiment data.`;
 
       default:
         /**
@@ -751,25 +780,56 @@ For sentiment analysis, provide a nuanced view of market psychology:
 
   /**
    * compactTechnical - Input compactor for large time series:
+   * - Separates CURRENT values (for exact references) from TREND arrays
    * - Keeps last N points per indicator to reduce token usage
    * - Caps signals to avoid runaway prompts
    * - Preserves summary & salient info for the model
+   *
+   * IMPORTANT: The "current" object contains the most recent indicator values
+   * which MUST match what the user sees in the Technical Indicators panel.
+   * The "trend" object contains recent historical values for context.
    */
   private compactTechnical(analysis: TechnicalAnalysisResult) {
     const lastN = (arr?: any[], n = 5) => Array.isArray(arr) ? arr.slice(-n) : undefined;
-    
+    const lastValue = <T>(arr?: T[]): T | undefined => Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : undefined;
+
     // Safely access indicators with fallbacks
     const indicators = analysis?.indicators || {};
-    
+
+    // Extract current (most recent) values - these MUST match UI display
+    const currentRsi = lastValue(indicators.rsi);
+    const currentMacd = lastValue(indicators.macd);
+    const currentBb = lastValue(indicators.bollingerBands);
+    const currentStoch = lastValue(indicators.stochastic);
+
     return {
       summary: analysis?.summary || { overall: 'neutral', strength: 0.5, confidence: 0.5 },
       signals: (analysis?.signals || []).slice(0, 20),
-      indicators: {
-        rsi: lastN(indicators.rsi),
-        macd: lastN(indicators.macd),
-        bollingerBands: lastN(indicators.bollingerBands),
-        stochastic: lastN(indicators.stochastic),
-        williamsR: lastN(indicators.williamsR),
+      // CURRENT values - the AI MUST reference these exact values
+      current: {
+        rsi: typeof currentRsi === 'object' && currentRsi !== null && 'value' in currentRsi
+          ? (currentRsi as any).value
+          : currentRsi ?? null,
+        macd: currentMacd ? {
+          macd: (currentMacd as any).macd ?? null,
+          signal: (currentMacd as any).signal ?? null,
+          histogram: (currentMacd as any).histogram ?? null,
+        } : null,
+        bollingerBands: currentBb ? {
+          upper: (currentBb as any).upper ?? null,
+          middle: (currentBb as any).middle ?? null,
+          lower: (currentBb as any).lower ?? null,
+        } : null,
+        stochastic: currentStoch ? {
+          k: (currentStoch as any).k ?? null,
+          d: (currentStoch as any).d ?? null,
+        } : null,
+      },
+      // TREND arrays - for context on recent movement
+      trend: {
+        rsi: lastN(indicators.rsi)?.map((r: any) => typeof r === 'object' && r !== null && 'value' in r ? r.value : r),
+        macd: lastN(indicators.macd)?.map((m: any) => m?.histogram),
+        stochastic: lastN(indicators.stochastic)?.map((s: any) => s?.k),
       }
     };
   }
@@ -778,64 +838,176 @@ For sentiment analysis, provide a nuanced view of market psychology:
    * buildTechnicalPrompt - Technical analysis user prompt
    * Prompt Engineering Tactics:
    * - Clear headers (SYMBOL/TYPE)
+   * - CURRENT values prominently displayed for exact reference
    * - Delimited JSON payload (<<<DATA ... DATA>>>)
-   * - Scoped, numbered tasks (minimize off-topic drift)
+   * - Scoped tasks emphasizing CURRENT value usage
    */
+  /** Safe number formatter - handles null/undefined without throwing */
+  private safeFixed(value: number | null | undefined, decimals: number): string {
+    if (value === null || value === undefined || !isFinite(value)) return 'N/A';
+    return value.toFixed(decimals);
+  }
+
   private buildTechnicalPrompt(analysis: TechnicalAnalysisResult, symbol: string): string {
     const compact = this.compactTechnical(analysis);
+
+    // Format current values for easy reference using safe formatter
+    const currentStr = compact.current ? [
+      `CURRENT INDICATOR VALUES (reference these EXACT numbers):`,
+      `- RSI: ${this.safeFixed(compact.current.rsi, 1)}`,
+      `- MACD: ${compact.current.macd ? `Line=${this.safeFixed(compact.current.macd.macd, 2)}, Signal=${this.safeFixed(compact.current.macd.signal, 2)}, Histogram=${this.safeFixed(compact.current.macd.histogram, 2)}` : 'N/A'}`,
+      `- Stochastic: ${compact.current.stochastic ? `%K=${this.safeFixed(compact.current.stochastic.k, 1)}, %D=${this.safeFixed(compact.current.stochastic.d, 1)}` : 'N/A'}`,
+      `- Bollinger Bands: ${compact.current.bollingerBands ? `Upper=${this.safeFixed(compact.current.bollingerBands.upper, 2)}, Middle=${this.safeFixed(compact.current.bollingerBands.middle, 2)}, Lower=${this.safeFixed(compact.current.bollingerBands.lower, 2)}` : 'N/A'}`,
+    ].join('\n') : '';
+
     return [
       `SYMBOL: ${symbol}`,
       `TYPE: TECHNICAL`,
-      `DATA (JSON, DELIMITED):`,
+      ``,
+      currentStr,
+      ``,
+      `FULL DATA (JSON):`,
       `<<<DATA`,
       JSON.stringify(compact),
       `DATA>>>`,
+      ``,
       `Tasks:`,
-      `1. Summarize current state in plain terms.`,
-      `2. Highlight notable levels or signals (e.g., overbought/oversold, crossovers).`,
-      `3. Mention risks and opportunities for the next 1–2 sessions.`,
-      `4. Provide confidence score (0–1).`
+      `1. Start by stating the CURRENT indicator values from above - these match the user's UI.`,
+      `2. Explain what these current readings mean (e.g., RSI 25 = oversold).`,
+      `3. Use the "trend" arrays to describe recent movement direction.`,
+      `4. Highlight entry/exit levels based on current Bollinger Bands.`,
+      `5. Discuss risks and opportunities for the next 1–2 sessions.`
     ].join('\n');
   }
 
   /**
    * buildPortfolioPrompt - Portfolio analysis user prompt
-   * - Mirrors the technical prompt structure for consistency.
+   * Includes portfolio context with held/not-held modes.
    */
   private buildPortfolioPrompt(data: any, symbol: string): string {
+    const portfolioContext = data?.portfolioContext;
+
+    // Format portfolio context prominently
+    let contextStr = '';
+    if (portfolioContext) {
+      const { portfolio, position, isHeld } = portfolioContext;
+      contextStr = [
+        ``,
+        `PORTFOLIO CONTEXT:`,
+        `- Total portfolio value: $${portfolio?.totalValue?.toLocaleString() ?? 'N/A'}`,
+        `- Cash available: $${portfolio?.cashAvailable?.toLocaleString() ?? 'N/A'}`,
+        `- Number of positions: ${portfolio?.positionsCount ?? 'N/A'}`,
+        ``,
+      ].join('\n');
+
+      if (isHeld && position) {
+        contextStr += [
+          `CURRENT POSITION IN ${symbol} (user HOLDS this stock):`,
+          `- Shares: ${position.shares}`,
+          `- Average cost basis: $${this.safeFixed(position.avgCostBasis, 2)}`,
+          `- Current price: $${this.safeFixed(position.currentPrice, 2)}`,
+          `- Market value: $${position.marketValue?.toLocaleString() ?? 'N/A'}`,
+          `- Total return: $${this.safeFixed(position.totalReturn, 2)} (${this.safeFixed(position.totalReturnPercent, 2)}%)`,
+          ``,
+        ].join('\n');
+      } else {
+        contextStr += [
+          `STATUS: User does NOT currently hold ${symbol}.`,
+          `Analyze as a POTENTIAL ADDITION to their portfolio.`,
+          ``,
+        ].join('\n');
+      }
+    }
+
+    // Compact technical data for context
+    const compact = this.compactTechnical(data);
+
     return [
       `SYMBOL: ${symbol}`,
       `TYPE: PORTFOLIO`,
-      `DATA (JSON, DELIMITED):`,
+      contextStr,
+      `TECHNICAL CONTEXT (for entry/exit decisions):`,
       `<<<DATA`,
-      JSON.stringify(data),
+      JSON.stringify({ summary: compact.summary, current: compact.current, signals: compact.signals?.slice(0, 10) }),
       `DATA>>>`,
+      ``,
       `Tasks:`,
-      `1. Summarize risk-adjusted returns and correlations.`,
-      `2. Note diversification or concentration issues versus a typical portfolio.`,
-      `3. Highlight risk management implications.`,
-      `4. Provide confidence score (0–1).`
+      portfolioContext?.isHeld
+        ? `1. Reference the EXACT position data above (shares, cost, return %).`
+        : `1. Analyze if this is a good entry point based on technical signals.`,
+      portfolioContext?.isHeld
+        ? `2. Assess performance: Is this position working for them?`
+        : `2. Suggest position sizing as a % of their $${portfolioContext?.portfolio?.totalValue?.toLocaleString() ?? 'N/A'} portfolio.`,
+      `3. Discuss actionable next steps based on current technical setup.`,
+      `4. Keep advice practical - no Sharpe ratio, beta, or correlations.`
     ].join('\n');
   }
 
   /**
-   * buildSentimentPrompt - Sentiment analysis user prompt
-   * - Maintains delimiter discipline & short task list.
+   * buildSentimentPrompt - Technical Psychology analysis user prompt
+   * Renamed from "sentiment" - focuses on what technicals reveal about crowd psychology.
+   * Does NOT use news/social sentiment (we don't have that data).
    */
   private buildSentimentPrompt(data: any, symbol: string): string {
+    // Use compact technical data
+    const compact = this.compactTechnical(data);
+
+    // Format current readings for psychology interpretation using safe formatter
+    const psychologyReadings = compact.current ? [
+      ``,
+      `TECHNICAL PSYCHOLOGY INDICATORS:`,
+      `- RSI: ${this.safeFixed(compact.current.rsi, 1)} ${this.interpretRsiPsychology(compact.current.rsi)}`,
+      `- Stochastic %K: ${this.safeFixed(compact.current.stochastic?.k, 1)} ${this.interpretStochasticPsychology(compact.current.stochastic?.k)}`,
+      `- MACD Histogram: ${this.safeFixed(compact.current.macd?.histogram, 2)} (momentum conviction)`,
+      `- Bollinger Position: ${this.getBollingerPosition(compact.current.bollingerBands, data?.latestPrice)}`,
+      ``,
+    ].join('\n') : '';
+
     return [
       `SYMBOL: ${symbol}`,
-      `TYPE: SENTIMENT`,
-      `DATA (JSON, DELIMITED):`,
+      `TYPE: TECHNICAL_PSYCHOLOGY`,
+      psychologyReadings,
+      `FULL DATA (JSON):`,
       `<<<DATA`,
-      JSON.stringify(data),
+      JSON.stringify({ summary: compact.summary, current: compact.current, trend: compact.trend }),
       `DATA>>>`,
+      ``,
       `Tasks:`,
-      `1. Summarize overall market sentiment for the symbol.`,
-      `2. Note divergences or extreme readings that could matter.`,
-      `3. Highlight near-term risks from sentiment-driven moves.`,
-      `4. Provide confidence score (0–1).`
+      `1. Interpret current RSI/Stochastic as fear vs greed indicators.`,
+      `2. Analyze volume/momentum patterns for accumulation vs distribution.`,
+      `3. Identify behavioral extremes from Bollinger Band positioning.`,
+      `4. Add disclaimer: "This analysis is derived from technical indicators only, not news or social sentiment."`
     ].join('\n');
+  }
+
+  /** Helper to interpret RSI as crowd psychology */
+  private interpretRsiPsychology(rsi?: number | null): string {
+    if (rsi === undefined || rsi === null) return '';
+    if (rsi < 30) return '(FEAR zone - potential panic selling)';
+    if (rsi < 40) return '(cautious/worried sentiment)';
+    if (rsi > 70) return '(GREED zone - potential euphoria)';
+    if (rsi > 60) return '(optimistic sentiment)';
+    return '(neutral sentiment)';
+  }
+
+  /** Helper to interpret Stochastic as crowd psychology */
+  private interpretStochasticPsychology(k?: number | null): string {
+    if (k === undefined || k === null) return '';
+    if (k < 20) return '(extreme pessimism)';
+    if (k > 80) return '(extreme optimism)';
+    return '(balanced)';
+  }
+
+  /** Helper to describe price position relative to Bollinger Bands */
+  private getBollingerPosition(bb?: { upper?: number; middle?: number; lower?: number } | null, price?: number): string {
+    if (!bb || !price) return 'N/A';
+    if (bb.upper && price > bb.upper) return 'ABOVE upper band (potentially overextended)';
+    if (bb.lower && price < bb.lower) return 'BELOW lower band (potentially oversold)';
+    if (bb.middle) {
+      const position = price > bb.middle ? 'above' : 'below';
+      return `${position} middle band (trending ${position === 'above' ? 'bullish' : 'bearish'})`;
+    }
+    return 'within bands';
   }
 
   /**
@@ -1000,15 +1172,17 @@ Position sizing becomes critical here. A 3-4% allocation would give you meaningf
 
 The risk-adjusted return profile suggests this could be a multi-year holding rather than a trading position, which aligns well with tax efficiency goals that serious investors should be considering.`,
 
-      sentiment: `The sentiment picture around ${symbol} tells a fascinating story about market psychology right now. What we're seeing is a classic case of institutional money being more cautious while retail investors remain relatively optimistic - a dynamic that often creates opportunities for patient, well-capitalized investors.
+      sentiment: `Looking at the technical psychology indicators for ${symbol}, we can infer some interesting insights about crowd behavior based solely on price and volume patterns.
 
-The professional money managers seem to be taking a "wait and see" approach, which isn't necessarily bearish but suggests they're looking for better entry points or more clarity on fundamental drivers. This creates an interesting dynamic where the stock might trade in a range while smart money accumulates positions.
+The current RSI reading suggests ${data?.summary?.trendDirection === 'up' ? 'optimistic sentiment with traders showing bullish conviction' : data?.summary?.trendDirection === 'down' ? 'cautious sentiment with sellers in control' : 'balanced sentiment without extreme positioning'}. When RSI approaches extremes, it often reflects emotional decision-making rather than rational analysis - fear drives oversold conditions while greed drives overbought readings.
 
-For investors with a longer time horizon and solid capital base, this type of sentiment environment can actually be quite favorable. You're not forced to chase momentum or make hasty decisions based on short-term noise. Instead, you can use periods of uncertainty to build positions methodically.
+From an accumulation/distribution perspective, the recent volume patterns indicate ${data?.summary?.volatility === 'high' ? 'active trading with potential distribution' : 'steady accumulation behavior'}. Volume spikes often coincide with emotional reactions, and understanding this helps anticipate potential reversals.
 
-What's particularly interesting is how quickly sentiment can shift in today's market environment. Social media and algorithmic trading can create rapid sentiment swings that may not reflect underlying business fundamentals. This volatility in sentiment often creates the best opportunities for investors who can maintain a longer-term perspective.
+The Bollinger Band positioning provides another psychological lens. Price near the bands suggests traders are testing extremes, while consolidation near the middle band indicates a period of uncertainty where neither bulls nor bears have conviction.
 
-The key is positioning yourself to benefit from eventual sentiment improvements while protecting against the downside if sentiment deteriorates further. This might mean building positions gradually rather than taking a full position immediately.`
+Looking at momentum through MACD, we can gauge trader conviction. Strong histogram readings reflect high conviction in the current direction, while divergences between price and MACD often precede sentiment shifts as early movers begin repositioning.
+
+**Note**: This technical psychology analysis is derived entirely from price and volume patterns. We do not have access to news sentiment, social media data, or institutional positioning data. These interpretations are inferences from technical indicators only.`
     };
 
     return {

@@ -65,6 +65,10 @@ function createMockInsight(type: string) {
 const mockGetHistoricalData = vi.fn();
 const mockAnalyze = vi.fn();
 const mockGenerateInsight = vi.fn();
+const mockGetDemoUserId = vi.fn();
+const mockGetUserPortfolios = vi.fn();
+const mockGetPortfolioSummary = vi.fn();
+const mockGetHoldingsWithMarketData = vi.fn();
 
 // Mock the dependencies before importing the route
 vi.mock('@/lib/data-providers/fmp', () => ({
@@ -83,21 +87,69 @@ vi.mock('@/lib/ai/llm-providers', () => ({
   getLLMInsightService: () => ({
     generateInsight: mockGenerateInsight,
   }),
+  LLMInsight: {},
+}));
+
+vi.mock('@/lib/auth/demo-user', () => ({
+  getDemoUserId: () => mockGetDemoUserId(),
+}));
+
+vi.mock('@/lib/database/connection', () => ({
+  getDatabase: () => ({}),
+}));
+
+vi.mock('@/lib/portfolio/PortfolioService', () => ({
+  getPortfolioService: () => ({
+    getUserPortfolios: mockGetUserPortfolios,
+    getPortfolioSummary: mockGetPortfolioSummary,
+    getHoldingsWithMarketData: mockGetHoldingsWithMarketData,
+  }),
 }));
 
 // Import the route handlers after mocking
 import { GET, POST } from '../route';
 
+// Helper to create mock portfolio data
+function createMockPortfolio(id: string = 'portfolio-1') {
+  return { id, name: 'Test Portfolio', userId: 'user-1' };
+}
+
+function createMockPortfolioSummary() {
+  return {
+    totalEquity: 100000,
+    cashBalance: 10000,
+    holdingsCount: 5,
+  };
+}
+
+function createMockHolding(symbol: string) {
+  return {
+    symbol,
+    quantity: 100,
+    averageCost: 150,
+    currentPrice: 175,
+    marketValue: 17500,
+    totalGainLoss: 2500,
+    totalGainLossPercent: 16.67,
+  };
+}
+
 describe('Insights API Route - GET', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mock implementations
     mockGetHistoricalData.mockResolvedValue(createMockPriceData());
     mockAnalyze.mockReturnValue(createMockAnalysis());
-    mockGenerateInsight.mockImplementation((type) => 
+    mockGenerateInsight.mockImplementation((type) =>
       Promise.resolve(createMockInsight(type))
     );
+
+    // Portfolio service mocks - default: user has no portfolios
+    mockGetDemoUserId.mockResolvedValue('user-1');
+    mockGetUserPortfolios.mockResolvedValue([]);
+    mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+    mockGetHoldingsWithMarketData.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -528,5 +580,260 @@ describe('Insights API Route - Edge Cases', () => {
       mockAnalysisResult,
       'AAPL'
     );
+  });
+});
+
+describe('Insights API Route - Portfolio Context', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Setup default mock implementations
+    mockGetHistoricalData.mockResolvedValue(createMockPriceData());
+    mockAnalyze.mockReturnValue(createMockAnalysis());
+    mockGenerateInsight.mockImplementation((type) =>
+      Promise.resolve(createMockInsight(type))
+    );
+
+    // Portfolio service mocks
+    mockGetDemoUserId.mockResolvedValue('user-1');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('Portfolio Context Fetching', () => {
+    it('should fetch portfolio context when portfolio insight is requested', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+      mockGetHoldingsWithMarketData.mockResolvedValue([createMockHolding('AAPL')]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGetUserPortfolios).toHaveBeenCalled();
+      expect(mockGetPortfolioSummary).toHaveBeenCalled();
+      expect(mockGetHoldingsWithMarketData).toHaveBeenCalled();
+    });
+
+    it('should NOT fetch portfolio context when only technical insight is requested', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      expect(mockGetUserPortfolios).not.toHaveBeenCalled();
+    });
+
+    it('should pass portfolioContext to generateInsight for portfolio type', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+      mockGetHoldingsWithMarketData.mockResolvedValue([createMockHolding('AAPL')]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            isHeld: true,
+            portfolio: expect.objectContaining({
+              totalValue: 100000,
+              cashAvailable: 10000,
+              positionsCount: 5,
+            }),
+            position: expect.objectContaining({
+              shares: 100,
+              avgCostBasis: 150,
+              currentPrice: 175,
+            }),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should set isHeld to false when user does not hold the stock', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+      mockGetHoldingsWithMarketData.mockResolvedValue([createMockHolding('GOOGL')]); // Different stock
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            isHeld: false,
+            position: null,
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should aggregate data across multiple portfolios', async () => {
+      mockGetUserPortfolios.mockResolvedValue([
+        createMockPortfolio('portfolio-1'),
+        createMockPortfolio('portfolio-2'),
+      ]);
+      mockGetPortfolioSummary
+        .mockResolvedValueOnce({ totalEquity: 50000, cashBalance: 5000, holdingsCount: 3 })
+        .mockResolvedValueOnce({ totalEquity: 50000, cashBalance: 5000, holdingsCount: 2 });
+      mockGetHoldingsWithMarketData
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([createMockHolding('AAPL')]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            portfolio: expect.objectContaining({
+              totalValue: 100000, // 50000 + 50000
+              cashAvailable: 10000, // 5000 + 5000
+              positionsCount: 5, // 3 + 2
+            }),
+            isHeld: true,
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should provide fallback context when user has no portfolios', async () => {
+      mockGetUserPortfolios.mockResolvedValue([]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      // Should still call generateInsight with fallback context
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            isHeld: false,
+            portfolio: expect.objectContaining({
+              totalValue: 0,
+              cashAvailable: 0,
+              positionsCount: 0,
+            }),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should handle portfolio service errors gracefully', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockRejectedValue(new Error('Database error'));
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      const response = await GET(request);
+      const data = await response.json();
+
+      // Should still succeed with fallback context
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+    });
+
+    it('should set position_held metadata on portfolio insights', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+      mockGetHoldingsWithMarketData.mockResolvedValue([createMockHolding('AAPL')]);
+
+      // Mock generateInsight to return an insight with mutable metadata
+      mockGenerateInsight.mockImplementation((type) => {
+        const insight = createMockInsight(type);
+        return Promise.resolve(insight);
+      });
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data.insights.portfolio.metadata.position_held).toBe(true);
+    });
+
+    it('should match symbol case-insensitively when checking holdings', async () => {
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockResolvedValue(createMockPortfolioSummary());
+      mockGetHoldingsWithMarketData.mockResolvedValue([createMockHolding('aapl')]); // lowercase
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            isHeld: true,
+          }),
+        }),
+        'AAPL'
+      );
+    });
+  });
+
+  describe('Parallel Portfolio Fetching', () => {
+    it('should fetch portfolio summaries and holdings in parallel', async () => {
+      let summaryCallTime = 0;
+      let holdingsCallTime = 0;
+
+      mockGetUserPortfolios.mockResolvedValue([createMockPortfolio()]);
+      mockGetPortfolioSummary.mockImplementation(async () => {
+        summaryCallTime = Date.now();
+        await new Promise(r => setTimeout(r, 10));
+        return createMockPortfolioSummary();
+      });
+      mockGetHoldingsWithMarketData.mockImplementation(async () => {
+        holdingsCallTime = Date.now();
+        await new Promise(r => setTimeout(r, 10));
+        return [createMockHolding('AAPL')];
+      });
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      // Both calls should happen nearly simultaneously (within 5ms)
+      expect(Math.abs(summaryCallTime - holdingsCallTime)).toBeLessThan(5);
+    });
+
+    it('should continue with other portfolios if one fails', async () => {
+      mockGetUserPortfolios.mockResolvedValue([
+        createMockPortfolio('portfolio-1'),
+        createMockPortfolio('portfolio-2'),
+      ]);
+
+      // First portfolio fails
+      mockGetPortfolioSummary
+        .mockRejectedValueOnce(new Error('Portfolio 1 error'))
+        .mockResolvedValueOnce({ totalEquity: 50000, cashBalance: 5000, holdingsCount: 3 });
+      mockGetHoldingsWithMarketData
+        .mockRejectedValueOnce(new Error('Portfolio 1 error'))
+        .mockResolvedValueOnce([createMockHolding('AAPL')]);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      // Should still have data from portfolio-2
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          portfolioContext: expect.objectContaining({
+            portfolio: expect.objectContaining({
+              totalValue: 50000,
+            }),
+            isHeld: true,
+          }),
+        }),
+        'AAPL'
+      );
+    });
   });
 });

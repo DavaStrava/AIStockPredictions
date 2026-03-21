@@ -1,9 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { LLMInsight, AIInsightsProps } from '@/types';
 
-export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
+/** Tab type for insight navigation */
+type InsightTabId = 'technical' | 'portfolio' | 'sentiment';
+
+/** Tab definition with label, subtitle, and icon */
+interface InsightTab {
+  id: InsightTabId;
+  label: string;
+  subtitle: string;
+  icon: string;
+}
+
+export default function AIInsights({ symbol }: AIInsightsProps) {
   const [insights, setInsights] = useState<{
     technical?: LLMInsight;
     portfolio?: LLMInsight;
@@ -11,26 +22,9 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
   }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'technical' | 'portfolio' | 'sentiment'>('technical');
+  const [activeTab, setActiveTab] = useState<InsightTabId>('technical');
 
-  useEffect(() => {
-    let isMounted = true;
-    
-    if (symbol) {
-      const loadInsights = async () => {
-        if (isMounted) {
-          await fetchInsights();
-        }
-      };
-      loadInsights();
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [symbol]);
-
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -49,7 +43,13 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [symbol]);
+
+  useEffect(() => {
+    if (symbol) {
+      fetchInsights();
+    }
+  }, [symbol, fetchInsights]);
 
   const getProviderIcon = (provider: string) => {
     switch (provider) {
@@ -80,10 +80,13 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
     return colors[quality as keyof typeof colors] || colors.medium;
   };
 
-  const tabs = [
-    { id: 'technical', label: 'Technical Analysis', icon: '📊' },
-    { id: 'portfolio', label: 'Portfolio Theory', icon: '📈' },
-    { id: 'sentiment', label: 'Market Sentiment', icon: '🎯' },
+  // Determine if user holds this stock for dynamic subtitle (explicit false for undefined)
+  const isHeld = insights.portfolio?.metadata?.position_held ?? false;
+
+  const tabs: InsightTab[] = [
+    { id: 'technical', label: 'Technical Analysis', subtitle: 'Chart patterns & indicators', icon: '📊' },
+    { id: 'portfolio', label: 'Portfolio Theory', subtitle: isHeld ? 'Based on your position' : 'Considering adding', icon: '📈' },
+    { id: 'sentiment', label: 'Technical Psychology', subtitle: 'Derived from price & volume', icon: '🧠' },
   ];
 
   if (loading) {
@@ -139,14 +142,24 @@ export default function AIInsights({ symbol, analysis }: AIInsightsProps) {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 px-3 py-2 rounded-md transition-colors ${activeTab === tab.id
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center text-sm font-medium">
+                    <span className="mr-1.5">{tab.icon}</span>
+                    {tab.label}
+                  </div>
+                  <span className={`text-xs mt-0.5 ${activeTab === tab.id
+                    ? 'text-blue-500 dark:text-blue-300'
+                    : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                    {tab.subtitle}
+                  </span>
+                </div>
               </button>
             ))}
           </div>

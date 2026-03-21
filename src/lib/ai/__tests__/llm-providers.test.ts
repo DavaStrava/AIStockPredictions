@@ -166,20 +166,25 @@ describe('OpenAIProvider', () => {
 
       it('should include portfolio analysis sections for portfolio type', () => {
         const prompt = getSystemPrompt(provider, 'portfolio');
-        
-        expect(prompt).toContain('Portfolio Context');
-        expect(prompt).toContain('Risk-Return Profile');
-        expect(prompt).toContain('Diversification Strategy');
-        expect(prompt).toContain('Strategic Positioning');
+
+        // Updated portfolio prompt with held/not-held modes
+        expect(prompt).toContain('portfolioContext');
+        expect(prompt).toContain('Position Review');
+        expect(prompt).toContain('Performance Assessment');
+        expect(prompt).toContain('Opportunity Assessment');
+        expect(prompt).toContain('Entry Strategy');
+        expect(prompt).toContain('Position Sizing');
       });
 
-      it('should include sentiment analysis sections for sentiment type', () => {
+      it('should include Technical Psychology sections for sentiment type', () => {
         const prompt = getSystemPrompt(provider, 'sentiment');
-        
-        expect(prompt).toContain('Market Psychology');
-        expect(prompt).toContain('Smart Money vs Retail');
-        expect(prompt).toContain('Contrarian Opportunities');
-        expect(prompt).toContain('Risk Assessment');
+
+        // Updated to Technical Psychology - derived from indicators only
+        expect(prompt).toContain('Technical Psychology');
+        expect(prompt).toContain('Fear & Greed Reading');
+        expect(prompt).toContain('Accumulation vs Distribution');
+        expect(prompt).toContain('Behavioral Extremes');
+        expect(prompt).toContain('Conviction Signals');
       });
 
       it('should return base prompt for unknown type', () => {
@@ -427,6 +432,279 @@ describe('OpenAIProvider', () => {
       await expect(
         provider.generateInsight('technical', {}, 'AAPL')
       ).rejects.toThrow('OpenAI API error 401');
+    });
+  });
+});
+
+describe('OpenAIProvider - New Helper Functions', () => {
+  let provider: OpenAIProvider;
+
+  beforeEach(() => {
+    provider = new OpenAIProvider('test-api-key');
+  });
+
+  describe('safeFixed', () => {
+    const safeFixed = (provider: OpenAIProvider, value: number | null | undefined, decimals: number) => {
+      return (provider as any).safeFixed(value, decimals);
+    };
+
+    it('should format valid numbers', () => {
+      expect(safeFixed(provider, 45.678, 2)).toBe('45.68');
+      expect(safeFixed(provider, 45.678, 1)).toBe('45.7');
+      expect(safeFixed(provider, 100, 2)).toBe('100.00');
+    });
+
+    it('should return N/A for null', () => {
+      expect(safeFixed(provider, null, 2)).toBe('N/A');
+    });
+
+    it('should return N/A for undefined', () => {
+      expect(safeFixed(provider, undefined, 2)).toBe('N/A');
+    });
+
+    it('should return N/A for NaN', () => {
+      expect(safeFixed(provider, NaN, 2)).toBe('N/A');
+    });
+
+    it('should return N/A for Infinity', () => {
+      expect(safeFixed(provider, Infinity, 2)).toBe('N/A');
+      expect(safeFixed(provider, -Infinity, 2)).toBe('N/A');
+    });
+
+    it('should handle zero correctly', () => {
+      expect(safeFixed(provider, 0, 2)).toBe('0.00');
+    });
+
+    it('should handle negative numbers', () => {
+      expect(safeFixed(provider, -25.5, 1)).toBe('-25.5');
+    });
+  });
+
+  describe('compactTechnical', () => {
+    const compactTechnical = (provider: OpenAIProvider, analysis: any) => {
+      return (provider as any).compactTechnical(analysis);
+    };
+
+    it('should separate current values from trend arrays', () => {
+      const analysis = {
+        summary: { overall: 'bullish', strength: 0.7, confidence: 0.8 },
+        signals: [{ indicator: 'RSI', signal: 'buy', strength: 0.8 }],
+        indicators: {
+          rsi: [{ value: 30 }, { value: 35 }, { value: 40 }, { value: 45 }, { value: 50 }],
+          macd: [
+            { macd: 0.1, signal: 0.05, histogram: 0.05 },
+            { macd: 0.2, signal: 0.1, histogram: 0.1 },
+          ],
+          bollingerBands: [{ upper: 110, middle: 100, lower: 90 }],
+          stochastic: [{ k: 75, d: 70 }],
+        },
+      };
+
+      const result = compactTechnical(provider, analysis);
+
+      // Check current values (last values)
+      expect(result.current.rsi).toBe(50);
+      expect(result.current.macd).toEqual({ macd: 0.2, signal: 0.1, histogram: 0.1 });
+      expect(result.current.bollingerBands).toEqual({ upper: 110, middle: 100, lower: 90 });
+      expect(result.current.stochastic).toEqual({ k: 75, d: 70 });
+
+      // Check trend arrays
+      expect(result.trend.rsi).toEqual([30, 35, 40, 45, 50]);
+      expect(result.trend.macd).toEqual([0.05, 0.1]); // histograms only
+      expect(result.trend.stochastic).toEqual([75]); // k values only
+    });
+
+    it('should handle empty indicators gracefully', () => {
+      const analysis = {
+        summary: { overall: 'neutral' },
+        signals: [],
+        indicators: {},
+      };
+
+      const result = compactTechnical(provider, analysis);
+
+      expect(result.current.rsi).toBeNull();
+      expect(result.current.macd).toBeNull();
+      expect(result.current.bollingerBands).toBeNull();
+      expect(result.current.stochastic).toBeNull();
+    });
+
+    it('should handle null analysis gracefully', () => {
+      const result = compactTechnical(provider, null);
+
+      expect(result.summary).toEqual({ overall: 'neutral', strength: 0.5, confidence: 0.5 });
+      expect(result.signals).toEqual([]);
+      expect(result.current.rsi).toBeNull();
+    });
+
+    it('should cap signals at 20 items', () => {
+      const analysis = {
+        signals: Array(30).fill({ indicator: 'test', signal: 'buy', strength: 0.5 }),
+        indicators: {},
+      };
+
+      const result = compactTechnical(provider, analysis);
+
+      expect(result.signals.length).toBe(20);
+    });
+
+    it('should extract RSI value from object with value property', () => {
+      const analysis = {
+        indicators: {
+          rsi: [{ value: 45, date: '2024-01-01' }],
+        },
+      };
+
+      const result = compactTechnical(provider, analysis);
+
+      expect(result.current.rsi).toBe(45);
+      expect(result.trend.rsi).toEqual([45]);
+    });
+  });
+
+  describe('interpretRsiPsychology', () => {
+    const interpretRsiPsychology = (provider: OpenAIProvider, rsi?: number | null) => {
+      return (provider as any).interpretRsiPsychology(rsi);
+    };
+
+    it('should return FEAR zone for RSI < 30', () => {
+      expect(interpretRsiPsychology(provider, 25)).toContain('FEAR zone');
+      expect(interpretRsiPsychology(provider, 29)).toContain('FEAR zone');
+    });
+
+    it('should return cautious for RSI 30-40', () => {
+      expect(interpretRsiPsychology(provider, 30)).toContain('cautious');
+      expect(interpretRsiPsychology(provider, 39)).toContain('cautious');
+    });
+
+    it('should return neutral for RSI 40-60', () => {
+      expect(interpretRsiPsychology(provider, 45)).toContain('neutral');
+      expect(interpretRsiPsychology(provider, 55)).toContain('neutral');
+    });
+
+    it('should return optimistic for RSI 60-70', () => {
+      expect(interpretRsiPsychology(provider, 65)).toContain('optimistic');
+    });
+
+    it('should return GREED zone for RSI > 70', () => {
+      expect(interpretRsiPsychology(provider, 75)).toContain('GREED zone');
+      expect(interpretRsiPsychology(provider, 85)).toContain('GREED zone');
+    });
+
+    it('should return empty string for null/undefined', () => {
+      expect(interpretRsiPsychology(provider, null)).toBe('');
+      expect(interpretRsiPsychology(provider, undefined)).toBe('');
+    });
+  });
+
+  describe('interpretStochasticPsychology', () => {
+    const interpretStochasticPsychology = (provider: OpenAIProvider, k?: number | null) => {
+      return (provider as any).interpretStochasticPsychology(k);
+    };
+
+    it('should return extreme pessimism for k < 20', () => {
+      expect(interpretStochasticPsychology(provider, 15)).toContain('extreme pessimism');
+    });
+
+    it('should return extreme optimism for k > 80', () => {
+      expect(interpretStochasticPsychology(provider, 85)).toContain('extreme optimism');
+    });
+
+    it('should return balanced for k 20-80', () => {
+      expect(interpretStochasticPsychology(provider, 50)).toContain('balanced');
+    });
+
+    it('should return empty string for null/undefined', () => {
+      expect(interpretStochasticPsychology(provider, null)).toBe('');
+      expect(interpretStochasticPsychology(provider, undefined)).toBe('');
+    });
+  });
+
+  describe('getBollingerPosition', () => {
+    const getBollingerPosition = (provider: OpenAIProvider, bb: any, price?: number) => {
+      return (provider as any).getBollingerPosition(bb, price);
+    };
+
+    it('should return N/A when bb is null', () => {
+      expect(getBollingerPosition(provider, null, 100)).toBe('N/A');
+    });
+
+    it('should return N/A when price is undefined', () => {
+      expect(getBollingerPosition(provider, { upper: 110, middle: 100, lower: 90 }, undefined)).toBe('N/A');
+    });
+
+    it('should detect price above upper band', () => {
+      const result = getBollingerPosition(provider, { upper: 110, middle: 100, lower: 90 }, 115);
+      expect(result).toContain('ABOVE upper band');
+      expect(result).toContain('overextended');
+    });
+
+    it('should detect price below lower band', () => {
+      const result = getBollingerPosition(provider, { upper: 110, middle: 100, lower: 90 }, 85);
+      expect(result).toContain('BELOW lower band');
+      expect(result).toContain('oversold');
+    });
+
+    it('should detect price above middle band', () => {
+      const result = getBollingerPosition(provider, { upper: 110, middle: 100, lower: 90 }, 105);
+      expect(result).toContain('above middle band');
+      expect(result).toContain('bullish');
+    });
+
+    it('should detect price below middle band', () => {
+      const result = getBollingerPosition(provider, { upper: 110, middle: 100, lower: 90 }, 95);
+      expect(result).toContain('below middle band');
+      expect(result).toContain('bearish');
+    });
+
+    it('should return within bands when no middle reference', () => {
+      const result = getBollingerPosition(provider, { upper: 110, lower: 90 }, 100);
+      expect(result).toBe('within bands');
+    });
+  });
+
+  describe('Updated System Prompts', () => {
+    const getSystemPrompt = (provider: OpenAIProvider, type: 'technical' | 'portfolio' | 'sentiment') => {
+      return (provider as any).getSystemPrompt(type);
+    };
+
+    it('should instruct technical prompt to reference CURRENT values', () => {
+      const prompt = getSystemPrompt(provider, 'technical');
+      expect(prompt).toContain('CURRENT values');
+      expect(prompt).toContain('current');
+      expect(prompt).toContain('trend');
+    });
+
+    it('should include Technical Psychology guidance in sentiment prompt', () => {
+      const prompt = getSystemPrompt(provider, 'sentiment');
+      expect(prompt).toContain('Technical Psychology');
+      expect(prompt).toContain('RSI');
+      expect(prompt).toContain('fear');
+      expect(prompt).toContain('greed');
+      expect(prompt).toContain('derived');
+    });
+
+    it('should instruct NOT to mention Sharpe ratio, beta, correlations in portfolio prompt', () => {
+      const prompt = getSystemPrompt(provider, 'portfolio');
+      // The prompt should instruct NOT to use these metrics
+      expect(prompt).toContain('DO NOT mention');
+      expect(prompt).toContain('Sharpe ratio');
+      expect(prompt).toContain('beta');
+      expect(prompt).toContain('correlations');
+    });
+
+    it('should include held/not-held modes in portfolio prompt', () => {
+      const prompt = getSystemPrompt(provider, 'portfolio');
+      expect(prompt).toContain('isHeld');
+      expect(prompt).toContain('HOLDS');
+      expect(prompt).toContain('NOT own');
+    });
+
+    it('should include disclaimer in sentiment prompt about no news data', () => {
+      const prompt = getSystemPrompt(provider, 'sentiment');
+      expect(prompt).toContain('do NOT have news sentiment');
+      expect(prompt).toContain('social media');
+      expect(prompt).toContain('institutional/retail');
     });
   });
 });
