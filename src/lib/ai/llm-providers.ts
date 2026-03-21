@@ -98,6 +98,7 @@ export interface LLMInsight {
   content: string;                                   // Human-readable insight (1–3 sentences)
   confidence: number;                                // Heuristic or model-provided 0..1 confidence
   provider: 'openai' | 'bedrock' | 'mock';           // Source provider
+  generatedAt: string;                               // ISO timestamp when this insight was generated
   metadata: {
     indicators_used?: string[];                      // Which indicators contributed (traceability)
     timeframe?: string;                              // e.g., '1D', '1H'
@@ -456,6 +457,7 @@ export class OpenAIProvider implements LLMProvider {
       content: content.trim(),
       confidence: this.calculateConfidence(data, type),
       provider: 'openai',
+      generatedAt: new Date().toISOString(),
       metadata: {
         // METADATA CONSTRUCTION PATTERN: Building observability data for AI responses
         // This metadata serves multiple purposes in production AI systems:
@@ -1014,6 +1016,7 @@ The key is positioning yourself to benefit from eventual sentiment improvements 
       content: mockInsights[type],
       confidence: 0.6,
       provider: 'mock',
+      generatedAt: new Date().toISOString(),
       metadata: {
         indicators_used: ['RSI', 'MACD'],
         timeframe: '1D',
