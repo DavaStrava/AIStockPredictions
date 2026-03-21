@@ -105,7 +105,15 @@ export function useMarketIndexAnalysis({
       const result = await response.json();
 
       if (result.success) {
-        setData(result.data);
+        // Convert date strings to Date objects for priceData
+        const processedData = {
+          ...result.data,
+          priceData: result.data.priceData?.map((item: PriceData) => ({
+            ...item,
+            date: new Date(item.date),
+          })) || [],
+        };
+        setData(processedData);
       } else {
         throw new Error(result.error || 'Failed to fetch index analysis');
       }
