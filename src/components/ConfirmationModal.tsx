@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  error?: string | null;
 }
 
 /**
@@ -29,6 +30,7 @@ export function ConfirmationModal({
   cancelText = 'Cancel',
   variant = 'danger',
   isLoading = false,
+  error = null,
 }: ConfirmationModalProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -155,6 +157,13 @@ export function ConfirmationModal({
         >
           {message}
         </p>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 p-3 bg-rose-900/30 border border-rose-700/50 rounded-lg">
+            <p className="text-rose-400 text-sm text-center">{error}</p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3">

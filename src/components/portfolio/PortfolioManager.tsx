@@ -119,6 +119,7 @@ export function PortfolioManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [portfolioToDelete, setPortfolioToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleCreatePortfolio = async () => {
     if (!newPortfolioName.trim()) return;
@@ -134,6 +135,7 @@ export function PortfolioManager() {
 
   const handleDeletePortfolioClick = (id: string) => {
     setPortfolioToDelete(id);
+    setDeleteError(null);
     setShowDeleteModal(true);
     setShowPortfolioDropdown(false);
   };
@@ -142,12 +144,14 @@ export function PortfolioManager() {
     if (!portfolioToDelete) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await deletePortfolio(portfolioToDelete);
       setShowDeleteModal(false);
       setPortfolioToDelete(null);
     } catch (err) {
-      console.error('Failed to delete portfolio:', err);
+      const message = err instanceof Error ? err.message : 'Failed to delete portfolio';
+      setDeleteError(message);
     } finally {
       setIsDeleting(false);
     }
@@ -156,6 +160,7 @@ export function PortfolioManager() {
   const handleDeleteModalClose = () => {
     setShowDeleteModal(false);
     setPortfolioToDelete(null);
+    setDeleteError(null);
   };
 
   const handleRefresh = async () => {
@@ -554,6 +559,7 @@ export function PortfolioManager() {
           cancelText="Cancel"
           variant="danger"
           isLoading={isDeleting}
+          error={deleteError}
         />
       </div>
 

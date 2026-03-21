@@ -153,6 +153,7 @@ export function usePortfolio(options: UsePortfolioOptions = {}) {
         }
 
         await fetchPortfolios();
+        setState((prev) => ({ ...prev, loading: false }));
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to delete portfolio';
         setState((prev) => ({ ...prev, loading: false, error: message }));
