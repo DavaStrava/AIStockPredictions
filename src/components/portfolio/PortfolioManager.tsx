@@ -317,17 +317,15 @@ export function PortfolioManager() {
                             </p>
                           )}
                         </div>
-                        {portfolios.length > 1 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePortfolioClick(portfolio.id);
-                            }}
-                            className="p-1.5 hover:bg-rose-600/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-400" />
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePortfolioClick(portfolio.id);
+                          }}
+                          className="p-1.5 hover:bg-rose-600/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-400" />
+                        </button>
                       </div>
                     ))}
                   </div>
