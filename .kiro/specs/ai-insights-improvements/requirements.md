@@ -10,11 +10,13 @@ The AI-powered insights feature has three analysis types (Technical, Portfolio, 
 
 ## Current State
 
-| Type | Has Correct Data? | Problem |
-|------|------------------|---------|
-| Technical | ✅ Partial | Historical trend vs current value mismatch |
-| Portfolio | ❌ No | Hallucinating metrics from wrong data source |
-| Sentiment | ❌ No | Inventing sentiment from wrong data source |
+| Type | Has Correct Data? | Status |
+|------|------------------|--------|
+| Technical | ✅ Yes | Current values separated from trends, prompts aligned |
+| Portfolio | ✅ Yes | Real portfolio data from DB, held/not-held modes |
+| Sentiment | ✅ Yes | Renamed to "Technical Psychology", derived from indicators |
+
+**Phase 1 Implementation Complete (March 2026)**
 
 ### Technical Details
 
@@ -39,9 +41,11 @@ All three insight types currently receive the same `TechnicalAnalysisResult`:
 - Historical trend context is acceptable but must be clearly distinguished from current values
 
 ### REQ-2: Portfolio Theory Data Integrity
-- Portfolio insights must only reference metrics that exist in the input data
-- If real portfolio data is not available, the prompt must be reframed to discuss "position management considerations" based on technical signals
+- Portfolio insights must use the user's **actual portfolio data**
+- **If stock is held**: Analyze existing position (cost basis, return, sizing recommendations)
+- **If stock is NOT held**: Analyze as potential addition (entry point, position sizing based on portfolio size, diversification impact)
 - No hallucinated Sharpe ratios, betas, or correlation values
+- Insights should be specific to the user's situation
 
 ### REQ-3: Sentiment Analysis Data Integrity
 - Sentiment insights must only reference data that actually exists
@@ -59,11 +63,9 @@ All three insight types currently receive the same `TechnicalAnalysisResult`:
 3. Clear labeling of insight types and their data sources
 4. Insights provide genuine value without misleading users
 
-## Out of Scope (Future Considerations)
+## Out of Scope (Phase 2 - Optional)
 
-- Integrating real-time news sentiment API
-- Options flow / put-call ratio data
-- Social media sentiment analysis
-- Insider trading data integration
+- Real-time sentiment data from external providers
+- News/social sentiment aggregation
 
-These could be added later to provide genuine sentiment data.
+Phase 2 is optional. "Technical Psychology" may be sufficient for personal use. If sentiment is desired, pick one provider and implement directly (no elaborate architecture needed).

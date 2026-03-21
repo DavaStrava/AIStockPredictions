@@ -1,81 +1,86 @@
 # AI Insights Improvements - Tasks
 
-## Status: NOT STARTED
+## Status: PHASE 1 COMPLETE
 
-## Phase 1: Fix Prompts & Labels (No New Data Sources)
+## Phase 1: Fix Prompts & Labels (No New Data Sources) ✅
 
-### Task 1: Technical Analysis - Current Value Alignment
-- [ ] 1.1 Modify `compactTechnical()` to separate current values from trend arrays
-- [ ] 1.2 Update technical prompt to explicitly reference current values
-- [ ] 1.3 Add instruction to lead with current values, then discuss trends
-- [ ] 1.4 Test that AI narrative RSI matches Technical Indicators panel RSI
+### Task 1: Technical Analysis - Current Value Alignment ✅
+- [x] 1.1 Modify `compactTechnical()` to separate current values from trend arrays
+- [x] 1.2 Update technical prompt to explicitly reference current values
+- [x] 1.3 Add instruction to lead with current values, then discuss trends
+- [x] 1.4 Test that AI narrative RSI matches Technical Indicators panel RSI
 
-### Task 2: Portfolio Theory → Position Management
-- [ ] 2.1 Rename insight type from "portfolio" to "position" (or keep internal name, change display)
-- [ ] 2.2 Rewrite `getSystemPrompt('portfolio')` to focus on position management
-- [ ] 2.3 Remove references to Sharpe ratio, beta, correlations from prompt
-- [ ] 2.4 Add disclaimer about technical-only data source
-- [ ] 2.5 Update UI tab label in `AIInsights.tsx` to "Position Management"
-- [ ] 2.6 Add subtitle "Based on technical analysis"
+### Task 2: Portfolio Theory → Real Portfolio Data ✅
+- [x] 2.1 Create `getPortfolioInsightData(symbol)` helper in insights API
+  - Gets current user ID via `getDemoUserId()`
+  - Aggregates data across all user portfolios using `Promise.allSettled`
+  - Returns `{ portfolio: {...}, position: {...} | null, isHeld: boolean }`
+- [x] 2.2 Update `/api/insights` route to fetch portfolio context
+  - Passes portfolio context for portfolio insight type
+  - Includes position data if stock is held
+- [x] 2.3 Rewrite `getSystemPrompt('portfolio')` with two modes:
+  - **If held**: Analyze existing position (cost basis, return, add/hold/reduce)
+  - **If not held**: Analyze as potential addition (sizing, entry point, diversification)
+- [x] 2.4 Update UI tab subtitle:
+  - "Based on your position" (if held)
+  - "Considering adding" (if not held)
 
-### Task 3: Sentiment Analysis → Technical Psychology
-- [ ] 3.1 Rewrite `getSystemPrompt('sentiment')` to focus on technical psychology
-- [ ] 3.2 Remove references to institutional/retail behavior
-- [ ] 3.3 Focus on RSI extremes, volume patterns, support/resistance behavior
-- [ ] 3.4 Add disclaimer about technical-derived psychology
-- [ ] 3.5 Update UI tab label in `AIInsights.tsx` to "Technical Psychology"
-- [ ] 3.6 Add subtitle "Derived from price & volume patterns"
+### Task 3: Sentiment Analysis → Technical Psychology ✅
+- [x] 3.1 Rewrite `getSystemPrompt('sentiment')` to focus on technical psychology
+- [x] 3.2 Remove references to institutional/retail behavior
+- [x] 3.3 Focus on RSI extremes, volume patterns, support/resistance behavior
+- [x] 3.4 Add disclaimer about technical-derived psychology
+- [x] 3.5 Update UI tab label in `AIInsights.tsx` to "Technical Psychology"
+- [x] 3.6 Add subtitle "Derived from price & volume patterns"
 
-### Task 4: Testing & Validation
-- [ ] 4.1 Manual test: Compare AI narrative values with UI panel values
-- [ ] 4.2 Review AI outputs for hallucinated metrics
-- [ ] 4.3 Verify disclaimers appear in responses
-- [ ] 4.4 User acceptance testing
+### Task 4: Testing & Validation ✅
+- [x] 4.1 Unit tests for `safeFixed()`, `compactTechnical()`, psychology helpers
+- [x] 4.2 Unit tests for portfolio context fetching (15 tests)
+- [x] 4.3 Prompt structure tests for all three insight types
+- [x] 4.4 Code review and critical issue fixes (N+1 query, null safety)
 
 ---
 
-## Phase 2: Add Real Data Sources (Future)
+## Phase 2: Real Sentiment Data (Future)
 
-### Task 5: Portfolio Data Integration
-- [ ] 5.1 Add FMP company profile API call (`/api/v3/profile/{symbol}`)
-- [ ] 5.2 Extract: sector, marketCap, beta, dividendYield
-- [ ] 5.3 Calculate historical volatility and simple Sharpe ratio
-- [ ] 5.4 Pass portfolio data to LLM alongside technical data
-- [ ] 5.5 Update prompt to use real portfolio metrics
-- [ ] 5.6 Rename back to "Portfolio Theory" with real data
+> **Note**: Keep this simple. Pick one provider, implement it directly. Refactor if you switch providers later.
 
-### Task 6: Sentiment Data Integration
-- [ ] 6.1 Add FMP news sentiment API call (`/api/v3/stock_news`)
-- [ ] 6.2 Aggregate recent news sentiment scores
-- [ ] 6.3 Explore social sentiment API if available
-- [ ] 6.4 Pass sentiment data to LLM
-- [ ] 6.5 Update prompt to use real sentiment data
-- [ ] 6.6 Rename back to "Market Sentiment" with real data
+### Task 5: Choose and Implement Sentiment Source
+- [ ] 5.1 Decide on sentiment data source:
+  - Option A: TradingAgents integration (if proceeding with that project)
+  - Option B: Single API (Finnhub, Alpha Vantage, or FMP news)
+  - Option C: Skip sentiment entirely, keep "Technical Psychology"
+- [ ] 5.2 Implement sentiment fetch in `/api/insights` route
+  - Simple function, not an elaborate provider system
+  - Cache results (4-hour TTL)
+- [ ] 5.3 Update `getSystemPrompt('sentiment')` to use real data when available
+- [ ] 5.4 Fall back to "Technical Psychology" if API unavailable or not configured
 
-### Task 7: Data Source Indicators
-- [ ] 7.1 Add data source badges to each insight tab
-- [ ] 7.2 Show "Technical Data" vs "Market Data" vs "News Sentiment" badges
-- [ ] 7.3 Add "Last Updated" timestamp display in UI
+### Task 6: UI Updates (if implementing sentiment)
+- [ ] 6.1 Rename tab to "Market Sentiment" when real data present
+- [ ] 6.2 Keep "Technical Psychology" label when using fallback
+- [ ] 6.3 Show simple indicator if using real vs derived sentiment
 
 ---
 
 ## Dependencies
 
-- Phase 1 has no external dependencies
-- Phase 2 requires:
-  - FMP API endpoints for company profile
-  - FMP API endpoints for news (check API tier/limits)
-  - Potential additional API costs
+- Phase 1:
+  - Existing `portfolio_holdings` and `portfolios` tables
+  - `getDemoUserId()` for user context
+- Phase 2:
+  - API credentials for chosen sentiment provider (if implementing)
+  - OR TradingAgents integration (separate project)
 
 ## Estimated Effort
 
 | Phase | Effort | Priority |
 |-------|--------|----------|
-| Phase 1 (Prompts) | 2-3 hours | HIGH - Fix misleading content |
-| Phase 2 (Data) | 4-6 hours | MEDIUM - Enhancement |
+| Phase 1 | 3-4 hours | HIGH - Fix misleading content |
+| Phase 2 | 2-4 hours | LOW - Only if sentiment data is valuable to you |
 
 ## Notes
 
-- Phase 1 should be completed first to stop AI hallucinations
-- Phase 2 can be deferred until real data sources are needed
-- Consider A/B testing Phase 1 changes with users before Phase 2
+- Phase 1 is straightforward: fix prompts + add one DB query for portfolio data
+- Phase 2 is optional - "Technical Psychology" may be sufficient for personal use
+- If TradingAgents project proceeds, sentiment could come from there instead

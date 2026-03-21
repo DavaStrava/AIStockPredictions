@@ -4,6 +4,8 @@
 
 This document provides a comprehensive overview of the AI Stock Prediction platform architecture, identifies areas for simplification, and documents the current system design for maintainability.
 
+> **Scope**: This is a **personal application** for the developer and 5-10 friends/colleagues. It is not intended for public deployment or large-scale usage. Infrastructure decisions prioritize simplicity over scalability.
+
 ---
 
 ## 1. Architecture Overview
@@ -67,19 +69,41 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 | Styling | Tailwind CSS | v4 | Utility-first CSS |
 | Language | TypeScript | 5.x | Type safety |
 | Validation | Zod | 3.x | Schema validation, type inference |
-| Authentication | Supabase Auth | Latest | OAuth (Google, GitHub) |
-| Database | PostgreSQL/Supabase | 8.x | Data persistence |
-| Hosting | Vercel | - | Production deployment |
-| Cloud | AWS CDK | v2 | Infrastructure as Code (optional) |
+| Authentication | Supabase Auth | Latest | OAuth (Google, GitHub) - optional |
+| Database | PostgreSQL | 8.x | Local database (see Deployment below) |
 | Testing | Vitest | 4.x | Unit/Integration tests |
 | Charts | Recharts | 3.x | Data visualization |
 | Analysis | technicalindicators | 3.x | Technical indicators |
 
-### 1.3 Authentication Architecture
+### 1.3 Deployment Model
+
+**This is a personal/small-group application (5-10 users max).**
+
+| Environment | Setup |
+|-------------|-------|
+| Development | Local PostgreSQL, demo user mode |
+| Production | TBD - likely simple VPS or local server |
+
+**Current State:**
+- Runs locally via `npm run dev`
+- Uses local PostgreSQL database
+- Auth runs in "demo mode" (single shared user) unless Supabase is configured
+- No cloud deployment configured
+
+**Future Options (if needed):**
+- Simple VPS (DigitalOcean, Linode) with PostgreSQL
+- Supabase for auth + database (free tier sufficient for 5-10 users)
+- Vercel for frontend (optional)
+
+### 1.4 Authentication Architecture
+
+> **Note**: Authentication is **optional**. Without Supabase configuration, the app runs in "demo mode" with a single shared user (`demo@example.com`). This is sufficient for personal use.
+
+**To enable multi-user auth**: Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         AUTHENTICATION FLOW                                  │
+│                    AUTHENTICATION FLOW (when Supabase configured)            │
 │                                                                              │
 │  ┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌────────────┐ │
 │  │  Client  │ --> │  /login page │ --> │ Supabase    │ --> │ OAuth      │ │
@@ -342,7 +366,7 @@ selectedIndex: string | null         // Market index selection
 |----------|--------|---------|-------------|
 | `/api/predictions` | GET | Stock predictions | FMP + Analysis Engine |
 | `/api/analysis` | GET/POST | Technical analysis | FMP + Analysis Engine |
-| `/api/insights` | GET | AI-powered insights | LLM Providers |
+| `/api/insights` | GET/POST | AI-powered insights | LLM Providers + Portfolio DB |
 | `/api/search` | GET | Stock search | FMP |
 | `/api/watchlists` | GET/POST | Watchlist CRUD | PostgreSQL |
 | `/api/watchlists/[id]` | GET/PUT/DELETE | Single watchlist | PostgreSQL |
@@ -691,40 +715,116 @@ ai-stock-prediction/
 
 ---
 
-## 12. Performance Considerations
+## 12. AI Insights System ✅ (Updated March 2026)
 
-### Current Performance Profile
+### Overview
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Initial Load | ~2-3s | <2s |
-| Stock Search | ~1-2s | <1s |
-| Analysis Render | ~500ms | <300ms |
+The AI Insights feature provides three types of analysis powered by LLM providers (OpenAI GPT-4, AWS Bedrock):
 
-### Optimization Opportunities
+| Insight Type | Data Source | Purpose |
+|--------------|-------------|---------|
+| Technical Analysis | Technical indicators + signals | Chart patterns, indicator interpretation |
+| Portfolio Theory | Portfolio DB + technical data | Position analysis (held/not-held modes) |
+| Technical Psychology | Technical indicators | Crowd behavior derived from RSI, volume, etc. |
 
-1. **Lazy Loading**: Already using `LazyTechnicalIndicatorExplanations`
-2. **Memoization**: Consider `useMemo` for expensive calculations
-3. **API Caching**: Consider SWR or React Query for data fetching
-4. **Bundle Size**: Audit recharts import (large library)
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ /api/insights                                                    │
+│   1. Fetch technical analysis (FMP + TechnicalAnalysisEngine)   │
+│   2. Fetch portfolio context (if portfolio type requested)       │
+│   3. Generate insights via LLM providers (OpenAI → Bedrock)     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Implementation Details
+
+**Data Separation** (`compactTechnical()`):
+- `current`: Latest indicator values (matches UI panels exactly)
+- `trend`: Last 5 values for context
+- `signals`: Latest 20 trading signals
+
+**Portfolio Context** (`getPortfolioInsightData()`):
+- Aggregates across all user portfolios using `Promise.allSettled`
+- Returns position data if stock is held, or null if not held
+- Enables two-mode prompts: "analyze existing position" vs "analyze as potential addition"
+
+**Prompt Engineering**:
+- Technical: References current values first, then discusses trends
+- Portfolio: Dynamic prompts based on held/not-held status
+- Technical Psychology: Interprets indicators as crowd behavior (no news/social data)
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/ai/llm-providers.ts` | LLM integration, prompts, helpers |
+| `src/app/api/insights/route.ts` | API route with portfolio context fetching |
+| `src/components/AIInsights.tsx` | UI component with tabbed interface |
+
+### Metadata
+
+Each insight includes:
+```typescript
+{
+  type: 'technical' | 'portfolio' | 'sentiment';
+  content: string;
+  confidence: number;        // 0-1
+  provider: 'openai' | 'bedrock' | 'cached';
+  generatedAt?: string;      // ISO timestamp
+  metadata: {
+    indicators_used?: string[];
+    timeframe?: string;
+    data_quality?: 'high' | 'medium' | 'low';
+    position_held?: boolean; // Portfolio insights only
+  };
+}
+```
 
 ---
 
-## 13. Security Considerations
+## 13. Performance Considerations
+
+> **Context**: With 5-10 users max, performance optimization is low priority. Current performance is acceptable.
+
+### Current Performance Profile
+
+| Metric | Current | Notes |
+|--------|---------|-------|
+| Initial Load | ~2-3s | Acceptable for personal use |
+| Stock Search | ~1-2s | Depends on FMP API latency |
+| Analysis Render | ~500ms | Good |
+
+### Existing Optimizations
+
+1. **Lazy Loading**: Using `LazyTechnicalIndicatorExplanations`
+2. **Connection Pooling**: PostgreSQL connection pool configured
+
+### Future Optimizations (if needed)
+
+- Memoization for expensive calculations
+- API response caching (SWR or React Query)
+- Bundle size audit (recharts is large)
+
+---
+
+## 14. Security Considerations
+
+> **Context**: Personal app with trusted users. Security focus is on protecting API keys and preventing accidental data exposure, not defending against attacks.
 
 ### Current Security Measures
 
-- ✅ API keys in environment variables
-- ✅ AWS Secrets Manager integration
-- ✅ SSL/TLS for database connections
-- ✅ Input validation in API routes
+- ✅ API keys in environment variables (not committed to git)
+- ✅ Input validation in API routes (Zod schemas)
+- ✅ Demo mode blocked in production unless explicitly enabled
 
-### Recommendations
+### Not Needed for Personal Use
 
-- Consider rate limiting on API routes
-- Add request validation middleware
-- Implement CORS configuration
-- Add security headers
+- Rate limiting (trusted users only)
+- CORS configuration (single origin)
+- AWS Secrets Manager (overkill for personal app)
+- Security headers (nice-to-have, not critical)
 
 ---
 
@@ -797,6 +897,6 @@ page.tsx
 
 ---
 
-*Document Version: 1.2*
-*Last Updated: March 16, 2026*
-*Author: System Architecture Review*
+*Document Version: 1.3*
+*Last Updated: March 21, 2026*
+*Scope: Personal application (5-10 users)*

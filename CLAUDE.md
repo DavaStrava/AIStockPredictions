@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/claude-code) when working 
 
 ## Project Overview
 
-AI Stock Prediction Platform - A Next.js web application that combines technical analysis, modern portfolio theory, and market sentiment analysis to provide AI-powered investment insights.
+AI Stock Prediction Platform - A **personal application** (5-10 users max) that combines technical analysis, modern portfolio theory, and market sentiment analysis to provide AI-powered investment insights.
+
+> **Scope**: This is not a public SaaS product. Prioritize simplicity over scalability.
 
 ## Tech Stack
 
 - **Frontend**: Next.js 15 with React 19, App Router, Server Components
 - **Styling**: Tailwind CSS v4 with dark mode support
 - **Language**: TypeScript (strict mode)
-- **Database**: PostgreSQL (Render managed database in production)
-- **Deployment**: Render (web service + managed PostgreSQL)
+- **Database**: Local PostgreSQL (development); deployment TBD
+- **Auth**: Supabase (optional) - runs in demo mode without config
 - **Testing**: Vitest
 - **Analysis**: technicalindicators, simple-statistics, Recharts
 
@@ -29,15 +31,11 @@ npm run test             # Run tests in watch mode
 npm run test:run         # Run tests once
 npm run test:ui          # Open Vitest UI
 
-# Database
+# Database (local PostgreSQL)
 npm run db:setup         # Initialize database and run migrations
 npm run db:migrate       # Run pending migrations
 npm run db:seed          # Seed development data
 npm run db:health        # Check database connectivity
-
-# Deployment
-# Render auto-deploys from main branch
-# Configure via render.yaml or Render dashboard
 ```
 
 ## Project Structure

@@ -4,11 +4,11 @@
 
 This design document outlines the approach to fix data accuracy issues in the three AI insight types: Technical Analysis, Portfolio Theory, and Sentiment Analysis.
 
-## Approach: Fix the Prompts (Phase 1)
+## Implementation Status: PHASE 1 COMPLETE ✅
 
-Rather than integrating new data sources immediately, we'll reframe the prompts to be honest about what data is available and generate valuable insights from actual data.
+Phase 1 has been fully implemented (March 2026). All prompts have been reframed to use actual data and eliminate hallucinations.
 
-### Phase 2 (Future) can add real data sources for Portfolio and Sentiment.
+### Phase 2 (Future) can add real data sources for Sentiment if needed.
 
 ---
 
@@ -64,37 +64,83 @@ Your analysis must reference these exact current values first, then discuss tren
 - Prompt asks about Sharpe ratio, beta, correlations
 - AI hallucinates these metrics
 
-### Solution: Reframe as "Position Management"
-Change the insight type from "Portfolio Theory" to "Position Management" and focus on:
-- What technical signals suggest for position sizing
-- Risk considerations based on volatility and trend
-- Entry/exit level implications
-- Stop-loss considerations
+### Solution: Use Real Portfolio Data
+Fetch the user's actual portfolio data for the analyzed stock and provide genuine portfolio insights.
+
+### Data Requirements
+```typescript
+// Always fetch portfolio context
+interface PortfolioContext {
+  totalEquity: number;
+  cashBalance: number;
+  positionCount: number;
+}
+
+// Fetch position data if held (null if not)
+interface PositionData {
+  symbol: string;
+  totalQuantity: number;
+  averageCostBasis: number;
+  currentPrice: number;
+  marketValue: number;
+  totalReturnPercent: number;
+  positionWeight: number;  // % of total portfolio
+}
+
+// Return both
+{
+  portfolio: PortfolioContext;
+  position: PositionData | null;
+}
+```
+
+If user has multiple portfolios, aggregate across all.
+
+### Conditional Behavior
+1. **If stock IS in portfolio**: Analyze existing position (cost basis, return, whether to add/reduce)
+2. **If stock is NOT in portfolio**: Analyze as potential addition (sizing suggestions based on portfolio size, diversification considerations)
 
 ### Prompt Change
-Replace portfolio prompt with:
+
+**If stock IS in portfolio:**
 ```
-For position management analysis, provide insights on:
+You have access to the user's actual position in {symbol}:
 
-**Position Sizing Considerations**: Based on current volatility and trend strength,
-discuss general position sizing principles (percentage-based, not dollar amounts).
+- Shares owned: {totalQuantity}
+- Average cost: ${averageCostBasis}
+- Current price: ${currentPrice}
+- Position value: ${marketValue}
+- Total return: {totalReturnPercent}%
 
-**Risk Management**: What do the technical signals suggest about setting stop-losses
-and managing downside risk?
+Portfolio context:
+- Total portfolio value: ${totalEquity}
+- This position is {positionWeight}% of portfolio
 
-**Entry/Exit Timing**: Based on support/resistance and momentum indicators,
-discuss timing considerations for building or reducing positions.
+Provide insights on:
+1. How is this position performing relative to cost basis?
+2. Given the technical signals, should they consider adding, holding, or reducing?
+3. Any risk considerations based on position size and current volatility?
+```
 
-**Volatility Assessment**: How does current volatility compare to recent history,
-and what does this mean for position management?
+**If stock is NOT in portfolio:**
+```
+The user does not currently hold {symbol} but may be considering adding it.
 
-NOTE: This analysis is based on technical indicators only. For full portfolio
-optimization (beta, correlations, Sharpe ratio), additional data would be needed.
+Portfolio context:
+- Total portfolio value: ${totalEquity}
+- Cash available: ${cashBalance}
+- Current number of positions: {positionCount}
+
+Provide insights on:
+1. Based on the technical signals, is this a good entry point?
+2. Position sizing suggestion (e.g., "a 3-5% allocation would be ${X}-${Y}")
+3. How would adding this stock affect portfolio diversification?
+4. Any timing considerations based on current volatility?
 ```
 
 ### UI Label Change
-- Change tab label from "Portfolio Theory" to "Position Management"
-- Add subtitle: "Based on technical analysis"
+- Keep tab label as "Portfolio Theory"
+- Subtitle: "Based on your position" (if held) or "Considering adding" (if not held)
 
 ---
 
@@ -139,34 +185,51 @@ psychology. For true sentiment analysis, news/social data would be needed.
 
 ---
 
-## File Changes Summary
+## File Changes Summary (Completed)
 
 | File | Changes |
 |------|---------|
-| `src/lib/ai/llm-providers.ts` | Update prompts, modify `compactTechnical()` |
-| `src/components/AIInsights.tsx` | Update tab labels and subtitles |
-| `src/lib/ai/llm-providers.ts` | Update `LLMInsight.type` union if needed |
+| `src/lib/ai/llm-providers.ts` | Updated prompts, `compactTechnical()`, added `safeFixed()` and psychology helpers |
+| `src/app/api/insights/route.ts` | Added `getPortfolioInsightData()` and `generateInsightsWithContext()` |
+| `src/components/AIInsights.tsx` | Updated tab labels, subtitles, and TypeScript types |
+| `src/types/components.ts` | Added `position_held` and `generatedAt` to metadata |
+| `src/lib/ai/__tests__/llm-providers.test.ts` | Added 32 new tests |
+| `src/app/api/insights/__tests__/route.test.ts` | Added 15 new tests |
 
 ---
 
-## Alternative: Add Real Data Sources (Phase 2)
+## Phase 2: Real Sentiment Data (Future - Optional)
 
-If we want genuine Portfolio and Sentiment insights later:
+> **Personal app context**: This phase is optional. "Technical Psychology" from Phase 1 may be sufficient. Only implement if you find sentiment data valuable.
 
-### Portfolio Data (via FMP API)
-- Company profile: sector, market cap, beta
-- Key metrics: PE ratio, dividend yield
-- Could calculate simple Sharpe from historical returns
+### Decision Point
+Before implementing, decide:
+1. **Skip it** - Technical Psychology is good enough
+2. **TradingAgents** - Get sentiment from that integration (separate project)
+3. **Simple API** - Add one sentiment source directly
 
-### Sentiment Data (via FMP API)
-- `/api/v3/stock_news` - News with sentiment
-- `/api/v4/social-sentiment` - Social media sentiment (if available)
-- Insider trading data
+### If Implementing: Keep It Simple
+Don't build a provider registry. Just:
+```typescript
+// In /api/insights route
+async function getSentiment(symbol: string): Promise<SentimentData | null> {
+  if (!process.env.SENTIMENT_API_KEY) return null;
 
-This would require:
-1. New API calls in the insights route
-2. New data structures for each insight type
-3. More complex prompt building
+  // Direct API call to chosen provider
+  const response = await fetch(`https://api.provider.com/sentiment/${symbol}`);
+  // ... parse and return
+}
+```
+
+### Potential Sources
+| Source | Pros | Cons |
+|--------|------|------|
+| TradingAgents | Multi-source, already planned | Separate project dependency |
+| Finnhub | News + social | Requires API key |
+| Alpha Vantage | News sentiment | Limited free tier |
+
+### Fallback Behavior
+If sentiment fetch fails or isn't configured → use "Technical Psychology" (Phase 1 behavior)
 
 ---
 
