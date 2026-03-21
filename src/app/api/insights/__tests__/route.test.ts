@@ -568,16 +568,20 @@ describe('Insights API Route - Edge Cases', () => {
     expect(data.data.symbol).toBe('BRK.B');
   });
 
-  it('should pass analysis data to insight service', async () => {
+  it('should pass analysis data with priceContext to insight service', async () => {
     const mockAnalysisResult = createMockAnalysis();
     mockAnalyze.mockReturnValue(mockAnalysisResult);
 
     const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
     await GET(request);
 
+    // Analysis data should include priceContext now
     expect(mockGenerateInsight).toHaveBeenCalledWith(
       'technical',
-      mockAnalysisResult,
+      expect.objectContaining({
+        ...mockAnalysisResult,
+        priceContext: expect.any(Object),
+      }),
       'AAPL'
     );
   });
@@ -834,6 +838,309 @@ describe('Insights API Route - Portfolio Context', () => {
         }),
         'AAPL'
       );
+    });
+  });
+});
+
+describe('Insights API Route - Price Context', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockAnalyze.mockReturnValue(createMockAnalysis());
+    mockGenerateInsight.mockImplementation((type) =>
+      Promise.resolve(createMockInsight(type))
+    );
+    mockGetDemoUserId.mockResolvedValue('user-1');
+    mockGetUserPortfolios.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Helper to create price data with specific dates
+   * @param daysBack - Number of days of data to create
+   * @param basePrice - Starting price (most recent)
+   */
+  function createPriceDataWithDates(daysBack: number, basePrice: number = 100) {
+    const now = new Date();
+    return Array.from({ length: daysBack }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      // Price decreases going back in time (for predictable tests)
+      const price = basePrice - (i * 0.5);
+      return {
+        date,
+        open: price - 1,
+        high: price + 2,
+        low: price - 2,
+        close: price,
+        volume: 1000000,
+      };
+    });
+  }
+
+  describe('Price Context Calculation', () => {
+    it('should pass priceContext to generateInsight for technical type', async () => {
+      const priceData = createPriceDataWithDates(60);
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'technical',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: expect.any(Number),
+            priceChange1W: expect.any(Number),
+            priceChange1WPercent: expect.any(Number),
+            priceChange1M: expect.any(Number),
+            priceChange1MPercent: expect.any(Number),
+            high1M: expect.any(Number),
+            low1M: expect.any(Number),
+            high3M: expect.any(Number),
+            low3M: expect.any(Number),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should calculate correct current price from most recent data', async () => {
+      const now = new Date();
+      const priceData = [
+        { date: now, close: 150.50, open: 149, high: 152, low: 148, volume: 1000000 },
+        { date: new Date(now.getTime() - 24 * 60 * 60 * 1000), close: 148, open: 147, high: 150, low: 146, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'technical',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: 150.50,
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should calculate correct percentage changes for positive movement', async () => {
+      const now = new Date();
+      // Today: $110, 1 week ago: $100, 1 month ago: $90
+      const priceData = [
+        { date: now, close: 110, open: 109, high: 112, low: 108, volume: 1000000 },
+        { date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), close: 100, open: 99, high: 102, low: 98, volume: 1000000 },
+        { date: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), close: 90, open: 89, high: 92, low: 88, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      const call = mockGenerateInsight.mock.calls[0];
+      const priceContext = call[1].priceContext;
+
+      // 1-week: (110 - 100) / 100 = 10%
+      expect(priceContext.priceChange1WPercent).toBeCloseTo(10, 1);
+      // 1-month: (110 - 90) / 90 = 22.22%
+      expect(priceContext.priceChange1MPercent).toBeCloseTo(22.22, 1);
+    });
+
+    it('should calculate correct percentage changes for negative movement', async () => {
+      const now = new Date();
+      // Today: $90, 1 week ago: $100
+      const priceData = [
+        { date: now, close: 90, open: 91, high: 93, low: 88, volume: 1000000 },
+        { date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), close: 100, open: 99, high: 102, low: 98, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      const call = mockGenerateInsight.mock.calls[0];
+      const priceContext = call[1].priceContext;
+
+      // (90 - 100) / 100 = -10%
+      expect(priceContext.priceChange1WPercent).toBeCloseTo(-10, 1);
+      expect(priceContext.priceChange1W).toBeCloseTo(-10, 1);
+    });
+
+    it('should calculate correct high and low values for 1-month period', async () => {
+      const now = new Date();
+      const priceData = [
+        { date: now, close: 100, open: 99, high: 105, low: 95, volume: 1000000 },
+        { date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), close: 120, open: 115, high: 125, low: 110, volume: 1000000 },
+        { date: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000), close: 80, open: 85, high: 90, low: 75, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      const call = mockGenerateInsight.mock.calls[0];
+      const priceContext = call[1].priceContext;
+
+      expect(priceContext.high1M).toBe(120);
+      expect(priceContext.low1M).toBe(80);
+    });
+
+    it('should include priceContext in portfolio insights', async () => {
+      const priceData = createPriceDataWithDates(60);
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=portfolio');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'portfolio',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: expect.any(Number),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should include priceContext in sentiment insights', async () => {
+      const priceData = createPriceDataWithDates(60);
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=sentiment');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'sentiment',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: expect.any(Number),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+  });
+
+  describe('Price Context Edge Cases', () => {
+    it('should handle minimal data (2 data points)', async () => {
+      const now = new Date();
+      const priceData = [
+        { date: now, close: 100, open: 99, high: 105, low: 95, volume: 1000000 },
+        { date: new Date(now.getTime() - 24 * 60 * 60 * 1000), close: 98, open: 97, high: 100, low: 96, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'technical',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: 100,
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should pass null priceContext when only 1 data point exists', async () => {
+      const priceData = [
+        { date: new Date(), close: 100, open: 99, high: 105, low: 95, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'technical',
+        expect.objectContaining({
+          priceContext: null,
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should use fallback prices when no data exists for 1-week horizon', async () => {
+      const now = new Date();
+      // Only 3 days of data - no data from 1 week ago
+      const priceData = [
+        { date: now, close: 100, open: 99, high: 105, low: 95, volume: 1000000 },
+        { date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), close: 99, open: 98, high: 101, low: 97, volume: 1000000 },
+        { date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), close: 98, open: 97, high: 100, low: 96, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      // Should not crash and should calculate using available data
+      expect(mockGenerateInsight).toHaveBeenCalledWith(
+        'technical',
+        expect.objectContaining({
+          priceContext: expect.objectContaining({
+            currentPrice: 100,
+            // Uses fallback: sorted[Math.min(5, length-1)] = sorted[2] = 98
+            priceChange1W: expect.any(Number),
+          }),
+        }),
+        'AAPL'
+      );
+    });
+
+    it('should handle unsorted price data by sorting correctly', async () => {
+      const now = new Date();
+      // Data provided out of chronological order
+      const priceData = [
+        { date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), close: 80, open: 79, high: 85, low: 75, volume: 1000000 },
+        { date: now, close: 100, open: 99, high: 105, low: 95, volume: 1000000 },
+        { date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), close: 90, open: 89, high: 95, low: 85, volume: 1000000 },
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      const call = mockGenerateInsight.mock.calls[0];
+      const priceContext = call[1].priceContext;
+
+      // Should identify most recent as current price
+      expect(priceContext.currentPrice).toBe(100);
+      // High should be the highest close
+      expect(priceContext.high1M).toBe(100);
+      // Low should be the lowest close
+      expect(priceContext.low1M).toBe(80);
+    });
+
+    it('should handle price data with gaps (weekends/holidays)', async () => {
+      const now = new Date();
+      // Simulate missing weekend data
+      const priceData = [
+        { date: now, close: 100, open: 99, high: 105, low: 95, volume: 1000000 }, // Friday
+        { date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), close: 98, open: 97, high: 100, low: 96, volume: 1000000 }, // Tuesday
+        { date: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), close: 97, open: 96, high: 99, low: 95, volume: 1000000 }, // Monday
+        { date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), close: 95, open: 94, high: 97, low: 93, volume: 1000000 }, // Previous Friday
+      ];
+      mockGetHistoricalData.mockResolvedValue(priceData);
+
+      const request = new NextRequest('http://localhost:3000/api/insights?symbol=AAPL&types=technical');
+      await GET(request);
+
+      const call = mockGenerateInsight.mock.calls[0];
+      const priceContext = call[1].priceContext;
+
+      // Should find the data point from ~1 week ago
+      expect(priceContext.currentPrice).toBe(100);
+      // 1-week change: (100 - 95) / 95 ≈ 5.26%
+      expect(priceContext.priceChange1WPercent).toBeCloseTo(5.26, 1);
     });
   });
 });

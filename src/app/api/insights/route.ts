@@ -13,6 +13,67 @@ type InsightType = 'technical' | 'portfolio' | 'sentiment';
 /** Result of insight generation */
 type InsightsResult = Partial<Record<InsightType, LLMInsight>>;
 
+/** Price context for AI insights */
+interface PriceContext {
+  currentPrice: number;
+  priceChange1W: number;
+  priceChange1WPercent: number;
+  priceChange1M: number;
+  priceChange1MPercent: number;
+  high1M: number;
+  low1M: number;
+  high3M: number;
+  low3M: number;
+}
+
+/**
+ * Calculate price context from historical data
+ */
+function calculatePriceContext(priceData: { date: Date; close: number }[]): PriceContext | null {
+  if (priceData.length < 2) return null;
+
+  // Sort by date descending (most recent first)
+  const sorted = [...priceData].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const currentPrice = sorted[0].close;
+  const now = sorted[0].date.getTime();
+  const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+  const threeMonthsAgo = now - 90 * 24 * 60 * 60 * 1000;
+
+  // Find prices at different time horizons
+  const price1WData = sorted.find(d => d.date.getTime() <= oneWeekAgo);
+  const price1MData = sorted.find(d => d.date.getTime() <= oneMonthAgo);
+
+  const price1W = price1WData?.close ?? sorted[Math.min(5, sorted.length - 1)].close;
+  const price1M = price1MData?.close ?? sorted[Math.min(22, sorted.length - 1)].close;
+
+  // Calculate highs and lows (with fallbacks if not enough data)
+  const last30Days = sorted.filter(d => d.date.getTime() >= oneMonthAgo);
+  const last90Days = sorted.filter(d => d.date.getTime() >= threeMonthsAgo);
+
+  // Use all available data if time-filtered arrays are empty
+  const pricesFor1M = last30Days.length > 0 ? last30Days.map(d => d.close) : sorted.slice(0, 22).map(d => d.close);
+  const pricesFor3M = last90Days.length > 0 ? last90Days.map(d => d.close) : sorted.map(d => d.close);
+
+  const high1M = Math.max(...pricesFor1M);
+  const low1M = Math.min(...pricesFor1M);
+  const high3M = Math.max(...pricesFor3M);
+  const low3M = Math.min(...pricesFor3M);
+
+  return {
+    currentPrice,
+    priceChange1W: currentPrice - price1W,
+    priceChange1WPercent: ((currentPrice - price1W) / price1W) * 100,
+    priceChange1M: currentPrice - price1M,
+    priceChange1MPercent: ((currentPrice - price1M) / price1M) * 100,
+    high1M,
+    low1M,
+    high3M,
+    low3M,
+  };
+}
+
 /**
  * Portfolio insight data structure for AI context
  * Contains aggregated portfolio information and position details if held
@@ -121,12 +182,14 @@ async function getPortfolioInsightData(symbol: string): Promise<PortfolioInsight
  * @param analysis - Technical analysis result
  * @param symbol - Stock symbol
  * @param types - Array of insight types to generate
+ * @param priceContext - Optional price context with recent price changes
  * @returns Record of generated insights by type
  */
 async function generateInsightsWithContext(
   analysis: TechnicalAnalysisResult,
   symbol: string,
-  types: string[]
+  types: string[],
+  priceContext?: PriceContext | null
 ): Promise<InsightsResult> {
   const insightService = getLLMInsightService();
   const insights: InsightsResult = {};
@@ -153,12 +216,19 @@ async function generateInsightsWithContext(
         await new Promise(r => setTimeout(r, 1500));
       }
 
+      // Build data for insight with price context
+      let dataForInsight: TechnicalAnalysisResult & {
+        portfolioContext?: PortfolioInsightData | null;
+        priceContext?: PriceContext | null;
+      } = {
+        ...analysis,
+        priceContext: priceContext ?? null,
+      };
+
       // For portfolio type, include portfolio context in data
-      // Provide fallback structure if portfolioContext is null
-      let dataForInsight: TechnicalAnalysisResult & { portfolioContext?: PortfolioInsightData | null } = analysis;
       if (type === 'portfolio') {
         dataForInsight = {
-          ...analysis,
+          ...dataForInsight,
           portfolioContext: portfolioContext ?? {
             isHeld: false,
             portfolio: { totalValue: 0, cashAvailable: 0, positionsCount: 0 },
@@ -212,8 +282,11 @@ export async function GET(request: NextRequest) {
     const engine = new TechnicalAnalysisEngine();
     const analysis = engine.analyze(priceData, symbol.toUpperCase());
 
+    // Calculate price context for AI insights
+    const priceContext = calculatePriceContext(priceData);
+
     // Generate AI insights using shared helper
-    const insights = await generateInsightsWithContext(analysis, symbol.toUpperCase(), types);
+    const insights = await generateInsightsWithContext(analysis, symbol.toUpperCase(), types, priceContext);
 
     return NextResponse.json({
       success: true,

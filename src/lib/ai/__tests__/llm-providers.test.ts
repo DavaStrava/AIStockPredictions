@@ -154,37 +154,34 @@ describe('OpenAIProvider', () => {
     });
 
     describe('Analysis Type Specialization', () => {
-      it('should include technical analysis sections for technical type', () => {
+      it('should include plain-language guidance for technical type', () => {
         const prompt = getSystemPrompt(provider, 'technical');
-        
-        expect(prompt).toContain('Market Story');
-        expect(prompt).toContain('Indicator Analysis');
-        expect(prompt).toContain('Risk Assessment');
-        expect(prompt).toContain('Entry/Exit Strategy');
-        expect(prompt).toContain('Timeline & Expectations');
+
+        // New plain-language prompts focus on insights, not indicator values
+        expect(prompt).toContain('DO NOT cite technical indicator values');
+        expect(prompt).toContain('plain language');
+        expect(prompt).toContain('FORBIDDEN');
+        expect(prompt).toContain("What's the situation");
       });
 
-      it('should include portfolio analysis sections for portfolio type', () => {
+      it('should include plain-language guidance for portfolio type', () => {
         const prompt = getSystemPrompt(provider, 'portfolio');
 
-        // Updated portfolio prompt with held/not-held modes
-        expect(prompt).toContain('portfolioContext');
-        expect(prompt).toContain('Position Review');
-        expect(prompt).toContain('Performance Assessment');
-        expect(prompt).toContain('Opportunity Assessment');
-        expect(prompt).toContain('Entry Strategy');
-        expect(prompt).toContain('Position Sizing');
+        // Updated portfolio prompt focuses on actionable advice
+        expect(prompt).toContain('plain English');
+        expect(prompt).toContain('OWN');
+        expect(prompt).toContain('Add more, hold, or trim');
+        expect(prompt).toContain('FORBIDDEN');
       });
 
-      it('should include Technical Psychology sections for sentiment type', () => {
+      it('should include plain-language guidance for sentiment type', () => {
         const prompt = getSystemPrompt(provider, 'sentiment');
 
-        // Updated to Technical Psychology - derived from indicators only
-        expect(prompt).toContain('Technical Psychology');
-        expect(prompt).toContain('Fear & Greed Reading');
-        expect(prompt).toContain('Accumulation vs Distribution');
-        expect(prompt).toContain('Behavioral Extremes');
-        expect(prompt).toContain('Conviction Signals');
+        // Updated to Technical Psychology with plain language
+        expect(prompt).toContain('crowd psychology');
+        expect(prompt).toContain('plain English');
+        expect(prompt).toContain('FORBIDDEN');
+        expect(prompt).toContain('crowd mood');
       });
 
       it('should return base prompt for unknown type', () => {
@@ -668,43 +665,41 @@ describe('OpenAIProvider - New Helper Functions', () => {
       return (provider as any).getSystemPrompt(type);
     };
 
-    it('should instruct technical prompt to reference CURRENT values', () => {
+    it('should forbid indicator values in technical prompt', () => {
       const prompt = getSystemPrompt(provider, 'technical');
-      expect(prompt).toContain('CURRENT values');
-      expect(prompt).toContain('current');
-      expect(prompt).toContain('trend');
+      expect(prompt).toContain('DO NOT cite technical indicator values');
+      expect(prompt).toContain('plain language');
+      expect(prompt).toContain('FORBIDDEN');
     });
 
-    it('should include Technical Psychology guidance in sentiment prompt', () => {
+    it('should include crowd psychology guidance in sentiment prompt', () => {
       const prompt = getSystemPrompt(provider, 'sentiment');
-      expect(prompt).toContain('Technical Psychology');
-      expect(prompt).toContain('RSI');
-      expect(prompt).toContain('fear');
+      expect(prompt).toContain('crowd psychology');
+      expect(prompt).toContain('Fear');
       expect(prompt).toContain('greed');
-      expect(prompt).toContain('derived');
+      expect(prompt).toContain('price patterns');
     });
 
-    it('should instruct NOT to mention Sharpe ratio, beta, correlations in portfolio prompt', () => {
+    it('should focus on actionable advice in portfolio prompt', () => {
       const prompt = getSystemPrompt(provider, 'portfolio');
-      // The prompt should instruct NOT to use these metrics
-      expect(prompt).toContain('DO NOT mention');
-      expect(prompt).toContain('Sharpe ratio');
-      expect(prompt).toContain('beta');
-      expect(prompt).toContain('correlations');
+      // New plain-language prompts focus on what to DO
+      expect(prompt).toContain('OWN');
+      expect(prompt).toContain("DON'T own");
+      expect(prompt).toContain('advice');
     });
 
-    it('should include held/not-held modes in portfolio prompt', () => {
+    it('should include held/not-held guidance in portfolio prompt', () => {
       const prompt = getSystemPrompt(provider, 'portfolio');
-      expect(prompt).toContain('isHeld');
-      expect(prompt).toContain('HOLDS');
-      expect(prompt).toContain('NOT own');
+      expect(prompt).toContain('OWN');
+      expect(prompt).toContain('Add more, hold, or trim');
+      expect(prompt).toContain('entry point');
     });
 
-    it('should include disclaimer in sentiment prompt about no news data', () => {
+    it('should include disclaimer guidance in sentiment prompt', () => {
       const prompt = getSystemPrompt(provider, 'sentiment');
-      expect(prompt).toContain('do NOT have news sentiment');
-      expect(prompt).toContain('social media');
-      expect(prompt).toContain('institutional/retail');
+      expect(prompt).toContain('price patterns');
+      expect(prompt).toContain('not news');
+      expect(prompt).toContain('social sentiment');
     });
   });
 });
@@ -727,7 +722,7 @@ describe('MockLLMProvider', () => {
     it('should return technical insight for technical type', async () => {
       const result = await mockProvider.generateInsight(
         'technical',
-        { summary: { trendDirection: 'bullish', volatility: 'high' } },
+        { summary: { trendDirection: 'up', volatility: 'high' } },
         'AAPL'
       );
 
@@ -735,7 +730,9 @@ describe('MockLLMProvider', () => {
       expect(result.provider).toBe('mock');
       expect(result.confidence).toBe(0.6);
       expect(result.content).toContain('AAPL');
-      expect(result.content).toContain('technical perspective');
+      // New plain-language mock should not contain jargon
+      expect(result.content).not.toContain('RSI is at');
+      expect(result.content).not.toContain('MACD shows');
     });
 
     it('should return portfolio insight for portfolio type', async () => {
@@ -743,7 +740,8 @@ describe('MockLLMProvider', () => {
 
       expect(result.type).toBe('portfolio');
       expect(result.content).toContain('GOOGL');
-      expect(result.content).toContain('portfolio');
+      // Should talk about position/ownership in plain language
+      expect(result.content).toContain('position');
     });
 
     it('should return sentiment insight for sentiment type', async () => {
@@ -751,7 +749,8 @@ describe('MockLLMProvider', () => {
 
       expect(result.type).toBe('sentiment');
       expect(result.content).toContain('MSFT');
-      expect(result.content).toContain('sentiment');
+      // Should mention crowd behavior, not indicator values
+      expect(result.content).toContain('crowd');
     });
 
     it('should include standard metadata', async () => {
@@ -770,6 +769,241 @@ describe('MockLLMProvider', () => {
     it('should use neutral as default market condition', async () => {
       const result = await mockProvider.generateInsight('technical', {}, 'NVDA');
       expect(result.metadata.market_conditions).toBe('neutral');
+    });
+  });
+});
+
+describe('OpenAIProvider - Prompt Builders with Price Context', () => {
+  let provider: OpenAIProvider;
+
+  beforeEach(() => {
+    provider = new OpenAIProvider('test-api-key');
+  });
+
+  // Helper to access private methods
+  const buildTechnicalPrompt = (provider: OpenAIProvider, analysis: any, symbol: string) => {
+    return (provider as any).buildTechnicalPrompt(analysis, symbol);
+  };
+
+  const buildPortfolioPrompt = (provider: OpenAIProvider, data: any, symbol: string) => {
+    return (provider as any).buildPortfolioPrompt(data, symbol);
+  };
+
+  const buildSentimentPrompt = (provider: OpenAIProvider, data: any, symbol: string) => {
+    return (provider as any).buildSentimentPrompt(data, symbol);
+  };
+
+  // Sample price context
+  const samplePriceContext = {
+    currentPrice: 150.25,
+    priceChange1W: 5.50,
+    priceChange1WPercent: 3.8,
+    priceChange1M: -12.75,
+    priceChange1MPercent: -7.8,
+    high1M: 165.00,
+    low1M: 145.50,
+    high3M: 175.25,
+    low3M: 140.00,
+  };
+
+  describe('buildTechnicalPrompt', () => {
+    it('should include price data section when priceContext is provided', () => {
+      const analysis = {
+        priceContext: samplePriceContext,
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).toContain('PRICE DATA');
+      expect(prompt).toContain('$150.25');
+      expect(prompt).toContain('+3.8%');
+      expect(prompt).toContain('-7.8%');
+    });
+
+    it('should format negative percentages correctly', () => {
+      const analysis = {
+        priceContext: {
+          ...samplePriceContext,
+          priceChange1WPercent: -5.5,
+        },
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).toContain('-5.5%');
+    });
+
+    it('should format positive percentages with + sign', () => {
+      const analysis = {
+        priceContext: {
+          ...samplePriceContext,
+          priceChange1WPercent: 10.5,
+        },
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).toContain('+10.5%');
+    });
+
+    it('should include 1-month and 3-month ranges', () => {
+      const analysis = {
+        priceContext: samplePriceContext,
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).toContain('$145.50 - $165.00'); // 1-month range
+      expect(prompt).toContain('$140.00 - $175.25'); // 3-month range
+    });
+
+    it('should not include price data section when priceContext is null', () => {
+      const analysis = {
+        priceContext: null,
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).not.toContain('PRICE DATA');
+      expect(prompt).not.toContain('Current price:');
+    });
+
+    it('should not include price data section when priceContext is missing', () => {
+      const analysis = {
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      expect(prompt).not.toContain('PRICE DATA');
+    });
+
+    it('should handle N/A for null values using safeFixed', () => {
+      const analysis = {
+        priceContext: {
+          currentPrice: null,
+          priceChange1WPercent: undefined,
+          priceChange1MPercent: 5.0,
+          high1M: 100,
+          low1M: 90,
+          high3M: 110,
+          low3M: 80,
+        },
+        indicators: {},
+      };
+
+      const prompt = buildTechnicalPrompt(provider, analysis, 'AAPL');
+
+      // Should contain N/A for null values
+      expect(prompt).toContain('N/A');
+    });
+  });
+
+  describe('buildPortfolioPrompt', () => {
+    it('should include price info when priceContext is provided', () => {
+      const data = {
+        priceContext: samplePriceContext,
+        portfolioContext: { isHeld: false },
+        indicators: {},
+      };
+
+      const prompt = buildPortfolioPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('PRICE:');
+      expect(prompt).toContain('$150.25');
+      expect(prompt).toContain('-7.8%');
+    });
+
+    it('should indicate user owns stock when isHeld is true', () => {
+      const data = {
+        priceContext: samplePriceContext,
+        portfolioContext: { isHeld: true },
+        indicators: {},
+      };
+
+      const prompt = buildPortfolioPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('USER OWNS THIS STOCK');
+    });
+
+    it('should indicate user does not own stock when isHeld is false', () => {
+      const data = {
+        priceContext: samplePriceContext,
+        portfolioContext: { isHeld: false },
+        indicators: {},
+      };
+
+      const prompt = buildPortfolioPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('USER DOES NOT OWN THIS STOCK');
+    });
+
+    it('should not include PRICE line when priceContext is null', () => {
+      const data = {
+        priceContext: null,
+        portfolioContext: { isHeld: false },
+        indicators: {},
+      };
+
+      const prompt = buildPortfolioPrompt(provider, data, 'AAPL');
+
+      expect(prompt).not.toContain('PRICE:');
+    });
+  });
+
+  describe('buildSentimentPrompt', () => {
+    it('should include price context when provided', () => {
+      const data = {
+        priceContext: samplePriceContext,
+        indicators: {},
+      };
+
+      const prompt = buildSentimentPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('PRICE CONTEXT');
+      expect(prompt).toContain('$150.25');
+      expect(prompt).toContain('-7.8%');
+    });
+
+    it('should include 3-month range', () => {
+      const data = {
+        priceContext: samplePriceContext,
+        indicators: {},
+      };
+
+      const prompt = buildSentimentPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('$140.00 - $175.25');
+    });
+
+    it('should not include price context when null', () => {
+      const data = {
+        priceContext: null,
+        indicators: {},
+      };
+
+      const prompt = buildSentimentPrompt(provider, data, 'AAPL');
+
+      expect(prompt).not.toContain('PRICE CONTEXT');
+    });
+
+    it('should format positive percentage with + sign', () => {
+      const data = {
+        priceContext: {
+          ...samplePriceContext,
+          priceChange1MPercent: 15.5,
+        },
+        indicators: {},
+      };
+
+      const prompt = buildSentimentPrompt(provider, data, 'AAPL');
+
+      expect(prompt).toContain('+15.5%');
     });
   });
 });
