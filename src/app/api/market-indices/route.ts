@@ -1019,29 +1019,34 @@ export async function GET(request: NextRequest) {
        * logging like this helps you quickly identify and fix these issues.
        */
 
-      // Process the data
-      const processedIndices = quotesData.map((quote: any) => {
-        /**
-         * ENHANCED DATA LOOKUP PATTERN - FUTURES-AWARE SYMBOL MATCHING
-         * 
-         * This enhanced lookup handles both regular market symbols and futures symbols.
-         * We need to match the quote symbol against either the regular symbol or futures symbol
-         * depending on what type of data we fetched.
-         * 
-         * 🔍 DUAL SYMBOL MATCHING LOGIC:
-         * - First try to match against regular symbol (index.symbol === quote.symbol)
-         * - If no match, try to match against futures symbol (index.futuresSymbol === quote.symbol)
-         * - This handles both market hours (regular symbols) and futures time (futures symbols)
-         * 
-         * 💡 WHY DUAL MATCHING IS NEEDED:
-         * - During market hours: API returns ^GSPC, we match against index.symbol
-         * - During futures time: API returns ES=F, we match against index.futuresSymbol
-         * - Same configuration object works for both scenarios
-         * - Maintains consistent display names regardless of data source
-         */
-        const indexInfo = MARKET_INDICES.find(index => 
-          index.symbol === quote.symbol || index.futuresSymbol === quote.symbol
-        );
+      // Process the data by iterating over our config (not the API response)
+      // This ensures we always use our configured symbols regardless of what the API returns
+      const processedIndices = MARKET_INDICES.map((indexConfig) => {
+        // Find the matching quote from the API response
+        // Use the symbol we requested (regular or futures) for matching
+        const requestedSymbol = shouldUseFutures ? indexConfig.futuresSymbol : indexConfig.symbol;
+
+        // Try multiple matching strategies for resilience
+        const quote = quotesData.find((q: any) => {
+          const apiSymbol = q.symbol?.toUpperCase() || '';
+          const configSymbol = requestedSymbol.toUpperCase();
+          const configFutures = indexConfig.futuresSymbol.toUpperCase();
+          const configRegular = indexConfig.symbol.toUpperCase();
+
+          // Exact match with requested symbol
+          if (apiSymbol === configSymbol) return true;
+          // Match with futures symbol
+          if (apiSymbol === configFutures) return true;
+          // Match with regular symbol
+          if (apiSymbol === configRegular) return true;
+          // Partial match (API might return symbol without special chars)
+          if (apiSymbol.replace(/[^A-Z0-9]/g, '') === configSymbol.replace(/[^A-Z0-9]/g, '')) return true;
+
+          return false;
+        });
+
+        // Use our config as the source of truth - indexConfig is always defined
+        const indexInfo = indexConfig;
         
         /**
          * OBJECT CONSTRUCTION WITH FALLBACKS - DEFENSIVE PROGRAMMING
@@ -1070,59 +1075,22 @@ export async function GET(request: NextRequest) {
          * - hour/minute: '2-digit' ensures consistent formatting (09:30 not 9:30)
          * - timeZoneName: 'short' adds timezone abbreviation (EST/EDT)
          */
-        /**
-         * ENHANCED DATA OBJECT WITH FUTURES AWARENESS
-         * 
-         * This enhanced return object includes information about whether we're
-         * displaying futures data or regular market data, providing context to users.
-         */
-        const isShowingFutures = shouldUseFutures && quote.symbol.includes('=F');
-        
-        /*
-          DEBUG LOGGING - EDUCATIONAL PATTERN FOR TROUBLESHOOTING
-          
-          This console.log demonstrates a crucial debugging technique for data transformation.
-          When working with external APIs and complex fallback logic, logging the decision
-          process helps developers understand what's happening at runtime.
-          
-          🔍 LOGGING STRATEGY BREAKDOWN:
-          - quoteSymbol: Shows what symbol the API returned (e.g., "^GSPC" or "ES=F")
-          - quoteName: Shows the raw name from the API (e.g., "S&P 500" or "E-mini S&P 500 Futures")
-          - hasIndexInfo: Boolean flag showing if we found matching configuration
-          - finalName: Shows the actual name that will be displayed to users
-          
-          💡 WHY THIS LOGGING IS VALUABLE:
-          1. DEBUGGING: Helps identify when fallback logic is triggered
-          2. VALIDATION: Confirms our configuration matching is working correctly
-          3. MONITORING: Can detect when APIs change their response format
-          4. LEARNING: Shows the decision process for educational purposes
-          
-          🎯 PRODUCTION CONSIDERATIONS:
-          In production, you might want to:
-          - Use a proper logging library (Winston, Pino) instead of console.log
-          - Add log levels (debug, info, warn, error) for better filtering
-          - Include request IDs for tracing across multiple API calls
-          - Consider performance impact of logging in high-traffic scenarios
-          
-          🔧 BOOLEAN CONVERSION PATTERN:
-          !!indexInfo converts any value to a strict boolean:
-          - !! is the "double NOT" operator
-          - First !: Converts to boolean and inverts (object becomes false, null becomes true)
-          - Second !: Inverts again (object becomes true, null becomes false)
-          - Result: Clean true/false instead of truthy/falsy values
-          
-          EXAMPLES:
-          - !!{name: "S&P 500"} → true (object exists)
-          - !!null → false (no matching configuration)
-          - !!undefined → false (no matching configuration)
-        */
-        console.log('Market Indices - Processing quote:', {
-          quoteSymbol: quote.symbol,
-          quoteName: quote.name,
-          hasIndexInfo: !!indexInfo,
-          finalName: indexInfo ? indexInfo.name : quote.name,
-          // Additional context for the simplified fallback pattern
-          fallbackStrategy: indexInfo ? 'using_configured_name' : 'using_api_name'
+        // Skip if no matching quote was found in API response
+        if (!quote) {
+          console.log('Market Indices - No API data for:', indexInfo.name);
+          return null; // Will be filtered out
+        }
+
+        // Determine if we're showing futures data
+        const isShowingFutures = shouldUseFutures;
+
+        // Debug logging
+        console.log('Market Indices - Processing:', {
+          configName: indexInfo.name,
+          configSymbol: indexInfo.symbol,
+          apiSymbol: quote.symbol,
+          apiName: quote.name,
+          matched: true
         });
         
         /*
@@ -1254,13 +1222,8 @@ export async function GET(request: NextRequest) {
           handle real-world data inconsistencies gracefully.
         */
         return {
-          /*
-            SYMBOL FALLBACK PATTERN:
-            indexInfo?.displaySymbol || quote.symbol
-            - Prefer our curated display symbols (e.g., "S&P 500") over API symbols (e.g., "^GSPC")
-            - Ensures user-friendly symbols in the UI instead of technical ticker symbols
-          */
-          symbol: indexInfo?.displaySymbol || quote.symbol,
+          // Use our config directly - indexInfo is always defined now
+          symbol: indexInfo.displaySymbol,
           
           /*
             ORIGINAL TICKER SYMBOL - DUAL SYMBOL ARCHITECTURE PATTERN
@@ -1385,7 +1348,8 @@ export async function GET(request: NextRequest) {
             symbol accuracy is critical for data integrity, but user experience
             requires human-readable names.
           */
-          tickerSymbol: indexInfo?.symbol || quote.symbol,
+          // Always use our configured technical symbol for charts
+          tickerSymbol: indexInfo.symbol,
           
           /*
             ENHANCED NAME FALLBACK PATTERN - SIMPLIFIED CONDITIONAL LOGIC
@@ -1475,7 +1439,7 @@ export async function GET(request: NextRequest) {
             better understood. The original triple fallback was defensive
             programming, but experience showed the middle case was unnecessary.
           */
-          name: indexInfo ? indexInfo.name : quote.name,
+          name: indexInfo.name,
           
           /*
             NUMERIC FALLBACK PATTERNS:
@@ -1527,9 +1491,12 @@ export async function GET(request: NextRequest) {
        * - Frontend can always check response.success before processing data
        * - Allows for partial success scenarios in more complex APIs
        */
+      // Filter out any null entries (indices where no API data was found)
+      const validIndices = processedIndices.filter((item: any) => item !== null);
+
       return NextResponse.json({
         success: true,
-        data: processedIndices,
+        data: validIndices,
         timestamp: new Date().toISOString()
       });
 
