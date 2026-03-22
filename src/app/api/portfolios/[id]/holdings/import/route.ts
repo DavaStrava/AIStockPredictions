@@ -132,7 +132,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Create new deposit with current cash balance
-        await portfolioService.addTransaction(id, {
+        await portfolioService.addTransaction({
+          portfolioId: id,
           transactionType: 'DEPOSIT',
           totalAmount: cashBalance,
           transactionDate: new Date(),
