@@ -84,7 +84,7 @@ export function isMoneyAccountRow(row: CSVParsedRow): boolean {
   // Check first column for money account/cash indicators
   const firstCol = String(data['Symbol '] || data['Symbol'] || '').replace(/"/g, '').trim().toLowerCase();
 
-  // These are the category labels in the first column
+  // These are the category labels in the first column (all non-stock rows)
   const cashCategories = [
     'money accounts',
     'cash balance',
@@ -209,14 +209,15 @@ export function validateMerrillPortfolioRow(row: CSVParsedRow): HoldingValidatio
 
 /**
  * Extract cash balance from Money accounts rows.
- * Returns the sum of all money account values.
+ * Returns the sum of all money account values minus pending activity.
  *
  * CSV structure for cash rows:
  * - "Money accounts" ,"ML DIRECT DEPOSIT PROGRM" ,...,"$47,651.00",...
  * - "Money accounts" ,"BLACKROCK LIQUIDITY FUND" ,...,"$150,717.21",...
  * - "Cash balance" ,...,"$44,797.17",...
+ * - "Pending activity" ,...,"-$34,856.43",...  (negative value to subtract)
  *
- * The first column (Symbol) contains "Money accounts" or "Cash balance",
+ * The first column (Symbol) contains "Money accounts", "Cash balance", or "Pending activity",
  * not the fund name. The fund name is in the Description column.
  */
 export function extractCashBalance(rows: CSVParsedRow[]): number {
@@ -227,14 +228,12 @@ export function extractCashBalance(rows: CSVParsedRow[]): number {
     // First column may be "Symbol " (with space) or "Symbol"
     const firstCol = String(data['Symbol '] || data['Symbol'] || '').replace(/"/g, '').trim().toLowerCase();
 
-    // Check if this is a money account row or cash balance row
-    // These rows have "money accounts" or "cash balance" in the first column
-    if (firstCol === 'money accounts' || firstCol === 'cash balance') {
+    // Check if this is a money account, cash balance, or pending activity row
+    if (firstCol === 'money accounts' || firstCol === 'cash balance' || firstCol === 'pending activity') {
       const valueRaw = String(data['Value'] || '');
       const value = parseNumber(valueRaw);
-      if (value > 0) {
-        cashBalance += value;
-      }
+      // Add the value (parseNumber handles negative values like "-$34,856.43")
+      cashBalance += value;
     }
   }
 
