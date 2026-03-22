@@ -73,29 +73,27 @@ export function parseMerrillPortfolioSymbol(symbol: string): string {
 
 /**
  * Check if a row represents a money account (cash/liquidity fund).
- * These rows have descriptive text in the first column like:
- * - "Money accounts"
- * - "ML DIRECT DEPOSIT PROGRM"
- * - "BLACKROCK LIQUIDITY FUND"
+ *
+ * In Merrill Portfolio Export format, the first column (Symbol) contains
+ * category labels like "Money accounts", "Cash balance", "Balances", etc.
+ * The fund name (e.g., "ML DIRECT DEPOSIT PROGRM") is in the Description column.
  */
 export function isMoneyAccountRow(row: CSVParsedRow): boolean {
   const data = row.data;
 
-  // Check first column for money account indicators
-  const firstCol = String(data['Symbol '] || data['Symbol'] || '').replace(/"/g, '').trim();
+  // Check first column for money account/cash indicators
+  const firstCol = String(data['Symbol '] || data['Symbol'] || '').replace(/"/g, '').trim().toLowerCase();
 
-  // Common money account patterns
-  const moneyPatterns = [
-    /^money\s*accounts?$/i,
-    /^ml\s+direct\s+deposit/i,
-    /^blackrock\s+liquidity/i,
-    /^cash\s*balance/i,
-    /^pending\s*activity/i,
-    /^total$/i,
-    /^balances$/i,
+  // These are the category labels in the first column
+  const cashCategories = [
+    'money accounts',
+    'cash balance',
+    'pending activity',
+    'total',
+    'balances',
   ];
 
-  return moneyPatterns.some((pattern) => pattern.test(firstCol));
+  return cashCategories.includes(firstCol);
 }
 
 /**
@@ -107,22 +105,16 @@ function shouldSkipRow(row: CSVParsedRow): { skip: boolean; reason?: string } {
 
   // Get the symbol column (may have trailing space in header)
   const symbolRaw = String(data['Symbol '] || data['Symbol'] || '');
-  const symbol = parseMerrillPortfolioSymbol(symbolRaw);
+  const symbolTrimmed = symbolRaw.replace(/"/g, '').trim();
 
   // Skip empty symbol rows
-  if (!symbol && !symbolRaw.trim()) {
+  if (!symbolTrimmed) {
     return { skip: true, reason: 'Empty row' };
   }
 
-  // Skip money account rows
+  // Skip money account rows (these have category labels in first column)
   if (isMoneyAccountRow(row)) {
     return { skip: true, reason: 'Money account row' };
-  }
-
-  // Skip section markers
-  const sectionMarkers = ['Balances', 'Total', 'Cash balance', 'Pending activity'];
-  if (sectionMarkers.some((marker) => symbolRaw.toLowerCase().includes(marker.toLowerCase()))) {
-    return { skip: true, reason: 'Section marker' };
   }
 
   return { skip: false };
@@ -218,22 +210,26 @@ export function validateMerrillPortfolioRow(row: CSVParsedRow): HoldingValidatio
 /**
  * Extract cash balance from Money accounts rows.
  * Returns the sum of all money account values.
+ *
+ * CSV structure for cash rows:
+ * - "Money accounts" ,"ML DIRECT DEPOSIT PROGRM" ,...,"$47,651.00",...
+ * - "Money accounts" ,"BLACKROCK LIQUIDITY FUND" ,...,"$150,717.21",...
+ * - "Cash balance" ,...,"$44,797.17",...
+ *
+ * The first column (Symbol) contains "Money accounts" or "Cash balance",
+ * not the fund name. The fund name is in the Description column.
  */
 export function extractCashBalance(rows: CSVParsedRow[]): number {
   let cashBalance = 0;
 
   for (const row of rows) {
     const data = row.data;
+    // First column may be "Symbol " (with space) or "Symbol"
     const firstCol = String(data['Symbol '] || data['Symbol'] || '').replace(/"/g, '').trim().toLowerCase();
 
-    // Look for money account value rows (not section headers)
-    // These have a value in the "Value" column
-    if (
-      firstCol.includes('ml direct deposit') ||
-      firstCol.includes('blackrock liquidity') ||
-      firstCol.includes('money market') ||
-      firstCol.includes('cash')
-    ) {
+    // Check if this is a money account row or cash balance row
+    // These rows have "money accounts" or "cash balance" in the first column
+    if (firstCol === 'money accounts' || firstCol === 'cash balance') {
       const valueRaw = String(data['Value'] || '');
       const value = parseNumber(valueRaw);
       if (value > 0) {
