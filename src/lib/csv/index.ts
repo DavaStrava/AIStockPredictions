@@ -11,6 +11,7 @@ export {
   getFormatDisplayName,
   isPortfolioCompatible,
   isTradeCompatible,
+  isHoldingsCompatible,
 } from './formatDetector';
 
 // Mappers
@@ -22,4 +23,11 @@ export {
   validateMerrillHoldingForSnapshot,
   mapMerrillHoldingsToHoldings,
 } from './merrillHoldingsMapper';
+export {
+  validateMerrillPortfolioRow,
+  mapMerrillPortfolioToHoldings,
+  extractCashBalance,
+  parseMerrillPortfolioSymbol,
+  type MerrillPortfolioMapResult,
+} from './merrillPortfolioMapper';
 export { validateTradeRow, mapTradeRows } from './tradeCSVMapper';

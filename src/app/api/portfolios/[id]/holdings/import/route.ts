@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { holdings } = body as { holdings: ParsedHolding[] };
+    const { holdings, cashBalance } = body as { holdings: ParsedHolding[]; cashBalance?: number };
 
     if (!Array.isArray(holdings) || holdings.length === 0) {
       return NextResponse.json(
@@ -55,6 +55,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate cashBalance if provided
+    if (cashBalance !== undefined && cashBalance !== null) {
+      if (typeof cashBalance !== 'number' || !Number.isFinite(cashBalance)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid cash balance: must be a valid number',
+          },
+          { status: 400 }
+        );
+      }
+      if (cashBalance < 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid cash balance: cannot be negative',
+          },
+          { status: 400 }
+        );
+      }
+      if (cashBalance > 1_000_000_000) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid cash balance: exceeds maximum allowed value',
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const db = getDatabase();
@@ -82,6 +113,42 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Import holdings
     const importResult = await portfolioService.importHoldings(id, holdings);
+
+    // If cash balance provided, handle the DEPOSIT transaction
+    // First remove any existing "Portfolio Export" deposits to avoid duplicates on re-import
+    if (cashBalance && cashBalance > 0) {
+      try {
+        const PORTFOLIO_EXPORT_NOTE = 'Cash balance imported from Merrill Lynch Portfolio Export';
+
+        // Find and delete existing portfolio export deposits
+        const existingDeposits = await portfolioService.getTransactions(id, {
+          transactionType: 'DEPOSIT',
+        });
+
+        for (const deposit of existingDeposits) {
+          if (deposit.notes === PORTFOLIO_EXPORT_NOTE) {
+            await portfolioService.deleteTransaction(deposit.id);
+          }
+        }
+
+        // Create new deposit with current cash balance
+        await portfolioService.addTransaction(id, {
+          transactionType: 'DEPOSIT',
+          totalAmount: cashBalance,
+          transactionDate: new Date(),
+          notes: PORTFOLIO_EXPORT_NOTE,
+        });
+      } catch (cashError) {
+        console.error('Failed to import cash balance:', cashError);
+        // Don't fail the whole import if cash deposit fails
+        importResult.errors.push({
+          row: 0,
+          field: 'cashBalance',
+          value: String(cashBalance),
+          message: `Failed to import cash balance: ${cashError instanceof Error ? cashError.message : 'Unknown error'}`,
+        });
+      }
+    }
 
     const response: HoldingsImportResult = {
       success: importResult.success,

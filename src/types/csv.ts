@@ -18,6 +18,7 @@ export type CSVFormatType =
   | 'fidelity'
   | 'merrill_transactions'
   | 'merrill_holdings'
+  | 'merrill_portfolio'
   | 'trade_tracker'
   | 'unknown';
 

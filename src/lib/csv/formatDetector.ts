@@ -3,8 +3,9 @@
  *
  * Auto-detects the CSV format by checking distinctive patterns:
  * - Fidelity: Row 3 starts with "Run Date"
- * - Merrill Transactions: Row 1 contains "Exported on:"
+ * - Merrill Transactions: Row 1 contains "Exported on:" + date-prefixed data rows
  * - Merrill Holdings: Row 1 contains "COB Date"
+ * - Merrill Portfolio: Row 1 contains "Exported on:" + "Unit Cost" header (portfolio snapshot)
  * - Trade Tracker: Row 1 contains "Symbol,Side,EntryPrice"
  */
 
@@ -42,9 +43,36 @@ export function detectCSVFormat(content: string): CSVFormatDetectionResult {
     };
   }
 
-  // Check for Merrill Transactions format
-  // First row contains "Exported on:"
+  // Check for Merrill Portfolio Export format (different from Merrill Transactions)
+  // First row contains "Exported on:" AND row ~11 has holdings headers with "Unit Cost"
   if (firstLine.includes('Exported on:')) {
+    // Check if this is the Portfolio Export format by looking for "Unit Cost" header
+    // Portfolio format has headers around row 11 with "Symbol ", "Unit Cost", "Quantity"
+    let isPortfolioFormat = false;
+    let portfolioHeaderRow = -1;
+    let portfolioDataStart = -1;
+
+    for (let i = 8; i < Math.min(15, lines.length); i++) {
+      const line = lines[i] || '';
+      // Portfolio headers have "Symbol " (with space), "Unit Cost", and "Quantity"
+      if (line.includes('Symbol ') && line.includes('Unit Cost') && line.includes('Quantity')) {
+        isPortfolioFormat = true;
+        portfolioHeaderRow = i;
+        portfolioDataStart = i + 1;
+        break;
+      }
+    }
+
+    if (isPortfolioFormat && portfolioHeaderRow >= 0) {
+      return {
+        format: 'merrill_portfolio',
+        headerRowIndex: portfolioHeaderRow,
+        dataStartIndex: portfolioDataStart,
+        confidence: 0.95,
+      };
+    }
+
+    // Otherwise, it's the Transactions format
     // Find the actual data start by looking for the first row with a date pattern
     // after the headers. Headers are on row 5 (index 4).
     // Rows 6-8 (indices 5-7) contain empty rows and filter text.
@@ -125,6 +153,8 @@ export function getFormatDisplayName(format: CSVFormatType): string {
       return 'Merrill Lynch Transactions';
     case 'merrill_holdings':
       return 'Merrill Lynch Holdings';
+    case 'merrill_portfolio':
+      return 'Merrill Lynch Portfolio Export';
     case 'trade_tracker':
       return 'Trade Tracker';
     default:
@@ -144,6 +174,13 @@ export function isPortfolioCompatible(format: CSVFormatType): boolean {
  */
 export function isTradeCompatible(format: CSVFormatType): boolean {
   return ['trade_tracker', 'merrill_transactions'].includes(format);
+}
+
+/**
+ * Check if format is compatible with holdings snapshot import.
+ */
+export function isHoldingsCompatible(format: CSVFormatType): boolean {
+  return ['merrill_holdings', 'merrill_portfolio'].includes(format);
 }
 
 export default detectCSVFormat;

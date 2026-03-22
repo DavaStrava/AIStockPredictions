@@ -21,10 +21,12 @@ import {
   getFormatDisplayName,
   isPortfolioCompatible,
   isTradeCompatible,
+  isHoldingsCompatible,
   mapFidelityRows,
   mapMerrillTransactionRows,
   mapMerrillHoldingsRows,
   mapMerrillHoldingsToHoldings,
+  mapMerrillPortfolioToHoldings,
   mapTradeRows,
 } from '@/lib/csv';
 import type {
@@ -54,6 +56,7 @@ interface ModalState {
   parseResult: CSVParseResult | null;
   validatedRows: ValidatedRow[];
   validData: ParsedPortfolioTransaction[] | ParsedHolding[] | ParsedTrade[];
+  cashBalance: number | null; // Cash balance extracted from portfolio export
   importResult: CSVImportResult | HoldingsImportResult | null;
   loading: boolean;
   error: string | null;
@@ -66,6 +69,7 @@ const INITIAL_STATE: ModalState = {
   parseResult: null,
   validatedRows: [],
   validData: [],
+  cashBalance: null,
   importResult: null,
   loading: false,
   error: null,
@@ -106,10 +110,10 @@ export function CSVImportModal({
               'Please use Fidelity or Merrill Lynch format.'
           );
         }
-        if (importType === 'holdings' && detection.format !== 'merrill_holdings') {
+        if (importType === 'holdings' && !isHoldingsCompatible(detection.format)) {
           throw new Error(
             `This file format (${getFormatDisplayName(detection.format)}) is not compatible with holdings import. ` +
-              'Please use Merrill Lynch Holdings format.'
+              'Please use Merrill Lynch Holdings or Portfolio Export format.'
           );
         }
         if (importType === 'trade' && !isTradeCompatible(detection.format)) {
@@ -132,6 +136,7 @@ export function CSVImportModal({
         // Validate and map rows based on format
         let validatedRows: ValidatedRow[] = [];
         let validData: ParsedPortfolioTransaction[] | ParsedHolding[] | ParsedTrade[] = [];
+        let cashBalance: number | null = null;
 
         if (importType === 'portfolio') {
           const result = mapPortfolioData(detection.format, parsed);
@@ -141,6 +146,7 @@ export function CSVImportModal({
           const result = mapHoldingsData(detection.format, parsed);
           validatedRows = result.validatedRows;
           validData = result.holdings;
+          cashBalance = result.cashBalance;
         } else {
           const result = mapTradeData(detection.format, parsed);
           validatedRows = result.validatedRows;
@@ -154,6 +160,7 @@ export function CSVImportModal({
           parseResult: parsed,
           validatedRows,
           validData,
+          cashBalance,
           step: 'preview',
           loading: false,
         }));
@@ -181,6 +188,10 @@ export function CSVImportModal({
       } else if (importType === 'holdings') {
         endpoint = `/api/portfolios/${portfolioId}/holdings/import`;
         body = { holdings: state.validData };
+        // Include cash balance if extracted from the CSV
+        if (state.cashBalance !== null && state.cashBalance > 0) {
+          body.cashBalance = state.cashBalance;
+        }
       } else {
         endpoint = '/api/trades/import';
         body = { trades: state.validData };
@@ -216,7 +227,7 @@ export function CSVImportModal({
         error: error instanceof Error ? error.message : 'Import failed',
       }));
     }
-  }, [importType, portfolioId, state.validData, onSuccess]);
+  }, [importType, portfolioId, state.validData, state.cashBalance, onSuccess]);
 
   const handleBack = useCallback(() => {
     setState((prev) => {
@@ -352,6 +363,11 @@ export function CSVImportModal({
                   <li>Format: {getFormatDisplayName(state.format)}</li>
                   <li>Total rows: {state.parseResult?.totalRows}</li>
                   <li>Valid records: {validCount}</li>
+                  {state.cashBalance !== null && state.cashBalance > 0 && (
+                    <li className="text-emerald-400">
+                      Cash balance: ${state.cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -528,13 +544,20 @@ function mapPortfolioData(
 function mapHoldingsData(
   format: CSVFormatType,
   parsed: CSVParseResult
-): { validatedRows: ValidatedRow[]; holdings: ParsedHolding[] } {
+): { validatedRows: ValidatedRow[]; holdings: ParsedHolding[]; cashBalance: number | null } {
   let result: { holdings: ParsedHolding[]; errors: CSVValidationError[] };
+  let cashBalance: number | null = null;
 
   switch (format) {
     case 'merrill_holdings':
       result = mapMerrillHoldingsToHoldings(parsed.rows);
       break;
+    case 'merrill_portfolio': {
+      const portfolioResult = mapMerrillPortfolioToHoldings(parsed.rows);
+      result = { holdings: portfolioResult.holdings, errors: portfolioResult.errors };
+      cashBalance = portfolioResult.cashBalance > 0 ? portfolioResult.cashBalance : null;
+      break;
+    }
     default:
       result = { holdings: [], errors: [] };
   }
@@ -557,7 +580,7 @@ function mapHoldingsData(
     };
   });
 
-  return { validatedRows, holdings: result.holdings };
+  return { validatedRows, holdings: result.holdings, cashBalance };
 }
 
 /**

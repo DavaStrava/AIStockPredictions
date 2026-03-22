@@ -953,7 +953,8 @@ export class PortfolioService {
 
         try {
           // Validate holding data
-          if (!symbol || !/^[A-Z]{1,5}$/.test(symbol)) {
+          // Allow 1-6 chars: letters, numbers, dots (e.g., AAPL, BRK.A, BRK.B)
+          if (!symbol || !/^[A-Z][A-Z0-9.]{0,5}$/.test(symbol)) {
             throw new Error(`Invalid symbol: ${symbol}`);
           }
           if (holding.quantity <= 0) {
