@@ -1593,28 +1593,23 @@ export class PortfolioService {
     const previousEquity = totalEquity - dayChange;
     const dayChangePercent = previousEquity > 0 ? (dayChange / previousEquity) * 100 : 0;
 
-    // Calculate net deposits for total return
-    const depositsQuery = `
-      SELECT COALESCE(SUM(CASE WHEN transaction_type IN ('DEPOSIT', 'DIVIDEND') THEN total_amount ELSE 0 END), 0) -
-             COALESCE(SUM(CASE WHEN transaction_type = 'WITHDRAW' THEN ABS(total_amount) ELSE 0 END), 0) as net_deposits
-      FROM portfolio_transactions
-      WHERE portfolio_id = $1
-    `;
-    const depositsResult = await this.db.query(depositsQuery, [portfolioId]);
-    const netDeposits = parseFloat(depositsResult.rows[0].net_deposits) || 0;
+    // Calculate total return based on cost basis
+    // Total Return = Current Holdings Value - Total Cost Basis (unrealized P&L)
+    // This works for both transaction-imported and directly-imported holdings
+    const totalCostBasis = holdingsWithMarket.reduce((sum, h) => sum + h.totalCostBasis, 0);
+    const totalReturn = holdingsValue - totalCostBasis;
+    const totalReturnPercent = totalCostBasis > 0 ? (totalReturn / totalCostBasis) * 100 : 0;
 
-    // Debug logging for net deposits
+    // Debug logging for return calculation
     if (process.env.NODE_ENV === 'development') {
-      console.log('[PortfolioService] Net Deposits Calculation:', {
+      console.log('[PortfolioService] Return Calculation:', {
         portfolioId,
-        netDeposits: netDeposits.toFixed(2),
-        totalReturn: (totalEquity - netDeposits).toFixed(2),
-        totalReturnPercent: netDeposits > 0 ? ((totalEquity - netDeposits) / netDeposits * 100).toFixed(2) + '%' : 'N/A'
+        holdingsValue: holdingsValue.toFixed(2),
+        totalCostBasis: totalCostBasis.toFixed(2),
+        totalReturn: totalReturn.toFixed(2),
+        totalReturnPercent: totalReturnPercent.toFixed(2) + '%',
       });
     }
-
-    const totalReturn = totalEquity - netDeposits;
-    const totalReturnPercent = netDeposits > 0 ? (totalReturn / netDeposits) * 100 : 0;
 
     // Calculate daily alpha vs SPY
     let dailyAlpha: number | null = null;
@@ -1827,18 +1822,17 @@ export class PortfolioService {
       }
     }
 
-    // Calculate net deposits
-    const depositsQuery = `
-      SELECT COALESCE(SUM(CASE WHEN transaction_type IN ('DEPOSIT', 'DIVIDEND') THEN ABS(total_amount) ELSE 0 END), 0) -
-             COALESCE(SUM(CASE WHEN transaction_type = 'WITHDRAW' THEN ABS(total_amount) ELSE 0 END), 0) as net_deposits
-      FROM portfolio_transactions
+    // Use the return calculation from summary (based on cost basis)
+    const totalReturnPercent = summary.totalReturnPercent;
+
+    // Calculate total cost basis for the net_deposits field (for historical reference)
+    const costBasisQuery = `
+      SELECT COALESCE(SUM(total_cost_basis), 0) as total_cost_basis
+      FROM portfolio_holdings
       WHERE portfolio_id = $1
     `;
-    const depositsResult = await this.db.query(depositsQuery, [portfolioId]);
-    const netDeposits = parseFloat(depositsResult.rows[0].net_deposits) || 0;
-
-    const totalReturnPercent =
-      netDeposits > 0 ? ((summary.totalEquity - netDeposits) / netDeposits) * 100 : null;
+    const costBasisResult = await this.db.query(costBasisQuery, [portfolioId]);
+    const netDeposits = parseFloat(costBasisResult.rows[0].total_cost_basis) || 0;
 
     const query = `
       INSERT INTO portfolio_daily_performance (
