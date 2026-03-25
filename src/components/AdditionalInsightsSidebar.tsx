@@ -10,8 +10,9 @@ import { MarketInsight, AdditionalInsightsSidebarProps } from '@/types';
  * and contextual information to enhance the user experience.
  */
 const AdditionalInsightsSidebar: React.FC<AdditionalInsightsSidebarProps> = ({
-  symbol,
-  analysis,
+  // These props are available for future use when we integrate real data
+  symbol: _symbol,
+  analysis: _analysis,
   priceData,
   className = ''
 }) => {

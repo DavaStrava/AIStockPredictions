@@ -1,5 +1,5 @@
 import { PriceData, OBVResult, VolumePriceTrendResult, AccumulationDistributionResult, TechnicalSignal } from '../types';
-import { validatePriceData, calculateSMA, calculateCorrelation } from '../utils';
+import { validatePriceData, calculateCorrelation } from '../utils';
 
 /**
  * Calculates On-Balance Volume (OBV) - A volume-momentum indicator
@@ -274,7 +274,7 @@ export function generateVolumeSignals(
   obv?: OBVResult[],
   vpt?: VolumePriceTrendResult[],
   ad?: AccumulationDistributionResult[],
-  symbol: string = ''
+  _symbol: string = ''
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
   

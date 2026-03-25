@@ -192,7 +192,7 @@ export function detectRSIDivergence(
  */
 export function generateRSISignals(
   rsiResults: RSIResult[],
-  symbol: string
+  _symbol: string
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
   

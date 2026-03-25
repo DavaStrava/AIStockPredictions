@@ -947,11 +947,7 @@ export async function GET(request: NextRequest) {
        * 3. Identify mismatches in symbol format or missing data
        * 4. Adjust our configuration or API request accordingly
        */
-      console.log('Market Indices - All received quotes:', quotesData.map((q: any) => ({
-        symbol: q.symbol,        // What symbol format did the API return?
-        name: q.name            // What name does the API provide?
-      })));
-      
+
       // DEBUG LOG 2: INSPECT OUR CONFIGURATION
       /**
        * CONFIGURATION INSPECTION - COMPARE EXPECTED VS ACTUAL
@@ -979,29 +975,14 @@ export async function GET(request: NextRequest) {
        * 
        * This makes it obvious where the mapping is failing.
        */
-      console.log('Market Indices - Our configuration:', MARKET_INDICES.map(idx => ({
-        symbol: idx.symbol,           // What we're requesting from the API
-        futuresSymbol: idx.futuresSymbol,  // Our futures contract mapping
-        name: idx.name               // Our display name for the UI
-      })));
 
       /**
-       * 🚀 PRODUCTION DEBUGGING BEST PRACTICES DEMONSTRATED:
-       * 
+       * 🚀 PRODUCTION DEBUGGING BEST PRACTICES:
+       *
        * 1. **STRUCTURED LOGGING**: Use objects instead of strings for better parsing
-       *    ✅ Good: console.log('Data:', { symbol: 'AAPL', price: 150 })
-       *    ❌ Bad: console.log('Symbol: AAPL, Price: 150')
-       * 
        * 2. **FOCUSED EXTRACTION**: Only log the fields you need to debug
-       *    ✅ Good: .map(q => ({ symbol: q.symbol, name: q.name }))
-       *    ❌ Bad: console.log(entireApiResponse) // Too much noise
-       * 
        * 3. **DESCRIPTIVE PREFIXES**: Use consistent prefixes for easy filtering
-       *    ✅ Good: 'Market Indices - All received quotes:'
-       *    ❌ Bad: 'Data:' or 'Debug:'
-       * 
        * 4. **COMPARATIVE LOGGING**: Log both expected and actual data together
-       *    This makes it easy to spot differences and identify root causes
        * 
        * 5. **TEMPORARY DEBUGGING**: These logs should be removed once the issue is resolved
        *    They're diagnostic tools, not permanent monitoring
@@ -1077,22 +1058,12 @@ export async function GET(request: NextRequest) {
          */
         // Skip if no matching quote was found in API response
         if (!quote) {
-          console.log('Market Indices - No API data for:', indexInfo.name);
           return null; // Will be filtered out
         }
 
         // Determine if we're showing futures data
         const isShowingFutures = shouldUseFutures;
 
-        // Debug logging
-        console.log('Market Indices - Processing:', {
-          configName: indexInfo.name,
-          configSymbol: indexInfo.symbol,
-          apiSymbol: quote.symbol,
-          apiName: quote.name,
-          matched: true
-        });
-        
         /*
           DATA TRANSFORMATION WITH ENHANCED FALLBACK PATTERN
           
@@ -1580,9 +1551,7 @@ export async function GET(request: NextRequest) {
          * This enhanced mock data includes the same futures logic as real data,
          * ensuring consistent behavior regardless of data source.
          */
-        // Debug logging for mock data
-        console.log('Market Indices - Mock data symbol:', index.displaySymbol);
-        
+
         return {
           symbol: index.displaySymbol,
           tickerSymbol: index.symbol,  // Original ticker symbol for chart API

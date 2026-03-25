@@ -40,7 +40,8 @@ export interface UsePredictionsReturn {
 export function usePredictions(
   onStockSelected?: (symbol: string) => Promise<void>
 ): UsePredictionsReturn {
-  const queryClient = useQueryClient();
+  // queryClient available for future cache invalidation needs
+  const _queryClient = useQueryClient();
 
   // Local state for managing manually added/removed predictions
   const [additionalPredictions, setAdditionalPredictions] = useState<PredictionResult[]>([]);

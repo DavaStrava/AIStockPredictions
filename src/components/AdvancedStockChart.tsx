@@ -56,7 +56,7 @@ import { useState, useEffect } from 'react';
   TypeScript interfaces imported from centralized types and technical analysis library.
   This provides compile-time type checking and better IDE support.
 */
-import { PriceData, TechnicalAnalysisResult } from '@/lib/technical-analysis/types';
+import { PriceData } from '@/lib/technical-analysis/types';
 import { AdvancedStockChartProps, ChartTimeRange, AdvancedChartType } from '@/types';
 
 /*
@@ -394,8 +394,6 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
             margin: { top: 5, right: 30, left: 20, bottom: 5 }
         };
 
-        console.log('Rendering chart:', { chartType, dataPoints: chartData.length });
-
         switch (chartType) {
             case 'line':
                 return (
@@ -511,16 +509,6 @@ export default function AdvancedStockChart({ symbol, priceData, analysis }: Adva
                 return null;
         }
     };
-
-    // Debug logging
-    console.log('AdvancedStockChart rendering:', {
-        symbol,
-        filteredDataLength: filteredData.length,
-        chartDataLength: chartData.length,
-        loading,
-        chartType,
-        selectedTimeRange
-    });
 
     return (
         <div className="space-y-6">

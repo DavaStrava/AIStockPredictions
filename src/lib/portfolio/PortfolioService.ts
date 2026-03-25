@@ -1572,23 +1572,6 @@ export class PortfolioService {
     const holdingsValue = holdingsWithMarket.reduce((sum, h) => sum + h.marketValue, 0);
     const totalEquity = holdingsValue + cashBalance;
 
-    // Debug logging for portfolio metrics verification
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[PortfolioService] Summary Calculation:', {
-        portfolioId,
-        cashBalance: cashBalance.toFixed(2),
-        holdingsValue: holdingsValue.toFixed(2),
-        totalEquity: totalEquity.toFixed(2),
-        holdingsCount: holdingsWithMarket.length,
-        topHoldings: holdingsWithMarket.slice(0, 5).map(h => ({
-          symbol: h.symbol,
-          quantity: h.quantity,
-          currentPrice: h.currentPrice,
-          marketValue: h.marketValue.toFixed(2)
-        }))
-      });
-    }
-
     const dayChange = holdingsWithMarket.reduce((sum, h) => sum + h.dayChange, 0);
     const previousEquity = totalEquity - dayChange;
     const dayChangePercent = previousEquity > 0 ? (dayChange / previousEquity) * 100 : 0;
@@ -1599,17 +1582,6 @@ export class PortfolioService {
     const totalCostBasis = holdingsWithMarket.reduce((sum, h) => sum + h.totalCostBasis, 0);
     const totalReturn = holdingsValue - totalCostBasis;
     const totalReturnPercent = totalCostBasis > 0 ? (totalReturn / totalCostBasis) * 100 : 0;
-
-    // Debug logging for return calculation
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[PortfolioService] Return Calculation:', {
-        portfolioId,
-        holdingsValue: holdingsValue.toFixed(2),
-        totalCostBasis: totalCostBasis.toFixed(2),
-        totalReturn: totalReturn.toFixed(2),
-        totalReturnPercent: totalReturnPercent.toFixed(2) + '%',
-      });
-    }
 
     // Calculate daily alpha vs SPY
     let dailyAlpha: number | null = null;

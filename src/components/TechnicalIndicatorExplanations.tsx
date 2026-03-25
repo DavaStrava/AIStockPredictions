@@ -1,9 +1,7 @@
 'use client';
 
-import { TechnicalSignal } from '@/lib/technical-analysis/types';
-import { 
+import {
   generateMultipleIndicatorExplanations,
-  MarketContext,
   IndicatorExplanation
 } from '@/lib/technical-analysis/explanations';
 import { TechnicalIndicatorExplanationsProps } from '@/types';

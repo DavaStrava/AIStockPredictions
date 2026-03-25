@@ -95,8 +95,6 @@ export function PortfolioManager() {
     fetchHistory,
     fetchHealth,
     // Trade Tracker methods
-    fetchTrades,
-    fetchTradeStats,
     refreshTrades,
     refreshPortfolioData,
     clearError,

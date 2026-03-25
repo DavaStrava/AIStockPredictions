@@ -123,7 +123,7 @@ export function calculateBollingerBands(
 export function generateBollingerBandsSignals(
   data: PriceData[],
   bollingerResults: BollingerBandsResult[],
-  symbol: string
+  _symbol: string
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
   
@@ -344,10 +344,7 @@ export function detectBandWalking(
   for (let i = 0; i < bollingerResults.length; i++) {
     const dataIndex = i + 19; // Adjust for period offset
     if (dataIndex >= data.length) break;
-    
-    const currentPrice = data[dataIndex].close;
-    const result = bollingerResults[i];
-    
+
     // Check for upper band walking
     if (i >= minPeriods - 1) {
       let upperWalking = true;

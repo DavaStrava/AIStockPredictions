@@ -18,7 +18,7 @@ import {
   BenchmarkDataPoint,
   CreateTransactionRequest
 } from './portfolio';
-import { JournalTrade, TradeWithPnL, PortfolioStats, TradeSide, CreateTradeRequest } from './models';
+import { TradeWithPnL, PortfolioStats, CreateTradeRequest } from './models';
 
 // ============================================================================
 // Common Types
@@ -300,13 +300,6 @@ export interface TechnicalIndicatorExplanationsProps {
   marketContext?: MarketContext;
 }
 
-export interface LazyTechnicalIndicatorExplanationsProps {
-  indicators: TechnicalSignal[];
-  symbol: string;
-  currentPrice: number;
-  marketContext?: MarketContext;
-}
-
 export interface AIInsightsProps {
   symbol: string;
   analysis?: TechnicalAnalysisResult;
@@ -342,10 +335,6 @@ export interface MultiColumnLayoutProps {
   rightColumn?: React.ReactNode;
   sidebarWidth?: 'narrow' | 'medium' | 'wide';
   className?: string;
-}
-
-export interface MultiColumnLayoutExampleProps {
-  symbol?: string;
 }
 
 export interface ResponsiveContainerProps {

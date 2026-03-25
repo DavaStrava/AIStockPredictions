@@ -172,7 +172,6 @@ export class PortfolioAnalyzer {
   ): number {
     const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
     const avgBenchmarkReturn = benchmarkReturns.reduce((sum, r) => sum + r, 0) / benchmarkReturns.length;
-    const dailyRiskFreeRate = riskFreeRate / 252;
 
     // Alpha = (Portfolio Return - Risk Free Rate) - Beta * (Benchmark Return - Risk Free Rate)
     const annualizedReturn = avgReturn * 252;

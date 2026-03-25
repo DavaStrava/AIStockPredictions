@@ -1,6 +1,5 @@
 'use client';
 
-import { PriceData } from '@/lib/technical-analysis/types';
 import { PerformanceMetricsProps, PerformanceStats } from '@/types';
 
 export default function PerformanceMetrics({ symbol, priceData }: PerformanceMetricsProps) {

@@ -4,7 +4,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
-import { PriceData } from '@/lib/technical-analysis/types';
 import { getFMPProvider } from '@/lib/data-providers/fmp';
 import { AnalysisPostBodySchema } from '@/lib/validation/schemas';
 

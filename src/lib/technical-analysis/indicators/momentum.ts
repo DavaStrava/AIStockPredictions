@@ -1,5 +1,5 @@
 import { PriceData, StochasticResult, WilliamsRResult, ADXResult, TechnicalSignal } from '../types';
-import { validatePriceData, calculateSMA, findHighestHigh, findLowestLow, calculateATR } from '../utils';
+import { validatePriceData, calculateSMA, findHighestHigh, findLowestLow } from '../utils';
 
 /**
  * Calculate Stochastic Oscillator
@@ -231,7 +231,7 @@ export function generateMomentumSignals(
   stochastic?: StochasticResult[],
   williamsR?: WilliamsRResult[],
   adx?: ADXResult[],
-  symbol: string = ''
+  _symbol: string = ''
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
 

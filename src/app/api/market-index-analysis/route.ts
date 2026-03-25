@@ -36,7 +36,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TechnicalAnalysisEngine } from '@/lib/technical-analysis/engine';
-import { getLLMProvider } from '@/lib/ai/llm-providers';
 
 /*
   SYMBOL MAPPING CONFIGURATION - DATA NORMALIZATION PATTERN
@@ -214,9 +213,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
     
-    // Add debugging to see what symbol is being received
-    console.log('Market Index Analysis - Received symbol:', symbol);
-    
     if (!symbol) {
       return NextResponse.json({
         success: false,
@@ -274,7 +270,6 @@ export async function GET(request: NextRequest) {
       }
     } catch (apiError) {
       console.warn('FMP API failed, using mock data for analysis:', apiError);
-      console.log('Market Index Analysis - Using mock data for symbol:', fmpSymbol);
       
       // Generate mock data for demonstration
       const basePrice = symbol === 'NASDAQ' ? 15000 : symbol === 'S&P 500' ? 4500 : symbol === 'DOW' ? 35000 : 2000;
@@ -363,10 +358,7 @@ export async function GET(request: NextRequest) {
      * - !!"" → false (empty string is falsy)
      * - !!"data" → true (non-empty string is truthy)
      */
-    // Debug: Check historical data availability and structure
-    console.log('Market Index Analysis - Historical data available:', !!historicalData.historical);
-    console.log('Market Index Analysis - Historical data length:', historicalData.historical?.length || 0);
-    
+
     /**
      * DATA TRANSFORMATION PIPELINE - FINANCIAL DATA PROCESSING
      * 
@@ -629,8 +621,6 @@ export async function GET(request: NextRequest) {
      * - Performance impact of data processing steps
      * - User experience issues with insufficient data
      */
-    console.log('Market Index Analysis - Processed price data length:', priceData.length);
-    console.log('Market Index Analysis - Filtered out invalid data points:', historicalData.historical.length - priceData.length);
 
     /**
      * DEFENSIVE PROGRAMMING PATTERN - VARIABLE INITIALIZATION

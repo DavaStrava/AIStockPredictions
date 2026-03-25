@@ -140,7 +140,7 @@ export function calculateMACD(
  */
 export function generateMACDSignals(
   macdResults: MACDResult[],
-  symbol: string
+  _symbol: string
 ): TechnicalSignal[] {
   const signals: TechnicalSignal[] = [];
   
