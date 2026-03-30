@@ -1,10 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, BarChart3, Briefcase } from 'lucide-react';
 import { MarketIndex, MarketIndicesProps } from '@/types';
 
-export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProps) {
+interface ExtendedMarketIndicesProps extends MarketIndicesProps {
+  /** Optional portfolio day change for comparison */
+  portfolioDayChange?: number;
+  /** Optional portfolio day change percentage */
+  portfolioDayChangePercent?: number;
+  /** Optional portfolio name */
+  portfolioName?: string;
+}
+
+export default function MarketIndicesSidebar({
+  onIndexClick,
+  portfolioDayChange,
+  portfolioDayChangePercent,
+  portfolioName,
+}: ExtendedMarketIndicesProps) {
   const [indices, setIndices] = useState<MarketIndex[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,12 +144,64 @@ export default function MarketIndicesSidebar({ onIndexClick }: MarketIndicesProp
     );
   }
 
+  // Calculate alpha vs SPY (first index is usually SPY)
+  const spyIndex = indices.find(i => i.symbol === 'SPY' || i.tickerSymbol === 'SPY');
+  const alpha = portfolioDayChangePercent != null && spyIndex?.changePercent != null
+    ? portfolioDayChangePercent - spyIndex.changePercent
+    : null;
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center gap-2 mb-6">
         <BarChart3 className="h-5 w-5 text-blue-600" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">US Market Indices</h3>
       </div>
+
+      {/* Portfolio Comparison Card - shown when portfolio data is available */}
+      {portfolioDayChangePercent != null && (
+        <div className="mb-4">
+          <div
+            className={`p-4 rounded-lg border-2 ${
+              portfolioDayChange != null && portfolioDayChange >= 0
+                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700'
+                : 'bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-700'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Briefcase className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                Your Portfolio
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {portfolioName || 'Portfolio'}
+                </p>
+                <p className={`text-lg font-bold ${getChangeColor(portfolioDayChange ?? 0)}`}>
+                  {formatChangePercent(portfolioDayChangePercent)}
+                </p>
+              </div>
+              <div className="text-right">
+                {portfolioDayChange != null && (
+                  <p className={`text-sm font-medium ${getChangeColor(portfolioDayChange)}`}>
+                    {formatChange(portfolioDayChange)}
+                  </p>
+                )}
+                {alpha != null && (
+                  <p
+                    className={`text-xs font-medium ${
+                      alpha >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                    }`}
+                  >
+                    {alpha >= 0 ? '+' : ''}{alpha.toFixed(2)}% vs SPY
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {indices.map((index) => (

@@ -17,12 +17,20 @@ This document provides a comprehensive overview of the AI Stock Prediction platf
 │                              CLIENT LAYER                                    │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                    Next.js App (React 19)                            │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │ StockDashboard (View Toggle: Portfolio Intelligence / Predictions) │   │
+│  │  │  ├── PortfolioIntelligenceDashboard (default when portfolio)  │  │   │
+│  │  │  │    ├── TopMoversCard, CompactPerformanceChart              │  │   │
+│  │  │  │    ├── CompactAllocationView, PortfolioInsightsCard (GPT-4o)│  │   │
+│  │  │  │    └── PortfolioHoldingsPreview                            │  │   │
+│  │  │  └── Stock Predictions Dashboard (original view)              │  │   │
+│  │  └──────────────────────────────────────────────────────────────┘  │   │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │   │
-│  │  │ StockDashboard│  │ WatchlistMgr │  │ MarketIndicesSidebar    │  │   │
+│  │  │ WatchlistMgr │  │PortfolioMgr  │  │ MarketIndicesSidebar    │  │   │
 │  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │   │
-│  │  ┌──────────────┐  ┌──────────────┐                                │   │
-│  │  │PortfolioMgr  │  │TermsGlossary│                                 │   │
-│  │  └──────────────┘  └──────────────┘                                │   │
+│  │  ┌──────────────┐                                                  │   │
+│  │  │TermsGlossary │                                                   │   │
+│  │  └──────────────┘                                                  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -157,11 +165,19 @@ src/
 │   ├── layout.tsx                # Root layout with ErrorBoundary
 │   └── api/                      # API routes (7 endpoints)
 │
-├── components/                   # React components (25 files)
+├── components/                   # React components (30+ files)
 │   ├── Core Dashboard
-│   │   ├── StockDashboard.tsx    # Main dashboard (1093 lines) ⚠️ LARGE
+│   │   ├── StockDashboard.tsx    # Main dashboard with view toggle
 │   │   ├── StockSearch.tsx       # Search functionality
 │   │   └── StockChart.tsx        # Basic charting
+│   │
+│   ├── Portfolio Intelligence Dashboard (NEW - March 2026)
+│   │   ├── PortfolioIntelligenceDashboard.tsx  # Main container
+│   │   ├── TopMoversCard.tsx                   # Today's gainers/losers
+│   │   ├── CompactPerformanceChart.tsx         # 90-day equity curve
+│   │   ├── PortfolioHoldingsPreview.tsx        # Top 8 holdings table
+│   │   ├── CompactAllocationView.tsx           # Sector allocation bars
+│   │   └── PortfolioInsightsCard.tsx           # GPT-4o AI insights
 │   │
 │   ├── Charts
 │   │   ├── AdvancedStockChart.tsx # Interactive charts
@@ -229,13 +245,19 @@ src/
 
 | Component | Lines | Responsibility | Complexity |
 |-----------|-------|----------------|------------|
-| StockDashboard | ~588 | Main orchestrator | MEDIUM ✅ |
+| StockDashboard | ~340 | Main orchestrator with view toggle | LOW ✅ |
+| PortfolioIntelligenceDashboard | ~260 | Portfolio dashboard container | MEDIUM ✅ NEW |
+| TopMoversCard | ~170 | Today's gainers/losers display | LOW ✅ NEW |
+| CompactPerformanceChart | ~230 | 90-day equity curve with benchmark | MEDIUM ✅ NEW |
+| PortfolioHoldingsPreview | ~270 | Top holdings table with sparklines | MEDIUM ✅ NEW |
+| CompactAllocationView | ~230 | Sector allocation bar chart | MEDIUM ✅ NEW |
+| PortfolioInsightsCard | ~270 | AI insights with collapsible sections | MEDIUM ✅ NEW |
 | AdvancedStockChart | ~500 | Interactive charting | MEDIUM |
 | TechnicalIndicatorExplanations | ~300 | Indicator display | MEDIUM |
 | FMPDataProvider | ~356 | External API | MEDIUM ✅ |
 | DatabaseConnection | ~331 | DB management | MEDIUM ✅ |
 
-*Note: StockDashboard, FMPDataProvider, and DatabaseConnection were refactored in December 2025 cleanup.*
+*Note: Dashboard components added in March 2026 for Portfolio Intelligence feature.*
 
 ---
 
@@ -381,7 +403,7 @@ selectedIndex: string | null         // Market index selection
 | `/api/trades/[id]` | GET/PATCH | Get/close trade | PostgreSQL |
 | `/api/trades/stats` | GET | Portfolio statistics | PostgreSQL + FMP |
 
-### 4.3 Portfolio Investment Tracker Endpoints ✅ NEW
+### 4.3 Portfolio Investment Tracker Endpoints ✅
 
 | Endpoint | Method | Purpose | Data Source |
 |----------|--------|---------|-------------|
@@ -392,6 +414,7 @@ selectedIndex: string | null         // Market index selection
 | `/api/portfolios/[id]/transactions` | GET/POST | Transaction history | PostgreSQL |
 | `/api/portfolios/[id]/allocation` | GET | Sector allocation (tree map) | PostgreSQL + FMP |
 | `/api/portfolios/[id]/history` | GET/POST | Performance snapshots | PostgreSQL + FMP |
+| `/api/portfolios/[id]/insights` | GET/POST | AI portfolio insights (GPT-4o) | PostgreSQL + FMP + OpenAI ✅ NEW |
 | `/api/portfolios/[id]/rebalance` | GET | Rebalancing suggestions | PostgreSQL + FMP |
 
 ---
@@ -677,10 +700,16 @@ ai-stock-prediction/
 │   │   └── ...
 │   ├── components/
 │   │   ├── dashboard/             # Dashboard-specific ✅
+│   │   │   ├── PortfolioIntelligenceDashboard.tsx  # ✅ NEW
+│   │   │   ├── TopMoversCard.tsx                   # ✅ NEW
+│   │   │   ├── CompactPerformanceChart.tsx         # ✅ NEW
+│   │   │   ├── PortfolioHoldingsPreview.tsx        # ✅ NEW
+│   │   │   ├── CompactAllocationView.tsx           # ✅ NEW
+│   │   │   ├── PortfolioInsightsCard.tsx           # ✅ NEW
 │   │   │   └── hooks/
 │   │   ├── trading-journal/       # Trade tracking ✅
 │   │   │   └── hooks/
-│   │   ├── portfolio/             # Portfolio tracker ✅ NEW
+│   │   ├── portfolio/             # Portfolio tracker ✅
 │   │   │   ├── PortfolioManager.tsx
 │   │   │   ├── PortfolioSummaryCard.tsx
 │   │   │   ├── HoldingsDataGrid.tsx
@@ -719,13 +748,28 @@ ai-stock-prediction/
 
 ### Overview
 
-The AI Insights feature provides three types of analysis powered by LLM providers (OpenAI GPT-4, AWS Bedrock):
+The AI Insights feature provides **five types of analysis** powered by LLM providers (OpenAI GPT-4o, AWS Bedrock):
+
+#### Stock-Level Insights (Individual Stock Analysis)
 
 | Insight Type | Data Source | Purpose |
 |--------------|-------------|---------|
 | Technical Analysis | Technical indicators + signals | Chart patterns, indicator interpretation |
 | Portfolio Theory | Portfolio DB + technical data | Position analysis (held/not-held modes) |
 | Technical Psychology | Technical indicators | Crowd behavior derived from RSI, volume, etc. |
+
+#### Portfolio-Level Insights ✅ NEW (March 2026)
+
+| Insight Type | Data Source | Purpose |
+|--------------|-------------|---------|
+| Portfolio Overview | Summary + Holdings + Allocation | Composition, diversification, performance drivers |
+| Market Context | Summary + Market Indices + Holdings | How market conditions affect the portfolio |
+
+**Key Features:**
+- Powered by GPT-4o (upgraded from gpt-4o-mini for better analysis quality)
+- 15-minute caching via in-memory Map (process-scoped)
+- Collapsible UI sections with loading states
+- Forced refresh via POST endpoint
 
 ### Architecture
 
@@ -759,32 +803,120 @@ The AI Insights feature provides three types of analysis powered by LLM provider
 
 | File | Purpose |
 |------|---------|
-| `src/lib/ai/llm-providers.ts` | LLM integration, prompts, helpers |
-| `src/app/api/insights/route.ts` | API route with portfolio context fetching |
-| `src/components/AIInsights.tsx` | UI component with tabbed interface |
+| `src/lib/ai/llm-providers.ts` | LLM integration, prompts, helpers (GPT-4o) |
+| `src/app/api/insights/route.ts` | Stock-level insights API route |
+| `src/app/api/portfolios/[id]/insights/route.ts` | Portfolio-level insights API route ✅ NEW |
+| `src/components/AIInsights.tsx` | Stock insights UI with tabbed interface |
+| `src/components/dashboard/PortfolioInsightsCard.tsx` | Portfolio insights UI with collapsible sections ✅ NEW |
 
 ### Metadata
 
 Each insight includes:
 ```typescript
 {
-  type: 'technical' | 'portfolio' | 'sentiment';
+  type: 'technical' | 'portfolio' | 'sentiment' | 'portfolio-overview' | 'market-context';
   content: string;
   confidence: number;        // 0-1
-  provider: 'openai' | 'bedrock' | 'cached';
-  generatedAt?: string;      // ISO timestamp
+  provider: 'openai' | 'bedrock' | 'mock';
+  generatedAt: string;       // ISO timestamp
   metadata: {
     indicators_used?: string[];
     timeframe?: string;
     data_quality?: 'high' | 'medium' | 'low';
-    position_held?: boolean; // Portfolio insights only
+    market_conditions?: string;
+    position_held?: boolean;        // Stock portfolio insights only
+    tokens_prompt?: number;         // Token usage tracking
+    tokens_completion?: number;
+    tokens_total?: number;
   };
 }
 ```
 
 ---
 
-## 13. Performance Considerations
+## 13. Portfolio Intelligence Dashboard ✅ (March 2026)
+
+### Overview
+
+The Dashboard tab now features a **Portfolio Intelligence Dashboard** that provides a portfolio-centric view when a user has portfolios. Users can toggle between this view and the original Stock Predictions view.
+
+### Dashboard Views
+
+| View | When Shown | Purpose |
+|------|------------|---------|
+| Portfolio Intelligence | Default when user has portfolios | Portfolio-centric insights and performance |
+| Stock Predictions | Default when no portfolios, or via toggle | Original technical analysis prediction cards |
+
+### Portfolio Intelligence Layout
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Portfolio Intelligence Dashboard    [Portfolio ▼] [↻ Refresh]  │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │         PORTFOLIO SUMMARY (PortfolioSummaryCard)         │    │
+│  │  Equity | Holdings | Cash | Day Chg | Return | Alpha    │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌──────────────────────────┐  ┌────────────────────────────┐   │
+│  │  PERFORMANCE CHART       │  │  TOP MOVERS TODAY          │   │
+│  │  90-day equity curve     │  │  ┌────────┬────────┐       │   │
+│  │  vs S&P 500 benchmark    │  │  │Gainers │ Losers │       │   │
+│  └──────────────────────────┘  └────────────────────────────┘   │
+│                                                                 │
+│  ┌──────────────────────────┐  ┌────────────────────────────┐   │
+│  │  SECTOR ALLOCATION       │  │  AI INSIGHTS (GPT-4o)      │   │
+│  │  Horizontal bar chart    │  │  ├── Portfolio Overview    │   │
+│  │  with performance color  │  │  └── Market Context        │   │
+│  └──────────────────────────┘  └────────────────────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  HOLDINGS PREVIEW (top 8 by weight)                      │    │
+│  │  Symbol | Price | Day% | Weight | Gain/Loss | Sparkline │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### New Components
+
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `PortfolioIntelligenceDashboard` | ~260 | Main dashboard container with portfolio selector |
+| `TopMoversCard` | ~170 | Today's top gainers and losers from holdings |
+| `CompactPerformanceChart` | ~230 | 90-day equity curve with S&P 500 benchmark |
+| `PortfolioHoldingsPreview` | ~270 | Compact table of top holdings with sparklines |
+| `CompactAllocationView` | ~230 | Horizontal bar chart for sector allocation |
+| `PortfolioInsightsCard` | ~270 | AI-powered insights with collapsible sections |
+
+### AI Insights (Portfolio-Level)
+
+The dashboard includes two AI-generated insight types:
+
+1. **Portfolio Overview** - Analyzes overall portfolio composition, diversification, and performance drivers
+2. **Market Context** - Explains how current market conditions affect the portfolio
+
+**Technical Details:**
+- Model: GPT-4o (upgraded from gpt-4o-mini)
+- Cache: 15-minute TTL via in-memory Map
+- API: `GET/POST /api/portfolios/[id]/insights`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/dashboard/PortfolioIntelligenceDashboard.tsx` | Main container |
+| `src/components/dashboard/TopMoversCard.tsx` | Gainers/losers display |
+| `src/components/dashboard/CompactPerformanceChart.tsx` | Recharts equity curve |
+| `src/components/dashboard/PortfolioHoldingsPreview.tsx` | Holdings table |
+| `src/components/dashboard/CompactAllocationView.tsx` | Sector bars |
+| `src/components/dashboard/PortfolioInsightsCard.tsx` | AI insights UI |
+| `src/app/api/portfolios/[id]/insights/route.ts` | Portfolio insights API |
+| `src/components/StockDashboard.tsx` | View toggle integration |
+| `src/components/MarketIndicesSidebar.tsx` | Portfolio comparison (alpha vs SPY) |
+
+---
+
+## 14. Performance Considerations
 
 > **Context**: With 5-10 users max, performance optimization is low priority. Current performance is acceptable.
 
@@ -809,7 +941,7 @@ Each insight includes:
 
 ---
 
-## 14. Security Considerations
+## 15. Security Considerations
 
 > **Context**: Personal app with trusted users. Security focus is on protecting API keys and preventing accidental data exposure, not defending against attacks.
 
@@ -833,20 +965,34 @@ Each insight includes:
 ```
 page.tsx
 ├── StockDashboard (uses usePredictions, useStockAnalysis hooks)
-│   ├── StockSearch
-│   ├── ResponsiveGrid
-│   │   └── [Prediction Cards]
-│   ├── CollapsibleSection
-│   │   ├── PerformanceMetrics
-│   │   ├── AdvancedStockChart
-│   │   ├── SimpleStockChart
-│   │   ├── AIInsights
-│   │   └── TechnicalIndicatorExplanations
-│   ├── TermsGlossary
-│   ├── MultiColumnLayout
-│   │   ├── AdditionalInsightsSidebar
-│   │   └── MarketIndicesSidebar
-│   └── MarketIndexAnalysis (modal)
+│   ├── ViewToggle (switches between Portfolio Intelligence and Predictions)
+│   │
+│   ├── [Portfolio Intelligence View - default when portfolio exists]
+│   │   └── PortfolioIntelligenceDashboard (uses usePortfolio hook)
+│   │       ├── PortfolioSummaryCard
+│   │       ├── TopMoversCard
+│   │       ├── CompactPerformanceChart (Recharts)
+│   │       ├── CompactAllocationView
+│   │       ├── PortfolioInsightsCard (GPT-4o AI)
+│   │       └── PortfolioHoldingsPreview
+│   │
+│   ├── [Stock Predictions View - original dashboard]
+│   │   ├── StockSearch
+│   │   ├── ResponsiveGrid
+│   │   │   └── [Prediction Cards]
+│   │   ├── CollapsibleSection
+│   │   │   ├── PerformanceMetrics
+│   │   │   ├── AdvancedStockChart
+│   │   │   ├── SimpleStockChart
+│   │   │   ├── AIInsights
+│   │   │   └── TechnicalIndicatorExplanations
+│   │   ├── TermsGlossary
+│   │   └── MultiColumnLayout
+│   │       ├── AdditionalInsightsSidebar
+│   │       └── MarketIndicesSidebar (with portfolio comparison)
+│   │
+│   └── MarketIndexAnalysis (modal - both views)
+│
 ├── WatchlistManager (supports useMockData prop)
 ├── PortfolioManager (uses usePortfolio hook)  # Unified with Trade Tracking
 │   ├── PortfolioSummaryCard
@@ -897,6 +1043,6 @@ page.tsx
 
 ---
 
-*Document Version: 1.3*
-*Last Updated: March 21, 2026*
+*Document Version: 1.4*
+*Last Updated: March 29, 2026*
 *Scope: Personal application (5-10 users)*

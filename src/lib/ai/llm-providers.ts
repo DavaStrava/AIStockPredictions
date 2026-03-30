@@ -93,8 +93,18 @@ import { TechnicalAnalysisResult } from '@/lib/technical-analysis/types';
  * };
  * ```
  */
+/**
+ * Insight type union - includes both stock-level and portfolio-level analysis types
+ */
+export type InsightType =
+  | 'technical'           // Stock-level technical analysis
+  | 'portfolio'           // Stock-level portfolio fit analysis
+  | 'sentiment'           // Stock-level sentiment/psychology analysis
+  | 'portfolio-overview'  // Portfolio-level overall health and composition
+  | 'market-context';     // Portfolio-level market impact analysis
+
 export interface LLMInsight {
-  type: 'technical' | 'portfolio' | 'sentiment';     // What kind of analysis is this?
+  type: InsightType;                                 // What kind of analysis is this?
   content: string;                                   // Human-readable insight (1–3 sentences)
   confidence: number;                                // Heuristic or model-provided 0..1 confidence
   provider: 'openai' | 'bedrock' | 'mock';           // Source provider
@@ -150,7 +160,7 @@ export interface LLMInsight {
  */
 export interface LLMProvider {
   generateInsight(
-    type: 'technical' | 'portfolio' | 'sentiment',
+    type: InsightType,
     data: any,
     symbol: string
   ): Promise<LLMInsight>;
@@ -337,7 +347,7 @@ export class OpenAIProvider implements LLMProvider {
    * - Attach observability metadata (token counts)
    */
   async generateInsight(
-    type: 'technical' | 'portfolio' | 'sentiment',
+    type: InsightType,
     data: any,
     symbol: string
   ): Promise<LLMInsight> {
@@ -350,7 +360,7 @@ export class OpenAIProvider implements LLMProvider {
 
     // JSON-only response; keeps downstream deterministic
     const body = JSON.stringify({
-      model: 'gpt-4o-mini',                 // cost-effective, good reasoning for this task
+      model: 'gpt-4o',                       // upgraded to flagship model for better analysis
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -572,7 +582,7 @@ export class OpenAIProvider implements LLMProvider {
    * prompt engineering system that can produce contextually appropriate, legally
    * compliant, and educationally valuable financial analysis.
    */
-  private getSystemPrompt(type: 'technical' | 'portfolio' | 'sentiment'): string {
+  private getSystemPrompt(type: InsightType): string {
     /**
      * BASE PROMPT TEMPLATE - The Foundation
      * 
@@ -729,6 +739,70 @@ Address:
 
 End with a brief note that this is based on price patterns, not news or social sentiment.`;
 
+      case 'portfolio-overview':
+        /**
+         * PORTFOLIO OVERVIEW PROMPT - Overall Portfolio Analysis
+         *
+         * Analyzes the entire portfolio's health, composition, and performance drivers.
+         * Focus on what's working, risk profile, diversification, and general observations.
+         */
+        return `${basePrompt}
+
+STRICT RULES - FOLLOW EXACTLY:
+
+Analyze this PORTFOLIO as a whole, not individual stocks.
+
+FORBIDDEN:
+- Recommending specific buy/sell actions
+- Citing technical indicator values
+- Making predictions about individual stock prices
+
+DO INCLUDE:
+- Portfolio composition assessment: "Tech-heavy at 60% - that's worked well but creates concentration risk"
+- Performance attribution: "Your NVDA position drove most of today's gains"
+- Diversification insights: "Adding some defensive sectors could smooth out the volatility"
+- Risk observations: "Three of your top five holdings are correlated - they tend to move together"
+
+Cover these points conversationally:
+1. What's working? Which positions or sectors are contributing most to returns?
+2. What's the risk profile? Concentration, sector exposure, volatility
+3. How balanced is it? Diversification assessment
+4. What might improve it? General observations (not specific stock picks)
+
+Use specific dollar amounts and percentages from the portfolio data to ground your analysis.`;
+
+      case 'market-context':
+        /**
+         * MARKET CONTEXT PROMPT - Market Impact Analysis
+         *
+         * Explains how broader market conditions are affecting the portfolio.
+         * Focus on portfolio vs market comparison and sector rotation impact.
+         */
+        return `${basePrompt}
+
+STRICT RULES - FOLLOW EXACTLY:
+
+Explain how TODAY'S MARKET CONDITIONS are affecting this specific portfolio.
+
+FORBIDDEN:
+- Technical indicator values
+- Predicting where the market will go
+- Generic market commentary unrelated to the portfolio
+
+DO INCLUDE:
+- Portfolio vs market comparison: "Your portfolio is up 1.2% while the S&P is flat - your tech exposure is paying off today"
+- Sector rotation impact: "Energy is leading today, but you're underweight there"
+- Correlation observations: "When rates rise like today, your growth-heavy portfolio tends to feel it"
+- Relative strength: "You're outperforming/underperforming because..."
+
+Cover these points:
+1. How is the portfolio doing vs the market today?
+2. What market factors are helping or hurting?
+3. Which holdings are most sensitive to current conditions?
+4. Is this a typical day for this portfolio's profile?
+
+Be specific with numbers - use the actual day change percentages provided.`;
+
       default:
         /**
          * DEFAULT CASE - Defensive Programming
@@ -751,7 +825,7 @@ End with a brief note that this is based on price patterns, not news or social s
    * Keeps a consistent interface while allowing per-type tuning.
    */
   private buildPrompt(
-    type: 'technical' | 'portfolio' | 'sentiment',
+    type: InsightType,
     data: any,
     symbol: string
   ): string {
@@ -759,6 +833,8 @@ End with a brief note that this is based on price patterns, not news or social s
       case 'technical': return this.buildTechnicalPrompt(data as TechnicalAnalysisResult, symbol);
       case 'portfolio': return this.buildPortfolioPrompt(data, symbol);
       case 'sentiment': return this.buildSentimentPrompt(data, symbol);
+      case 'portfolio-overview': return this.buildPortfolioOverviewPrompt(data);
+      case 'market-context': return this.buildMarketContextPrompt(data);
       default:
         return `SYMBOL: ${symbol}\nTYPE: UNKNOWN\nDATA:\n${JSON.stringify(data)}`;
     }
@@ -943,6 +1019,121 @@ End with a brief note that this is based on price patterns, not news or social s
     ].join('\n');
   }
 
+  /**
+   * buildPortfolioOverviewPrompt - Portfolio-level analysis prompt
+   * Analyzes the entire portfolio's composition, performance, and risk profile.
+   */
+  private buildPortfolioOverviewPrompt(data: any): string {
+    const { summary, holdings, allocation, topMovers } = data;
+
+    // Format summary data
+    const summaryStr = summary ? [
+      `PORTFOLIO SUMMARY:`,
+      `- Total Equity: $${this.safeFixed(summary.totalEquity, 2)}`,
+      `- Holdings Value: $${this.safeFixed(summary.holdingsValue, 2)}`,
+      `- Cash Balance: $${this.safeFixed(summary.cashBalance, 2)}`,
+      `- Day Change: ${summary.dayChange >= 0 ? '+' : ''}$${this.safeFixed(summary.dayChange, 2)} (${this.safeFixed(summary.dayChangePercent, 2)}%)`,
+      `- Total Return: ${summary.totalReturn >= 0 ? '+' : ''}$${this.safeFixed(summary.totalReturn, 2)} (${this.safeFixed(summary.totalReturnPercent, 2)}%)`,
+      `- Daily Alpha vs S&P 500: ${summary.dailyAlpha !== null ? `${summary.dailyAlpha >= 0 ? '+' : ''}${this.safeFixed(summary.dailyAlpha, 2)}%` : 'N/A'}`,
+      `- Number of Positions: ${summary.holdingsCount}`,
+    ].join('\n') : '';
+
+    // Format top holdings
+    const topHoldings = holdings?.slice(0, 10).map((h: any) => ({
+      symbol: h.symbol,
+      weight: `${this.safeFixed(h.portfolioWeight, 1)}%`,
+      dayChange: `${h.dayChangePercent >= 0 ? '+' : ''}${this.safeFixed(h.dayChangePercent, 2)}%`,
+      totalGain: `${h.totalGainLossPercent >= 0 ? '+' : ''}${this.safeFixed(h.totalGainLossPercent, 1)}%`,
+      value: `$${this.safeFixed(h.marketValue, 0)}`,
+    })) || [];
+
+    // Format allocation
+    const sectorBreakdown = allocation?.map((s: any) => ({
+      sector: s.sector,
+      weight: `${this.safeFixed(s.portfolioWeight, 1)}%`,
+      dayChange: `${s.dayChangePercent >= 0 ? '+' : ''}${this.safeFixed(s.dayChangePercent, 2)}%`,
+    })) || [];
+
+    // Format top movers
+    const moversStr = topMovers ? [
+      ``,
+      `TODAY'S TOP MOVERS:`,
+      `Gainers: ${topMovers.gainers?.map((h: any) => `${h.symbol} ${h.dayChangePercent >= 0 ? '+' : ''}${this.safeFixed(h.dayChangePercent, 1)}%`).join(', ') || 'None'}`,
+      `Losers: ${topMovers.losers?.map((h: any) => `${h.symbol} ${this.safeFixed(h.dayChangePercent, 1)}%`).join(', ') || 'None'}`,
+    ].join('\n') : '';
+
+    return [
+      `PORTFOLIO OVERVIEW ANALYSIS`,
+      ``,
+      summaryStr,
+      ``,
+      `TOP 10 HOLDINGS (by weight):`,
+      `<<<DATA`,
+      JSON.stringify(topHoldings, null, 2),
+      `DATA>>>`,
+      ``,
+      `SECTOR ALLOCATION:`,
+      `<<<DATA`,
+      JSON.stringify(sectorBreakdown, null, 2),
+      `DATA>>>`,
+      moversStr,
+      ``,
+      `Analyze this portfolio holistically. Focus on composition, diversification, and what's driving performance.`,
+    ].join('\n');
+  }
+
+  /**
+   * buildMarketContextPrompt - Market impact analysis prompt
+   * Explains how current market conditions are affecting the portfolio.
+   */
+  private buildMarketContextPrompt(data: any): string {
+    const { portfolioSummary, marketIndices, holdings, sectorPerformance } = data;
+
+    // Format portfolio summary
+    const portfolioStr = portfolioSummary ? [
+      `PORTFOLIO TODAY:`,
+      `- Day Change: ${portfolioSummary.dayChange >= 0 ? '+' : ''}$${this.safeFixed(portfolioSummary.dayChange, 2)} (${this.safeFixed(portfolioSummary.dayChangePercent, 2)}%)`,
+      `- Alpha vs S&P: ${portfolioSummary.dailyAlpha !== null ? `${portfolioSummary.dailyAlpha >= 0 ? '+' : ''}${this.safeFixed(portfolioSummary.dailyAlpha, 2)}%` : 'N/A'}`,
+    ].join('\n') : '';
+
+    // Format market indices
+    const indicesStr = marketIndices?.map((idx: any) =>
+      `- ${idx.name} (${idx.symbol}): ${idx.changePercent >= 0 ? '+' : ''}${this.safeFixed(idx.changePercent, 2)}%`
+    ).join('\n') || '';
+
+    // Format top holdings with day change
+    const holdingsData = holdings?.slice(0, 10).map((h: any) => ({
+      symbol: h.symbol,
+      weight: `${this.safeFixed(h.portfolioWeight, 1)}%`,
+      dayChange: `${h.dayChangePercent >= 0 ? '+' : ''}${this.safeFixed(h.dayChangePercent, 2)}%`,
+      sector: h.sector || 'Unknown',
+    })) || [];
+
+    // Format sector performance
+    const sectorStr = sectorPerformance?.map((s: any) =>
+      `- ${s.sector}: ${this.safeFixed(s.portfolioWeight, 1)}% weight, ${s.dayChangePercent >= 0 ? '+' : ''}${this.safeFixed(s.dayChangePercent, 2)}% today`
+    ).join('\n') || '';
+
+    return [
+      `MARKET CONTEXT ANALYSIS`,
+      ``,
+      portfolioStr,
+      ``,
+      `MARKET INDICES TODAY:`,
+      indicesStr,
+      ``,
+      `TOP HOLDINGS PERFORMANCE:`,
+      `<<<DATA`,
+      JSON.stringify(holdingsData, null, 2),
+      `DATA>>>`,
+      ``,
+      `SECTOR PERFORMANCE:`,
+      sectorStr,
+      ``,
+      `Explain how today's market conditions are specifically affecting this portfolio. Compare portfolio performance to the indices.`,
+    ].join('\n');
+  }
+
   /** Helper to interpret RSI as crowd psychology */
   private interpretRsiPsychology(rsi?: number | null): string {
     if (rsi === undefined || rsi === null) return '';
@@ -1112,13 +1303,17 @@ export class MockLLMProvider implements LLMProvider {
   async isAvailable(): Promise<boolean> { return true; }
 
   async generateInsight(
-    type: 'technical' | 'portfolio' | 'sentiment',
+    type: InsightType,
     data: any,
     symbol: string
   ): Promise<LLMInsight> {
     const trendDirection = data?.summary?.trendDirection ?? 'sideways';
     const isUp = trendDirection === 'up';
     const isDown = trendDirection === 'down';
+
+    // Portfolio-level mock insights
+    const dayChange = data?.summary?.dayChangePercent ?? data?.portfolioSummary?.dayChangePercent ?? 0;
+    const isPositive = dayChange > 0;
 
     const mockInsights: Record<string, string> = {
       technical: `${symbol} is ${isUp ? 'showing strength right now with buyers in control' : isDown ? 'under pressure with sellers dominating' : 'stuck in a holding pattern without clear direction'}. ${isUp ? "The stock has momentum behind it, but it's getting stretched - if you're looking to buy, chasing here carries risk." : isDown ? "This pullback could be an opportunity if the selling exhausts itself, but there's no clear sign of a bottom yet." : "Neither buyers nor sellers have conviction, which often precedes a bigger move in either direction."}
@@ -1139,17 +1334,33 @@ Think about how this fits with your other holdings. You don't want too much ridi
 
 ${isUp ? "Watch for signs that momentum is fading - that's usually when the late buyers get trapped." : isDown ? "Look for signs the panic is exhausting itself - heavy volume without much price movement lower can signal a bottom forming." : "The next move could go either way. Don't force a trade here."}
 
-*Note: This read is based on price and momentum patterns only, not news or social media sentiment.*`
+*Note: This read is based on price and momentum patterns only, not news or social media sentiment.*`,
+
+      'portfolio-overview': `Your portfolio ${isPositive ? 'is having a good day' : 'is pulling back today'}, which gives us a chance to look at the bigger picture. ${data?.allocation?.length > 5 ? "You've got decent diversification across sectors" : "Your portfolio is fairly concentrated"}, which affects how it responds to market moves.
+
+${data?.holdings?.length > 0 ? `Your top holdings are driving most of the action today. When a few positions dominate your returns, it's worth asking whether that concentration is intentional or if it's crept up over time.` : 'Add some holdings to see how your portfolio is performing.'}
+
+Looking at the sector mix, ${data?.allocation?.[0]?.sector ? `${data.allocation[0].sector} is your largest sector exposure` : 'your allocation looks fairly balanced'}. This matters because different sectors respond differently to economic conditions - having all your eggs in one basket can work great until it doesn't.
+
+Consider whether your current allocation matches your investment goals. Sometimes portfolios drift away from their original targets as certain positions grow faster than others.`,
+
+      'market-context': `${isPositive ? "Your portfolio is outperforming the market today" : "Your portfolio is lagging the market today"}, which tells us something about how your holdings are positioned relative to what's moving.
+
+${data?.marketIndices?.length > 0 ? `The major indices are showing ${data.marketIndices[0]?.changePercent > 0 ? 'strength' : 'weakness'} today.` : 'Market indices data helps put your performance in context.'} ${isPositive === (data?.marketIndices?.[0]?.changePercent > 0) ? "Your portfolio is moving with the market" : "Your portfolio is moving against the broader market"}, which could be due to your sector allocation or specific positions.
+
+The sectors that are leading or lagging today matter for your portfolio. If you're overweight in today's winners, you'll look like a genius. If you're heavy in the laggards, it's a drag - but that's just one day.
+
+Don't read too much into any single day's performance. What matters more is whether your portfolio is set up to capture the trends you believe in while managing the risks you're worried about.`
     };
 
     return {
       type,
-      content: mockInsights[type],
+      content: mockInsights[type] || 'Analysis unavailable.',
       confidence: 0.6,
       provider: 'mock',
       generatedAt: new Date().toISOString(),
       metadata: {
-        indicators_used: ['RSI', 'MACD'],
+        indicators_used: type === 'technical' || type === 'sentiment' ? ['RSI', 'MACD'] : [],
         timeframe: '1D',
         data_quality: 'medium',
         market_conditions: data?.summary?.overall ?? 'neutral'
@@ -1225,16 +1436,20 @@ export class LLMInsightService {
    * 4) Success is cached with a TTL
    */
   async generateInsight(
-    type: 'technical' | 'portfolio' | 'sentiment',
+    type: InsightType,
     data: any,
     symbol: string
   ): Promise<LLMInsight> {
     // Cache key includes symbol, type, and a hash of the input data
     const cacheKey = `${symbol}:${type}:${this.stableHash(data)}`;
 
-    // Cache HIT (fresh)
+    // Cache HIT (fresh) - use shorter TTL for portfolio-level insights due to market changes
+    const timeout = (type === 'portfolio-overview' || type === 'market-context')
+      ? 15 * 60 * 1000  // 15 minutes for portfolio insights
+      : this.cacheTimeout; // 30 minutes for stock insights
+
     const cached = this.cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+    if (cached && Date.now() - cached.timestamp < timeout) {
       return cached.insight;
     }
 
@@ -1337,7 +1552,7 @@ export function getLLMProvider(): { generateText: (prompt: string) => Promise<st
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o',
             messages: [
               {
                 role: 'system',

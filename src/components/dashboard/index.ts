@@ -10,6 +10,14 @@ export { PredictionCard } from './PredictionCard';
 export { PredictionsGrid } from './PredictionsGrid';
 export { DetailedAnalysisPanel } from './DetailedAnalysisPanel';
 
+// Portfolio Intelligence Dashboard components
+export { PortfolioIntelligenceDashboard } from './PortfolioIntelligenceDashboard';
+export { TopMoversCard } from './TopMoversCard';
+export { CompactPerformanceChart } from './CompactPerformanceChart';
+export { PortfolioHoldingsPreview } from './PortfolioHoldingsPreview';
+export { CompactAllocationView } from './CompactAllocationView';
+export { PortfolioInsightsCard } from './PortfolioInsightsCard';
+
 // Hooks
 export { usePredictionStyles } from './hooks/usePredictionStyles';
 export { useTradingModal } from './hooks/useTradingModal';

@@ -21,13 +21,22 @@ ai-stock-prediction/
 - **`api/`**: Next.js API routes for backend functionality
   - `analysis/route.ts`: Technical analysis endpoint
   - `predictions/route.ts`: Stock prediction endpoint
-  - `insights/route.ts`: AI-powered insights
+  - `insights/route.ts`: AI-powered stock insights
   - `search/route.ts`: Stock search functionality
   - `watchlists/`: Watchlist management endpoints
   - `market-indices/`: Market index data endpoints
+  - `portfolios/`: Portfolio management endpoints
+    - `[id]/insights/route.ts`: Portfolio-level AI insights (GPT-4o)
 
 ### Component Architecture (`src/components/`)
-- **Dashboard Components**: `StockDashboard.tsx`, `StockChart.tsx`, `AdvancedStockChart.tsx`
+- **Dashboard Components**: `StockDashboard.tsx` (view toggle), `StockChart.tsx`, `AdvancedStockChart.tsx`
+- **Portfolio Intelligence Dashboard** (NEW):
+  - `PortfolioIntelligenceDashboard.tsx` - Main container with portfolio selector
+  - `TopMoversCard.tsx` - Today's gainers/losers
+  - `CompactPerformanceChart.tsx` - 90-day equity curve
+  - `PortfolioHoldingsPreview.tsx` - Top holdings table
+  - `CompactAllocationView.tsx` - Sector allocation bars
+  - `PortfolioInsightsCard.tsx` - GPT-4o AI insights
 - **Analysis Components**: `AIInsights.tsx`, `PerformanceMetrics.tsx`, `MarketIndexAnalysis.tsx`
 - **UI Components**: `StockSearch.tsx`, `WatchlistManager.tsx`, `CollapsibleSection.tsx`
 - **Utility Components**: `ErrorBoundary.tsx`, `DevErrorDashboard.tsx`, `TermsGlossary.tsx`

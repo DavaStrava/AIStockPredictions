@@ -1,10 +1,11 @@
 # Technology Stack & Development Guide
 
 ## Core Technologies
-- **Frontend**: Next.js 15.4.6 with React 19, App Router
+- **Frontend**: Next.js 15.5.9 with React 19, App Router
 - **Styling**: Tailwind CSS v4 with dark mode support
 - **Language**: TypeScript with strict mode enabled
 - **Database**: PostgreSQL with custom connection pooling
+- **AI**: OpenAI GPT-4o for stock and portfolio insights
 - **Cloud**: AWS (Aurora Serverless v2, Lambda, S3, Secrets Manager)
 - **Infrastructure**: AWS CDK v2 for Infrastructure as Code
 - **Testing**: Vitest with UI support
@@ -59,6 +60,7 @@ npm run synth        # Generate CloudFormation templates
 ### Backend & Data
 - **PostgreSQL**: Primary database with connection pooling
 - **AWS SDK**: Secrets Manager integration for secure credentials
+- **OpenAI GPT-4o**: AI-powered insights for stocks and portfolios
 - **technicalindicators**: RSI, MACD, Bollinger Bands calculations
 - **simple-statistics**: Statistical analysis and portfolio metrics
 
