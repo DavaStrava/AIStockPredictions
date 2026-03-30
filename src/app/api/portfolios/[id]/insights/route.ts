@@ -13,7 +13,7 @@ import { getDatabase } from '@/lib/database/connection';
 import { getFMPProvider } from '@/lib/data-providers/fmp';
 import { PortfolioService, PortfolioNotFoundError } from '@/lib/portfolio/PortfolioService';
 import { getLLMInsightService, LLMInsight } from '@/lib/ai/llm-providers';
-import { HoldingWithMarketData, SectorAllocation, PortfolioSummary } from '@/types/portfolio';
+import { HoldingWithMarketData } from '@/types/portfolio';
 
 interface PortfolioInsightsResponse {
   portfolioOverview: LLMInsight | null;
@@ -60,14 +60,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch all required data in parallel
-    const [summary, holdingsResult, allocation, marketIndicesResponse] = await Promise.all([
+    const [summary, holdings, allocation, marketIndicesResponse] = await Promise.all([
       portfolioService.getPortfolioSummary(portfolioId),
       portfolioService.getHoldingsWithMarketData(portfolioId),
       portfolioService.getSectorAllocation(portfolioId),
       fetch(`${request.nextUrl.origin}/api/market-indices`).then(res => res.json()).catch(() => ({ success: false })),
     ]);
-
-    const holdings = holdingsResult.holdings;
 
     // Get market indices
     const marketIndices = marketIndicesResponse.success ? marketIndicesResponse.data : [];
