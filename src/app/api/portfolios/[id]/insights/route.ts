@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const portfolioService = new PortfolioService(db, fmpProvider);
 
     // Verify portfolio exists and get data
-    const portfolio = await portfolioService.getPortfolio(portfolioId);
+    const portfolio = await portfolioService.getPortfolioById(portfolioId);
     if (!portfolio) {
       return NextResponse.json(
         { success: false, error: 'Portfolio not found' },
